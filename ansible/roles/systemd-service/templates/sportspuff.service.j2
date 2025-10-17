@@ -8,7 +8,7 @@ User={{ app_user }}
 Group={{ app_group }}
 WorkingDirectory={{ app_dir }}
 Environment=PATH={{ app_dir }}/venv/bin
-ExecStart={{ app_dir }}/venv/bin/python app.py
+ExecStart={{ app_dir }}/venv/bin/python app.py --port {{ app_port }}
 Restart=always
 RestartSec=10
 

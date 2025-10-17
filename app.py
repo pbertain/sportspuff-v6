@@ -360,4 +360,14 @@ def get_logo(team_id):
     return None
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    import sys
+    port = 5000  # Default port
+    
+    # Check for port argument
+    if len(sys.argv) > 1 and sys.argv[1] == '--port':
+        try:
+            port = int(sys.argv[2])
+        except (IndexError, ValueError):
+            print("Invalid port argument, using default port 5000")
+    
+    app.run(debug=True, host='0.0.0.0', port=port)

@@ -1,8 +1,8 @@
 # Development environment variables
-environment: "dev"
+env_name: "dev"
 app_dir: "/home/ansible/sportspuff-v6-dev"
 service_name: "sportspuff-v6-dev"
-port: 34181
+app_port: 34181
 branch: "dev"
 flask_env: "development"
 flask_debug: "True"

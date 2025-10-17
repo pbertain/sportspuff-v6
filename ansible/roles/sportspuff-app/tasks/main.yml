@@ -11,21 +11,11 @@
       - python3
       - python3-pip
       - python3-venv
+      - python3-full
       - postgresql
       - postgresql-contrib
       - git
       - nginx
-    state: present
-
-- name: Install Python packages
-  pip:
-    name:
-      - psycopg2-binary
-      - pandas
-      - openpyxl
-      - python-dotenv
-      - flask
-      - werkzeug
     state: present
 
 # Create application directory
