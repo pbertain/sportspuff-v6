@@ -12,6 +12,7 @@
       - python3-pip
       - python3-venv
       - python3-full
+      - python3-dev
       - postgresql
       - postgresql-contrib
       - git
