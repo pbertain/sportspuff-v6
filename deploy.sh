@@ -40,7 +40,7 @@ fi
 echo "📋 Running deployment playbook for $ENVIRONMENT..."
 
 # Run the deployment
-ansible-playbook --ask-vault-pass \
+ansible-playbook \
     -i ansible/inventory \
     -u ansible \
     --private-key ~/.ssh/keys/nirdclub__id_ed25519 \

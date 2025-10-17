@@ -157,7 +157,6 @@ For automatic deployment to work, you need to configure these secrets in your Gi
 2. Add these repository secrets:
    - `SSH_PRIVATE_KEY_DEV`: Your SSH private key for development deployments
    - `SSH_PRIVATE_KEY_PROD`: Your SSH private key for production deployments
-   - `VAULT_PASSWORD`: Your Ansible vault password
 
 The workflows will use these secrets to authenticate with your server and run deployments.
 
