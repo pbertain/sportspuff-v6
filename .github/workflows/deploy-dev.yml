@@ -1,0 +1,29 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Ansible
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ansible
+        
+    - name: Deploy to development
+      run: |
+        ansible-playbook -i ansible/inventory ansible/playbooks/deploy.yml \
+          -e target_env=dev \
+          --private-key ~/.ssh/keys/nirdclub__id_25519
+      env:
+        ANSIBLE_HOST_KEY_CHECKING: False

@@ -1,0 +1,355 @@
+/* Sportspuff v6 - Modern Arena Color Scheme */
+
+:root {
+  /* Core Site Palette */
+  --deep-navy: #1A2A6C;
+  --cool-gray: #E0E0E0;
+  --electric-red: #FF3B30;
+  --golden-yellow: #FFB400;
+  --pure-white: #FFFFFF;
+  
+  /* League-Specific Accents */
+  --mlb-accent: #0E4C92;      /* Royal Blue */
+  --nhl-accent: #BFC9CA;      /* Ice Silver */
+  --nhl-accent-dark: #0A0A0A; /* Jet Black */
+  --nba-accent: #7028E4;      /* Vibrant Purple */
+  --nfl-accent: #B3001B;      /* Deep Crimson */
+  --wnba-accent: #FF6F00;     /* Bright Orange */
+  --mls-accent: #2BAE66;      /* Emerald Green */
+  
+  /* Gradients */
+  --primary-gradient: linear-gradient(135deg, var(--deep-navy) 0%, var(--electric-red) 100%);
+  --secondary-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--pure-white) 100%);
+  
+  /* League Gradients */
+  --mlb-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--mlb-accent) 100%);
+  --nhl-gradient: linear-gradient(135deg, var(--nhl-accent-dark) 0%, var(--nhl-accent) 100%);
+  --nba-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--nba-accent) 100%);
+  --nfl-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--nfl-accent) 100%);
+  --wnba-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--wnba-accent) 100%);
+  --mls-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--mls-accent) 100%);
+}
+
+/* Base Styles */
+body {
+  background-color: var(--pure-white);
+  color: var(--deep-navy);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navigation */
+.navbar {
+  background: var(--primary-gradient) !important;
+  box-shadow: 0 2px 10px rgba(26, 42, 108, 0.3);
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* Hero Section */
+.hero-section {
+  background: var(--primary-gradient);
+  color: var(--pure-white);
+  padding: 4rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+  opacity: 0.3;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Cards */
+.card {
+  background: var(--secondary-gradient);
+  border: 1px solid var(--cool-gray);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(26, 42, 108, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(26, 42, 108, 0.2);
+}
+
+/* League-Specific Styles */
+.league-mlb {
+  border-left: 4px solid var(--mlb-accent);
+}
+
+.league-mlb .league-badge {
+  background: var(--mlb-gradient);
+  color: var(--pure-white);
+}
+
+.league-nhl {
+  border-left: 4px solid var(--nhl-accent);
+}
+
+.league-nhl .league-badge {
+  background: var(--nhl-gradient);
+  color: var(--pure-white);
+}
+
+.league-nba {
+  border-left: 4px solid var(--nba-accent);
+}
+
+.league-nba .league-badge {
+  background: var(--nba-gradient);
+  color: var(--pure-white);
+}
+
+.league-nfl {
+  border-left: 4px solid var(--nfl-accent);
+}
+
+.league-nfl .league-badge {
+  background: var(--nfl-gradient);
+  color: var(--pure-white);
+}
+
+.league-wnba {
+  border-left: 4px solid var(--wnba-accent);
+}
+
+.league-wnba .league-badge {
+  background: var(--wnba-gradient);
+  color: var(--pure-white);
+}
+
+.league-mls {
+  border-left: 4px solid var(--mls-accent);
+}
+
+.league-mls .league-badge {
+  background: var(--mls-gradient);
+  color: var(--pure-white);
+}
+
+/* League Section Cards */
+.league-section {
+  margin-bottom: 2rem;
+}
+
+.league-header {
+  background: var(--secondary-gradient);
+  border-radius: 15px 15px 0 0;
+  padding: 1.5rem;
+  border-bottom: 3px solid;
+}
+
+.league-header.mlb { border-bottom-color: var(--mlb-accent); }
+.league-header.nhl { border-bottom-color: var(--nhl-accent); }
+.league-header.nba { border-bottom-color: var(--nba-accent); }
+.league-header.nfl { border-bottom-color: var(--nfl-accent); }
+.league-header.wnba { border-bottom-color: var(--wnba-accent); }
+.league-header.mls { border-bottom-color: var(--mls-accent); }
+
+.league-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+  color: var(--deep-navy);
+}
+
+.league-subtitle {
+  color: var(--deep-navy);
+  opacity: 0.8;
+  margin: 0.5rem 0 0 0;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--electric-red);
+  border-color: var(--electric-red);
+  border-radius: 25px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--deep-navy);
+  border-color: var(--deep-navy);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(26, 42, 108, 0.3);
+}
+
+.btn-outline-primary {
+  border-color: var(--electric-red);
+  color: var(--electric-red);
+  border-radius: 25px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+  background: var(--electric-red);
+  border-color: var(--electric-red);
+  transform: translateY(-2px);
+}
+
+/* League-specific buttons */
+.btn-mlb { background: var(--mlb-accent); border-color: var(--mlb-accent); }
+.btn-nhl { background: var(--nhl-accent-dark); border-color: var(--nhl-accent-dark); color: var(--pure-white); }
+.btn-nba { background: var(--nba-accent); border-color: var(--nba-accent); }
+.btn-nfl { background: var(--nfl-accent); border-color: var(--nfl-accent); }
+.btn-wnba { background: var(--wnba-accent); border-color: var(--wnba-accent); }
+.btn-mls { background: var(--mls-accent); border-color: var(--mls-accent); }
+
+/* Statistics Cards */
+.stat-card {
+  background: var(--secondary-gradient);
+  border-radius: 20px;
+  padding: 2rem;
+  text-align: center;
+  border: 2px solid var(--cool-gray);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: var(--electric-red);
+  transform: translateY(-5px);
+}
+
+.stat-number {
+  font-size: 3rem;
+  font-weight: bold;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* League Grid */
+.league-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.league-card {
+  background: var(--secondary-gradient);
+  border-radius: 20px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.league-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--electric-red);
+}
+
+.league-card.mlb::before { background: var(--mlb-accent); }
+.league-card.nhl::before { background: var(--nhl-gradient); }
+.league-card.nba::before { background: var(--nba-accent); }
+.league-card.nfl::before { background: var(--nfl-accent); }
+.league-card.wnba::before { background: var(--wnba-accent); }
+.league-card.mls::before { background: var(--mls-accent); }
+
+.league-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(26, 42, 108, 0.2);
+}
+
+.league-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--cool-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.league-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--deep-navy);
+  margin-bottom: 0.5rem;
+}
+
+.league-count {
+  color: var(--deep-navy);
+  opacity: 0.7;
+  margin-bottom: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 2rem 0;
+  }
+  
+  .league-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Loading States */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.spinner {
+  border: 3px solid var(--cool-gray);
+  border-top: 3px solid var(--electric-red);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

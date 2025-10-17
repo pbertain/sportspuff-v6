@@ -1,0 +1,21 @@
+---
+# Main playbook for sportspuff-v6 deployment
+
+- name: Deploy sportspuff-v6 application
+  hosts: "{{ target_env | default('dev') }}"
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/{{ target_env | default('dev') }}.yml
+  
+  roles:
+    - sportspuff-app
+    - systemd-service
+  
+  handlers:
+    - name: restart sportspuff service
+      systemd:
+        name: "{{ service_name }}"
+        state: restarted
+        enabled: yes
+      notify: "restart sportspuff service"

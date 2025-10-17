@@ -1,0 +1,10 @@
+# Ansible inventory for sportspuff-v6
+[dev]
+host74.nird.club ansible_user=ansible ansible_ssh_private_key_file=~/.ssh/keys/nirdclub__id_25519
+
+[prod]
+host74.nird.club ansible_user=ansible ansible_ssh_private_key_file=~/.ssh/keys/nirdclub__id_25519
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

@@ -1,0 +1,27 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Ansible
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ansible
+        
+    - name: Deploy to production
+      run: |
+        ansible-playbook -i ansible/inventory ansible/playbooks/deploy.yml \
+          -e target_env=prod \
+          --private-key ~/.ssh/keys/nirdclub__id_25519
+      env:
+        ANSIBLE_HOST_KEY_CHECKING: False

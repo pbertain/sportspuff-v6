@@ -1,0 +1,8 @@
+# Production environment variables
+environment: "prod"
+app_dir: "/home/ansible/sportspuff-v6-prod"
+service_name: "sportspuff-v6-prod"
+port: 34180
+branch: "main"
+flask_env: "production"
+flask_debug: "False"

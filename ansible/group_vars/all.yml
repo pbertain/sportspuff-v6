@@ -1,0 +1,27 @@
+# Group variables for sportspuff-v6 environments
+
+# Database configuration
+db_host: "{{ ansible_default_ipv4.address }}"
+db_name: "sportspuff_v6"
+db_user: "postgres"
+db_password: "{{ vault_db_password }}"
+
+# Application configuration
+app_name: "sportspuff-v6"
+app_user: "ansible"
+app_group: "ansible"
+
+# Environment-specific settings
+dev:
+  app_dir: "/home/ansible/sportspuff-v6-dev"
+  service_name: "sportspuff-v6-dev"
+  port: 5000
+  branch: "dev"
+  environment: "development"
+
+prod:
+  app_dir: "/home/ansible/sportspuff-v6-prod"
+  service_name: "sportspuff-v6-prod"
+  port: 5001
+  branch: "main"
+  environment: "production"
