@@ -20,10 +20,20 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y ansible
         
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY_DEV }}" > ~/.ssh/nirdclub_id_ed25519
+        chmod 600 ~/.ssh/nirdclub_id_ed25519
+        ssh-keyscan -H host74.nird.club >> ~/.ssh/known_hosts
+        
     - name: Deploy to development
       run: |
-        ansible-playbook -i ansible/inventory ansible/playbooks/deploy.yml \
-          -e target_env=dev \
-          --private-key ~/.ssh/keys/nirdclub__id_25519
+        ansible-playbook --ask-vault-pass \
+          -i ansible/inventory \
+          -u ansible \
+          --private-key ~/.ssh/nirdclub_id_ed25519 \
+          ansible/playbooks/deploy.yml \
+          -e target_env=dev
       env:
         ANSIBLE_HOST_KEY_CHECKING: False

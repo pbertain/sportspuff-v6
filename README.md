@@ -150,9 +150,22 @@ sportspuff-v6/
 - Push to `dev` branch → auto-deploys to dev environment (port 34181)
 - Push to `main` branch → auto-deploys to prod environment (port 34180)
 
+#### GitHub Secrets Setup
+For automatic deployment to work, you need to configure these secrets in your GitHub repository:
+
+1. Go to your repository → Settings → Secrets and variables → Actions
+2. Add these repository secrets:
+   - `SSH_PRIVATE_KEY_DEV`: Your SSH private key for development deployments
+   - `SSH_PRIVATE_KEY_PROD`: Your SSH private key for production deployments
+   - `VAULT_PASSWORD`: Your Ansible vault password
+
+The workflows will use these secrets to authenticate with your server and run deployments.
+
 ### Access Points
-- **Development**: http://host74.nird.club:34181
-- **Production**: http://host74.nird.club:34180
+- **Development**: http://host74.nird.club (via NGINX → port 34181)
+- **Production**: http://host74.nird.club (via NGINX → port 34180)
+
+> **Note**: Direct port access is not available. NGINX will be configured to route traffic to the appropriate internal ports.
 
 ## 🧪 Testing
 

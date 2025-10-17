@@ -40,10 +40,12 @@ fi
 echo "📋 Running deployment playbook for $ENVIRONMENT..."
 
 # Run the deployment
-ansible-playbook -i "$INVENTORY_FILE" "$PLAYBOOK_DIR/deploy.yml" \
-    -e "target_env=$ENVIRONMENT" \
-    --ask-become-pass \
-    --ask-vault-pass
+ansible-playbook --ask-vault-pass \
+    -i ansible/inventory \
+    -u ansible \
+    --private-key ~/.ssh/keys/nirdclub__id_ed25519 \
+    ansible/playbooks/deploy.yml \
+    -e "target_env=$ENVIRONMENT"
 
 echo "✅ Deployment to $ENVIRONMENT completed!"
 echo ""

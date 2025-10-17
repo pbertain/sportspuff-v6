@@ -1,0 +1,47 @@
+# NGINX Configuration Template for Sportspuff v6
+# This is a reference - you'll configure NGINX separately
+
+# Development environment
+server {
+    listen 80;
+    server_name dev.sportspuff.nird.club;  # or your dev subdomain
+    
+    location / {
+        proxy_pass http://localhost:34181;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Production environment
+server {
+    listen 80;
+    server_name sportspuff.nird.club;  # or your production domain
+    
+    location / {
+        proxy_pass http://localhost:34180;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Optional: SSL configuration
+# server {
+#     listen 443 ssl;
+#     server_name sportspuff.nird.club;
+#     
+#     ssl_certificate /path/to/your/certificate.crt;
+#     ssl_certificate_key /path/to/your/private.key;
+#     
+#     location / {
+#         proxy_pass http://localhost:34180;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+# }
