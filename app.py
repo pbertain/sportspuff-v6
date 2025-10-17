@@ -39,7 +39,12 @@ def get_db_connection():
         conn = psycopg2.connect(**DB_CONFIG)
         return conn
     except psycopg2.Error as e:
-        flash(f'Database connection error: {e}', 'error')
+        # Only flash if we're in a request context
+        try:
+            flash(f'Database connection error: {e}', 'error')
+        except RuntimeError:
+            # Outside request context, just print the error
+            print(f'Database connection error: {e}')
         return None
 
 @app.route('/')

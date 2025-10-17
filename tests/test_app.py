@@ -48,7 +48,8 @@ class TestFlaskApp(unittest.TestCase):
             mock_cursor.fetchone.return_value = {'count': 10}
             mock_cursor.fetchall.return_value = [
                 {'team_id': 1, 'real_team_name': 'Test Team', 'league': 'nfl', 
-                 'city_name': 'Test City', 'state_name': 'TS', 'full_stadium_name': 'Test Stadium'}
+                 'city_name': 'Test City', 'state_name': 'TS', 'full_stadium_name': 'Test Stadium',
+                 'stadium_city': 'Test City', 'stadium_state': 'TS'}
             ]
             mock_conn.return_value.cursor.return_value = mock_cursor
             
@@ -110,7 +111,8 @@ class TestFlaskApp(unittest.TestCase):
             mock_cursor = MagicMock(spec=RealDictCursor)
             mock_cursor.fetchone.return_value = {
                 'team_id': 1, 'real_team_name': 'Test Team', 'league': 'nfl',
-                'city_name': 'Test City', 'state_name': 'TS', 'full_stadium_name': 'Test Stadium'
+                'city_name': 'Test City', 'state_name': 'TS', 'full_stadium_name': 'Test Stadium',
+                'stadium_city': 'Test City', 'stadium_state': 'TS', 'capacity': 50000
             }
             mock_conn.return_value.cursor.return_value = mock_cursor
             
@@ -124,7 +126,8 @@ class TestFlaskApp(unittest.TestCase):
             # Mock database connection and cursor
             mock_cursor = MagicMock(spec=RealDictCursor)
             mock_cursor.fetchone.return_value = {
-                'stadium_id': 1, 'full_stadium_name': 'Test Stadium', 'capacity': 50000
+                'stadium_id': 1, 'full_stadium_name': 'Test Stadium', 'capacity': 50000,
+                'city_name': 'Test City', 'state_name': 'TS'
             }
             mock_cursor.fetchall.return_value = []
             mock_conn.return_value.cursor.return_value = mock_cursor

@@ -193,6 +193,13 @@ def main():
     # Change to project directory
     os.chdir(project_root)
     
+    # Verify we're in the right directory
+    if not os.path.exists('app.py'):
+        print("❌ Error: app.py not found. Make sure you're in the project root directory.")
+        print(f"Current directory: {os.getcwd()}")
+        print(f"Project root: {project_root}")
+        sys.exit(1)
+    
     # Run all tests
     ready_for_deployment = generate_deployment_report()
     
