@@ -49,6 +49,8 @@
     requirements: "{{ app_dir }}/requirements.txt"
     virtualenv: "{{ app_dir }}/venv"
     virtualenv_command: "{{ app_dir }}/venv/bin/python"
+  async: 300
+  poll: 10
 
 # Create environment file
 - name: Create environment file

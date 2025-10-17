@@ -60,6 +60,10 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY_DEV }}" > ~/.ssh/nirdclub_id_ed25519
         chmod 600 ~/.ssh/nirdclub_id_ed25519
         ssh-keyscan -H host74.nird.club >> ~/.ssh/known_hosts
+        echo "Host host74.nird.club" >> ~/.ssh/config
+        echo "  ServerAliveInterval 60" >> ~/.ssh/config
+        echo "  ServerAliveCountMax 10" >> ~/.ssh/config
+        echo "  TCPKeepAlive yes" >> ~/.ssh/config
         
     - name: Deploy to development
       run: |
@@ -92,6 +96,10 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY_PROD }}" > ~/.ssh/nirdclub_id_ed25519
         chmod 600 ~/.ssh/nirdclub_id_ed25519
         ssh-keyscan -H host74.nird.club >> ~/.ssh/known_hosts
+        echo "Host host74.nird.club" >> ~/.ssh/config
+        echo "  ServerAliveInterval 60" >> ~/.ssh/config
+        echo "  ServerAliveCountMax 10" >> ~/.ssh/config
+        echo "  TCPKeepAlive yes" >> ~/.ssh/config
         
     - name: Deploy to production
       run: |
