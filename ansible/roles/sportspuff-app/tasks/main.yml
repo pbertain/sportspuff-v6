@@ -40,7 +40,7 @@
 # Clone/update repository
 - name: Clone repository
   git:
-    repo: "https://github.com/{{ github_user | default('your-username') }}/sportspuff-v6.git"
+    repo: "https://github.com/pbertain/sportspuff-v6.git"
     dest: "{{ app_dir }}"
     version: "{{ branch }}"
     force: yes
@@ -62,7 +62,7 @@
 # Create environment file
 - name: Create environment file
   template:
-    src: ../templates/.env.j2
+    src: .env.j2
     dest: "{{ app_dir }}/.env"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"

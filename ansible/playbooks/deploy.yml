@@ -5,12 +5,12 @@
   hosts: "{{ target_env | default('dev') }}"
   become: yes
   vars_files:
-    - group_vars/all.yml
-    - group_vars/{{ target_env | default('dev') }}.yml
+    - ../group_vars/all.yml
+    - ../group_vars/{{ target_env | default('dev') }}.yml
   
   roles:
-    - sportspuff-app
-    - systemd-service
+    - ../roles/sportspuff-app
+    - ../roles/systemd-service
   
   handlers:
     - name: restart sportspuff service
