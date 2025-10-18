@@ -42,9 +42,15 @@ def import_stadiums(cursor, conn):
     # Clean and prepare data
     df = df.fillna('')  # Replace NaN with empty strings
     
-    # Convert year_opened to integer, handling NaN
-    df['year_opened'] = pd.to_numeric(df['year_opened'], errors='coerce').fillna(0).astype(int)
-    df.loc[df['year_opened'] == 0, 'year_opened'] = None
+    # Convert numeric fields, handling NaN and empty strings
+    df['year_opened'] = pd.to_numeric(df['year_opened'], errors='coerce')
+    df['capacity'] = pd.to_numeric(df['capacity'], errors='coerce')
+    df['baseball_distance_to_center_field_ft'] = pd.to_numeric(df['baseball_distance_to_center_field_ft'], errors='coerce')
+    df['baseball_distance_to_center_field_m'] = pd.to_numeric(df['baseball_distance_to_center_field_m'], errors='coerce')
+    df['soccer_field_width_yd'] = pd.to_numeric(df['soccer_field_width_yd'], errors='coerce')
+    df['soccer_field_width_m'] = pd.to_numeric(df['soccer_field_width_m'], errors='coerce')
+    df['soccer_field_length_yd'] = pd.to_numeric(df['soccer_field_length_yd'], errors='coerce')
+    df['soccer_field_length_m'] = pd.to_numeric(df['soccer_field_length_m'], errors='coerce')
     
     # Prepare data for insertion
     stadiums_data = []
@@ -53,20 +59,20 @@ def import_stadiums(cursor, conn):
             int(row['stadium_id']),
             row['full_stadium_name'],
             row['stadium_name'],
-            row['location_name'] if pd.notna(row['location_name']) else None,
+            row['location_name'] if pd.notna(row['location_name']) and row['location_name'] != '' else None,
             row['city_name'],
-            row['full_state_name'] if pd.notna(row['full_state_name']) else None,
+            row['full_state_name'] if pd.notna(row['full_state_name']) and row['full_state_name'] != '' else None,
             row['state_name'],
             row['country'],
-            int(row['capacity']),
-            row['surface'] if pd.notna(row['surface']) else None,
-            int(row['year_opened']) if pd.notna(row['year_opened']) and row['year_opened'] != 0 else None,
-            row['roof_type'] if pd.notna(row['roof_type']) else None,
-            row['coordinates'] if pd.notna(row['coordinates']) else None,
-            row['stadium_type'] if pd.notna(row['stadium_type']) else None,
+            int(row['capacity']) if pd.notna(row['capacity']) else None,
+            row['surface'] if pd.notna(row['surface']) and row['surface'] != '' else None,
+            int(row['year_opened']) if pd.notna(row['year_opened']) else None,
+            row['roof_type'] if pd.notna(row['roof_type']) and row['roof_type'] != '' else None,
+            row['coordinates'] if pd.notna(row['coordinates']) and row['coordinates'] != '' else None,
+            row['stadium_type'] if pd.notna(row['stadium_type']) and row['stadium_type'] != '' else None,
             int(row['baseball_distance_to_center_field_ft']) if pd.notna(row['baseball_distance_to_center_field_ft']) else None,
             float(row['baseball_distance_to_center_field_m']) if pd.notna(row['baseball_distance_to_center_field_m']) else None,
-            row['first_sport_year'] if pd.notna(row['first_sport_year']) else None,
+            row['first_sport_year'] if pd.notna(row['first_sport_year']) and row['first_sport_year'] != '' else None,
             int(row['soccer_field_width_yd']) if pd.notna(row['soccer_field_width_yd']) else None,
             float(row['soccer_field_width_m']) if pd.notna(row['soccer_field_width_m']) else None,
             int(row['soccer_field_length_yd']) if pd.notna(row['soccer_field_length_yd']) else None,
