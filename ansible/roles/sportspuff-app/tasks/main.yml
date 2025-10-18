@@ -116,8 +116,16 @@
 - name: Configure PostgreSQL authentication
   shell: |
     find /etc/postgresql -name "pg_hba.conf" -exec sed -i 's/^local\s\+all\s\+postgres\s\+peer/local   all             postgres                                md5/' {} \;
+    find /etc/postgresql -name "pg_hba.conf" -exec sh -c 'echo "host    all             all             127.0.0.1/32            md5" >> "$1"' _ {} \;
   args:
     creates: /tmp/pg_hba_configured
+  notify: restart postgresql
+
+- name: Configure PostgreSQL to listen on all addresses
+  shell: |
+    find /etc/postgresql -name "postgresql.conf" -exec sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" {} \;
+  args:
+    creates: /tmp/postgresql_conf_configured
   notify: restart postgresql
 
 - name: Set postgres user password
