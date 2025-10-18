@@ -1,0 +1,6 @@
+---
+# Handlers for systemd-service role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
