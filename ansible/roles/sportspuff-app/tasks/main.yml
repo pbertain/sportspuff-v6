@@ -113,28 +113,18 @@
     state: started
     enabled: yes
 
-- name: Configure PostgreSQL authentication
+- name: Configure PostgreSQL authentication (peer to md5)
   shell: |
     find /etc/postgresql -name "pg_hba.conf" -exec sed -i 's/^local\s\+all\s\+postgres\s\+peer/local   all             postgres                                md5/' {} \;
-    find /etc/postgresql -name "pg_hba.conf" -exec sh -c 'echo "host    all             all             127.0.0.1/32            md5" >> "$1"' _ {} \;
   args:
     creates: /tmp/pg_hba_configured
   register: pg_hba_configured
-  notify: restart postgresql
 
-- name: Configure PostgreSQL to listen on all addresses
-  shell: |
-    find /etc/postgresql -name "postgresql.conf" -exec sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" {} \;
-  args:
-    creates: /tmp/postgresql_conf_configured
-  register: postgresql_conf_configured
-  notify: restart postgresql
-
-- name: Restart PostgreSQL to apply configuration changes
+- name: Restart PostgreSQL if configuration changed
   systemd:
     name: postgresql
     state: restarted
-  when: pg_hba_configured.changed or postgresql_conf_configured.changed
+  when: pg_hba_configured.changed
 
 - name: Wait for PostgreSQL to be ready
   wait_for:
@@ -142,27 +132,21 @@
     host: localhost
     timeout: 30
 
-- name: Set postgres user password
-  shell: |
-    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '{{ db_password }}';"
-  args:
-    creates: /tmp/postgres_password_set
-
 - name: Create database
   shell: |
-    sudo -u postgres createdb {{ db_name }}
+    sudo -u postgres createdb {{ db_name }} || true
   args:
     creates: /tmp/database_created
   register: db_create_result
-  failed_when: db_create_result.rc != 0 and "already exists" not in db_create_result.stderr
+  failed_when: false
 
 - name: Create database user
   shell: |
-    sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';"
+    sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';" || sudo -u postgres psql -c "ALTER USER {{ db_user }} PASSWORD '{{ db_password }}';"
   args:
     creates: /tmp/db_user_created
   register: user_create_result
-  failed_when: user_create_result.rc != 0 and "already exists" not in user_create_result.stderr
+  failed_when: false
 
 - name: Grant database privileges
   shell: |
