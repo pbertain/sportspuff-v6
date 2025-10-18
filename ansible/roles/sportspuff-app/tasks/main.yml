@@ -132,9 +132,19 @@
     host: localhost
     timeout: 30
 
-- name: Create database
+- name: Test PostgreSQL connection
   shell: |
-    sudo -u postgres createdb {{ db_name }} || true
+    sudo -u postgres psql -c "SELECT 1;" || echo "PostgreSQL not ready"
+  register: pg_test
+  failed_when: false
+
+- name: Show PostgreSQL test result
+  debug:
+    msg: "PostgreSQL test: {{ pg_test.stdout }}"
+
+- name: Create database using psql
+  shell: |
+    timeout 30 sudo -u postgres psql -c "CREATE DATABASE {{ db_name }};" || echo "Database may already exist"
   args:
     creates: /tmp/database_created
   register: db_create_result
