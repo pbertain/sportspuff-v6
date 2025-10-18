@@ -119,6 +119,7 @@
     find /etc/postgresql -name "pg_hba.conf" -exec sh -c 'echo "host    all             all             127.0.0.1/32            md5" >> "$1"' _ {} \;
   args:
     creates: /tmp/pg_hba_configured
+  register: pg_hba_configured
   notify: restart postgresql
 
 - name: Configure PostgreSQL to listen on all addresses
@@ -126,7 +127,20 @@
     find /etc/postgresql -name "postgresql.conf" -exec sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" {} \;
   args:
     creates: /tmp/postgresql_conf_configured
+  register: postgresql_conf_configured
   notify: restart postgresql
+
+- name: Restart PostgreSQL to apply configuration changes
+  systemd:
+    name: postgresql
+    state: restarted
+  when: pg_hba_configured.changed or postgresql_conf_configured.changed
+
+- name: Wait for PostgreSQL to be ready
+  wait_for:
+    port: 5432
+    host: localhost
+    timeout: 30
 
 - name: Set postgres user password
   shell: |
