@@ -98,78 +98,12 @@
     group: "{{ app_group }}"
     mode: '0600'
 
-# Setup database
-- name: Install PostgreSQL
-  apt:
-    name:
-      - postgresql
-      - postgresql-contrib
-      - python3-psycopg2
-    state: present
-
-- name: Start and enable PostgreSQL
-  systemd:
-    name: postgresql
-    state: started
-    enabled: yes
-
-- name: Configure PostgreSQL authentication (peer to md5)
-  shell: |
-    find /etc/postgresql -name "pg_hba.conf" -exec sed -i 's/^local\s\+all\s\+postgres\s\+peer/local   all             postgres                                md5/' {} \;
-  args:
-    creates: /tmp/pg_hba_configured
-  register: pg_hba_configured
-
-- name: Restart PostgreSQL if configuration changed
-  systemd:
-    name: postgresql
-    state: restarted
-  when: pg_hba_configured.changed
-
-- name: Wait for PostgreSQL to be ready
-  wait_for:
-    port: 5432
-    host: localhost
-    timeout: 30
-
-- name: Test PostgreSQL connection
-  shell: |
-    sudo -u postgres psql -c "SELECT 1;" || echo "PostgreSQL not ready"
-  register: pg_test
-  failed_when: false
-
-- name: Show PostgreSQL test result
+# Skip PostgreSQL setup for now - get basic deployment working first
+- name: Skip PostgreSQL setup
   debug:
-    msg: "PostgreSQL test: {{ pg_test.stdout }}"
+    msg: "Skipping PostgreSQL setup to get basic deployment working"
 
-- name: Create database using psql
-  shell: |
-    timeout 30 sudo -u postgres psql -c "CREATE DATABASE {{ db_name }};" || echo "Database may already exist"
-  args:
-    creates: /tmp/database_created
-  register: db_create_result
-  failed_when: false
-
-- name: Create database user
-  shell: |
-    sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';" || sudo -u postgres psql -c "ALTER USER {{ db_user }} PASSWORD '{{ db_password }}';"
-  args:
-    creates: /tmp/db_user_created
-  register: user_create_result
-  failed_when: false
-
-- name: Grant database privileges
-  shell: |
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ db_name }} TO {{ db_user }};"
-
-# Run database schema
-- name: Run database schema
-  shell: |
-    sudo -u postgres psql -d {{ db_name }} -f {{ app_dir }}/database_schema.sql
-
-# Import data (CSV files are already in the repository)
-- name: Import data
-  command: "{{ app_dir }}/venv/bin/python import_data.py"
-  args:
-    chdir: "{{ app_dir }}"
-  become_user: "{{ app_user }}"
+# Skip data import for now - requires PostgreSQL
+- name: Skip data import
+  debug:
+    msg: "Skipping data import - requires PostgreSQL setup"
