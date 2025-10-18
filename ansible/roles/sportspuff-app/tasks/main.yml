@@ -152,6 +152,12 @@
     sudo -u postgres psql -d {{ db_name }} -f {{ app_dir }}/database_schema.sql
 
 # Import data
+- name: Generate CSV files from Excel
+  command: "{{ app_dir }}/venv/bin/python analyze_excel.py"
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+
 - name: Import data
   command: "{{ app_dir }}/venv/bin/python import_data.py"
   args:
