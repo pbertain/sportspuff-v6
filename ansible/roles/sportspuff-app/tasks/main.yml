@@ -154,7 +154,7 @@
 # Import data
 - name: Copy Excel file to server
   copy:
-    src: "team-logo-image-downloads.xlsx"
+    src: "{{ playbook_dir }}/../../../team-logo-image-downloads.xlsx"
     dest: "{{ app_dir }}/team-logo-image-downloads.xlsx"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
