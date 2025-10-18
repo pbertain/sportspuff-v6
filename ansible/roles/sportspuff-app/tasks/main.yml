@@ -121,29 +121,35 @@
   notify: restart postgresql
 
 - name: Set postgres user password
-  postgresql_user:
-    name: postgres
-    password: "{{ db_password }}"
-    state: present
-  become_user: postgres
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '{{ db_password }}';"
+  args:
+    creates: /tmp/postgres_password_set
 
 - name: Create database
-  postgresql_db:
-    name: "{{ db_name }}"
-    state: present
+  shell: |
+    sudo -u postgres createdb {{ db_name }}
+  args:
+    creates: /tmp/database_created
+  register: db_create_result
+  failed_when: db_create_result.rc != 0 and "already exists" not in db_create_result.stderr
 
 - name: Create database user
-  postgresql_user:
-    name: "{{ db_user }}"
-    password: "{{ db_password }}"
-    priv: "{{ db_name }}:ALL"
-    state: present
+  shell: |
+    sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';"
+  args:
+    creates: /tmp/db_user_created
+  register: user_create_result
+  failed_when: user_create_result.rc != 0 and "already exists" not in user_create_result.stderr
+
+- name: Grant database privileges
+  shell: |
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ db_name }} TO {{ db_user }};"
 
 # Run database schema
 - name: Run database schema
-  postgresql_query:
-    db: "{{ db_name }}"
-    query_from_file: "{{ app_dir }}/database_schema.sql"
+  shell: |
+    sudo -u postgres psql -d {{ db_name }} -f {{ app_dir }}/database_schema.sql
 
 # Import data
 - name: Import data
