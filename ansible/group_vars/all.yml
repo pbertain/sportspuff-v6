@@ -8,20 +8,20 @@ db_password: "{{ db_password_secret }}"
 
 # Application configuration
 app_name: "sportspuff-v6"
-app_user: "ansible"
-app_group: "ansible"
+app_user: "root"
+app_group: "root"
 
 # Environment-specific settings
 dev:
-  app_dir: "/home/ansible/sportspuff-v6-dev"
+  app_dir: "/opt/sportspuff-v6-dev"
   service_name: "sportspuff-v6-dev"
-  port: 5000
+  port: 34181
   branch: "dev"
   environment: "development"
 
 prod:
-  app_dir: "/home/ansible/sportspuff-v6-prod"
+  app_dir: "/opt/sportspuff-v6-prod"
   service_name: "sportspuff-v6-prod"
-  port: 5001
+  port: 34180
   branch: "main"
   environment: "production"
