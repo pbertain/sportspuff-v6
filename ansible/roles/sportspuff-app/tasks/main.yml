@@ -152,6 +152,14 @@
     sudo -u postgres psql -d {{ db_name }} -f {{ app_dir }}/database_schema.sql
 
 # Import data
+- name: Copy Excel file to server
+  copy:
+    src: "team-logo-image-downloads.xlsx"
+    dest: "{{ app_dir }}/team-logo-image-downloads.xlsx"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+
 - name: Check if Excel file exists
   stat:
     path: "{{ app_dir }}/team-logo-image-downloads.xlsx"
