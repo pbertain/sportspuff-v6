@@ -43,14 +43,45 @@
   args:
     creates: "{{ app_dir }}/venv"
 
-# Install requirements
-- name: Install Python requirements
+- name: Debug virtual environment
+  command: "{{ app_dir }}/venv/bin/python --version"
+  register: venv_python_version
+  changed_when: false
+
+- name: Show Python version
+  debug:
+    msg: "Virtual environment Python version: {{ venv_python_version.stdout }}"
+
+# Install requirements in smaller chunks to avoid timeouts
+- name: Install core Flask requirements
   pip:
-    requirements: "{{ app_dir }}/requirements.txt"
+    name:
+      - Flask==2.3.3
+      - Werkzeug==2.3.7
+      - python-dotenv==1.0.0
     virtualenv: "{{ app_dir }}/venv"
     virtualenv_command: "{{ app_dir }}/venv/bin/python"
   async: 300
-  poll: 10
+  poll: 30
+
+- name: Install database requirements
+  pip:
+    name:
+      - psycopg2-binary==2.9.9
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: "{{ app_dir }}/venv/bin/python"
+  async: 300
+  poll: 30
+
+- name: Install data processing requirements
+  pip:
+    name:
+      - pandas==1.5.3
+      - openpyxl==3.1.2
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: "{{ app_dir }}/venv/bin/python"
+  async: 600
+  poll: 30
 
 # Create environment file
 - name: Create environment file
