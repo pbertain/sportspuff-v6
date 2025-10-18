@@ -1,0 +1,7 @@
+---
+# Handlers for sportspuff-app role
+
+- name: restart postgresql
+  systemd:
+    name: postgresql
+    state: restarted

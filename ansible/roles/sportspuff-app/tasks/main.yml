@@ -151,9 +151,3 @@
   args:
     chdir: "{{ app_dir }}"
   become_user: "{{ app_user }}"
-
-# Handlers
-- name: restart postgresql
-  systemd:
-    name: postgresql
-    state: restarted
