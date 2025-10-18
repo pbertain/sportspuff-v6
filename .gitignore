@@ -129,10 +129,11 @@ dmypy.json
 .pyre/
 
 # Project specific
-*.csv
 logo_mapping.json
 # Allow data files
 !team-logo-image-downloads.xlsx
+!leagues-and-teams.csv
+!final_stadiums.csv
 .DS_Store
 .vscode/
 .idea/
