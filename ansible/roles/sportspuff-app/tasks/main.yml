@@ -99,6 +99,34 @@
     mode: '0600'
 
 # Setup database
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Configure PostgreSQL authentication
+  shell: |
+    find /etc/postgresql -name "pg_hba.conf" -exec sed -i 's/^local\s\+all\s\+postgres\s\+peer/local   all             postgres                                md5/' {} \;
+  args:
+    creates: /tmp/pg_hba_configured
+  notify: restart postgresql
+
+- name: Set postgres user password
+  postgresql_user:
+    name: postgres
+    password: "{{ db_password }}"
+    state: present
+  become_user: postgres
+
 - name: Create database
   postgresql_db:
     name: "{{ db_name }}"
@@ -123,3 +151,9 @@
   args:
     chdir: "{{ app_dir }}"
   become_user: "{{ app_user }}"
+
+# Handlers
+- name: restart postgresql
+  systemd:
+    name: postgresql
+    state: restarted
