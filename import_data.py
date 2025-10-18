@@ -10,13 +10,17 @@ from psycopg2.extras import execute_values
 import os
 from datetime import datetime
 import sys
+from dotenv import load_dotenv
 
-# Database configuration
+# Load environment variables
+load_dotenv()
+
+# Database configuration from environment variables
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'sportspuff_v6',
-    'user': 'postgres',
-    'password': 'password'  # Change this to your PostgreSQL password
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'database': os.getenv('DB_NAME', 'sportspuff_v6'),
+    'user': os.getenv('DB_USER', 'postgres'),
+    'password': os.getenv('DB_PASSWORD', 'password')
 }
 
 def connect_to_db():
