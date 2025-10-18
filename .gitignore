@@ -129,9 +129,10 @@ dmypy.json
 .pyre/
 
 # Project specific
-*.xlsx
 *.csv
 logo_mapping.json
+# Allow data files
+!team-logo-image-downloads.xlsx
 .DS_Store
 .vscode/
 .idea/
