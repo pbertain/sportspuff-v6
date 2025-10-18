@@ -74,7 +74,8 @@ jobs:
           -u ansible \
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
-          -e target_env=dev
+          -e target_env=dev \
+          -e db_password_secret="${{ secrets.DB_PASSWORD }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 
@@ -112,6 +113,7 @@ jobs:
           -u ansible \
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
-          -e target_env=prod
+          -e target_env=prod \
+          -e db_password_secret="${{ secrets.DB_PASSWORD }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False

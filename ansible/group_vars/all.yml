@@ -4,7 +4,7 @@
 db_host: "{{ ansible_default_ipv4.address }}"
 db_name: "sportspuff_v6"
 db_user: "postgres"
-db_password: "sportspuff2024!"
+db_password: "{{ db_password_secret }}"
 
 # Application configuration
 app_name: "sportspuff-v6"
