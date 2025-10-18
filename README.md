@@ -231,4 +231,4 @@ For questions or issues:
 
 ---
 
-**Ready to explore the world of sports data! 🏆**
+**Ready to explore the world of sports data! 🏆**# Deployment test - duplicate team_id fix applied
