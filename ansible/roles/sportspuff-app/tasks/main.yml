@@ -98,7 +98,7 @@
     group: "{{ app_group }}"
     mode: '0600'
 
-# PostgreSQL Setup
+# PostgreSQL Setup - Simplified to avoid hanging
 - name: Start and enable PostgreSQL
   systemd:
     name: postgresql
@@ -110,19 +110,14 @@
     port: 5432
     host: "{{ db_host }}"
     delay: 5
-    timeout: 60
+    timeout: 30
 
-- name: Set postgres user password
-  shell: |
-    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '{{ db_password }}';" || true
-  become: yes
-
-- name: Create database
+- name: Create database (skip password setting to avoid hanging)
   shell: |
     sudo -u postgres createdb {{ db_name }} || true
   become: yes
 
-- name: Create application user
+- name: Create application user (skip password setting to avoid hanging)
   shell: |
     sudo -u postgres createuser -s {{ db_user }} || true
   become: yes
