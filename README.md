@@ -232,3 +232,4 @@ For questions or issues:
 ---
 
 **Ready to explore the world of sports data! 🏆**# Deployment test - duplicate team_id fix applied
+# Force new deployment - PostgreSQL removed
