@@ -98,12 +98,54 @@
     group: "{{ app_group }}"
     mode: '0600'
 
-# Skip PostgreSQL setup for now - get basic deployment working first
-- name: Skip PostgreSQL setup
-  debug:
-    msg: "Skipping PostgreSQL setup to get basic deployment working"
+# PostgreSQL Setup
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
 
-# Skip data import for now - requires PostgreSQL
-- name: Skip data import
-  debug:
-    msg: "Skipping data import - requires PostgreSQL setup"
+- name: Wait for PostgreSQL to be ready
+  wait_for:
+    port: 5432
+    host: "{{ db_host }}"
+    delay: 5
+    timeout: 60
+
+- name: Set postgres user password
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '{{ db_password }}';" || true
+  become: yes
+
+- name: Create database
+  shell: |
+    sudo -u postgres createdb {{ db_name }} || true
+  become: yes
+
+- name: Create application user
+  shell: |
+    sudo -u postgres createuser -s {{ db_user }} || true
+  become: yes
+
+- name: Grant privileges to application user
+  shell: |
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ db_name }} TO {{ db_user }};" || true
+  become: yes
+
+- name: Run database schema
+  shell: |
+    cd {{ app_dir }}
+    sudo -u postgres psql -d {{ db_name }} -f database_schema.sql || true
+  become: yes
+
+# Data Import
+- name: Import data
+  shell: |
+    cd {{ app_dir }}
+    {{ app_dir }}/venv/bin/python import_data.py
+  become: yes
+  environment:
+    DB_HOST: "{{ db_host }}"
+    DB_NAME: "{{ db_name }}"
+    DB_USER: "{{ db_user }}"
+    DB_PASSWORD: "{{ db_password }}"

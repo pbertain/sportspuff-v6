@@ -37,19 +37,44 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Main Content Area - Darker Background */
+/* Main Content Area - Much Darker Background */
 main, .main-content {
-  background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+  background: linear-gradient(135deg, #0F0F0F 0%, #1A1A1A 50%, #2D2D2D 100%);
   min-height: 100vh;
   padding: 2rem 0;
 }
 
 .container {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(20, 20, 20, 0.95);
   border-radius: 20px;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
   margin: 2rem auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Update text colors for dark theme */
+body {
+  background-color: #0F0F0F;
+  color: #E0E0E0;
+}
+
+.card {
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #E0E0E0;
+}
+
+.stat-card {
+  background: rgba(25, 25, 25, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: #E0E0E0;
+}
+
+.league-card {
+  background: rgba(25, 25, 25, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #E0E0E0;
 }
 
 /* Navigation */
