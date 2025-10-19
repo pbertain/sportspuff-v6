@@ -37,6 +37,21 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Main Content Area - Darker Background */
+main, .main-content {
+  background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+.container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin: 2rem auto;
+}
+
 /* Navigation */
 .navbar {
   background: var(--primary-gradient) !important;

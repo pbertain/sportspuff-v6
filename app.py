@@ -52,7 +52,14 @@ def index():
     """Home page with overview statistics"""
     conn = get_db_connection()
     if not conn:
-        return render_template('error.html', message="Database connection failed")
+        # Fallback data when database is not available
+        return render_template('index.html', 
+                             team_count=0,
+                             stadium_count=0,
+                             linked_count=0,
+                             league_stats=[],
+                             logo_mapping=LOGO_MAPPING,
+                             db_available=False)
     
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -87,11 +94,18 @@ def index():
                              stadium_count=stadium_count,
                              linked_count=linked_count,
                              league_stats=league_stats,
-                             logo_mapping=LOGO_MAPPING)
+                             logo_mapping=LOGO_MAPPING,
+                             db_available=True)
     
     except Exception as e:
         flash(f'Error loading dashboard: {e}', 'error')
-        return render_template('error.html', message=str(e))
+        return render_template('index.html', 
+                             team_count=0,
+                             stadium_count=0,
+                             linked_count=0,
+                             league_stats=[],
+                             logo_mapping=LOGO_MAPPING,
+                             db_available=False)
 
 @app.route('/teams')
 def teams():
@@ -103,7 +117,14 @@ def teams():
     
     conn = get_db_connection()
     if not conn:
-        return render_template('error.html', message="Database connection failed")
+        # Return empty teams list when database is not available
+        return render_template('teams.html', 
+                             teams=[],
+                             pagination=None,
+                             league_filter=league_filter,
+                             search=search,
+                             logo_mapping=LOGO_MAPPING,
+                             db_available=False)
     
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
