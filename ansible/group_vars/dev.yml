@@ -1,6 +1,6 @@
 # Development environment variables
 env_name: "dev"
-app_dir: "/home/ansible/sportspuff-v6-dev"
+app_dir: "/opt/sportspuff-v6-dev"
 service_name: "sportspuff-v6-dev"
 app_port: 34181
 branch: "dev"
