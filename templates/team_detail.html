@@ -142,12 +142,10 @@
                             {% endif %}
                         </table>
                         
-                        {% if team.curl_cmd %}
                         <div class="mt-3">
                             <h6>Logo</h6>
-                            <img src="{{ team.curl_cmd }}" alt="{{ team.real_team_name }} logo" class="img-fluid" style="max-height: 100px;">
+                            <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" class="img-fluid" style="max-height: 100px;" onerror="this.style.display='none';">
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>

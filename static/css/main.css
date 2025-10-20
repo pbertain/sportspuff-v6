@@ -80,7 +80,7 @@ main, .main-content {
 }
 
 .league-card {
-  background: var(--card-bg);
+  background: rgba(20, 15, 40, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--warm-white);
 }
@@ -330,11 +330,23 @@ main, .main-content {
   width: 80px;
   height: 80px;
   margin: 0 auto 1rem;
-  border-radius: 50%;
-  background: var(--cool-gray);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 2rem;
+  overflow: hidden;
+}
+
+.league-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.league-logo i {
   font-size: 2rem;
 }
 
@@ -400,4 +412,27 @@ main, .main-content {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Division Cards */
+.division-card {
+  background: rgba(30, 25, 50, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--warm-white);
+  transition: all 0.3s ease;
+}
+
+.division-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border-color: var(--electric-red);
+}
+
+.division-card .card-title {
+  color: var(--warm-white);
+  font-weight: bold;
+}
+
+.division-card .card-text {
+  color: var(--soft-gray);
 }

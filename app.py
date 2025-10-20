@@ -166,6 +166,19 @@ def teams():
         cursor.execute(teams_query, params + [per_page, offset])
         teams = cursor.fetchall()
         
+        # Get divisions for the selected league
+        divisions = []
+        if league_filter:
+            divisions_query = """
+                SELECT division, COUNT(*) as team_count
+                FROM teams 
+                WHERE league = %s AND division IS NOT NULL AND division != ''
+                GROUP BY division
+                ORDER BY division
+            """
+            cursor.execute(divisions_query, [league_filter])
+            divisions = cursor.fetchall()
+        
         # Get leagues for filter dropdown
         cursor.execute("SELECT DISTINCT league FROM teams ORDER BY league")
         leagues = [row['league'] for row in cursor.fetchall()]
@@ -179,6 +192,7 @@ def teams():
         return render_template('teams.html', 
                              teams=teams,
                              leagues=leagues,
+                             divisions=divisions,
                              current_league=league_filter,
                              search=search,
                              page=page,
