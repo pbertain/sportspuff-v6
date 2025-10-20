@@ -1,12 +1,17 @@
 /* Sportspuff v6 - Modern Arena Color Scheme */
 
 :root {
-  /* Core Site Palette */
-  --deep-navy: #1A2A6C;
-  --cool-gray: #E0E0E0;
-  --electric-red: #FF3B30;
-  --golden-yellow: #FFB400;
-  --pure-white: #FFFFFF;
+  /* Core Site Palette - Softer Dark Theme */
+  --deep-purple: #2D1B69;      /* Deep purple instead of navy */
+  --soft-gray: #B8B8B8;        /* Softer gray instead of bright white */
+  --electric-red: #FF3B30;      /* Keep the red accent */
+  --golden-yellow: #FFB400;     /* Keep the yellow accent */
+  --warm-white: #F5F5F5;       /* Warmer white instead of pure white */
+  
+  /* Background colors - softer approach */
+  --main-bg: linear-gradient(135deg, #1A0B3D 0%, #2D1B69 50%, #3D2A7A 100%);
+  --card-bg: rgba(45, 27, 105, 0.8);
+  --container-bg: rgba(26, 11, 61, 0.9);
   
   /* League-Specific Accents */
   --mlb-accent: #0E4C92;      /* Royal Blue */
@@ -18,63 +23,66 @@
   --mls-accent: #2BAE66;      /* Emerald Green */
   
   /* Gradients */
-  --primary-gradient: linear-gradient(135deg, var(--deep-navy) 0%, var(--electric-red) 100%);
-  --secondary-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--pure-white) 100%);
+  --primary-gradient: linear-gradient(135deg, var(--deep-purple) 0%, var(--electric-red) 100%);
+  --secondary-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--warm-white) 100%);
   
   /* League Gradients */
-  --mlb-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--mlb-accent) 100%);
+  --mlb-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--mlb-accent) 100%);
   --nhl-gradient: linear-gradient(135deg, var(--nhl-accent-dark) 0%, var(--nhl-accent) 100%);
-  --nba-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--nba-accent) 100%);
-  --nfl-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--nfl-accent) 100%);
-  --wnba-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--wnba-accent) 100%);
-  --mls-gradient: linear-gradient(135deg, var(--cool-gray) 0%, var(--mls-accent) 100%);
+  --nba-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--nba-accent) 100%);
+  --nfl-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--nfl-accent) 100%);
+  --wnba-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--wnba-accent) 100%);
+  --mls-gradient: linear-gradient(135deg, var(--soft-gray) 0%, var(--mls-accent) 100%);
 }
 
 /* Base Styles */
 body {
-  background-color: var(--pure-white);
-  color: var(--deep-navy);
+  background: var(--main-bg);
+  color: var(--warm-white);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Main Content Area - Much Darker Background */
+/* Main Content Area - Softer Purple Background */
 main, .main-content {
-  background: linear-gradient(135deg, #0F0F0F 0%, #1A1A1A 50%, #2D2D2D 100%);
+  background: var(--main-bg);
   min-height: 100vh;
   padding: 2rem 0;
 }
 
 .container {
-  background: rgba(20, 20, 20, 0.95);
+  background: var(--container-bg);
   border-radius: 20px;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   margin: 2rem auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Update text colors for dark theme */
-body {
-  background-color: #0F0F0F;
-  color: #E0E0E0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .card {
-  background: rgba(30, 30, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #E0E0E0;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--warm-white);
 }
 
 .stat-card {
-  background: rgba(25, 25, 25, 0.9);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  color: #E0E0E0;
+  background: var(--card-bg);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--warm-white);
+}
+
+.stat-card h5 {
+  color: var(--warm-white);
+  font-weight: bold;
+}
+
+.stat-card p {
+  color: var(--soft-gray);
 }
 
 .league-card {
-  background: rgba(25, 25, 25, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #E0E0E0;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--warm-white);
 }
 
 /* Navigation */
