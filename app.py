@@ -172,12 +172,13 @@ def teams():
             divisions_query = """
                 SELECT d.division_name as division, COUNT(t.team_id) as team_count
                 FROM divisions d
-                LEFT JOIN teams t ON d.division_id = t.division_id AND t.league = %s
-                WHERE d.league = %s
+                JOIN leagues l ON d.league_id = l.league_id
+                LEFT JOIN teams t ON d.division_id = t.division_id
+                WHERE l.league_abbreviation = %s
                 GROUP BY d.division_id, d.division_name
                 ORDER BY d.division_name
             """
-            cursor.execute(divisions_query, [league_filter, league_filter])
+            cursor.execute(divisions_query, [league_filter])
             divisions = cursor.fetchall()
         
         # Get leagues for filter dropdown

@@ -80,7 +80,7 @@ main, .main-content {
 }
 
 .league-card {
-  background: rgba(20, 15, 40, 0.9);
+  background: rgba(10, 5, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--warm-white);
 }
@@ -327,8 +327,8 @@ main, .main-content {
 }
 
 .league-logo {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   margin: 0 auto 1rem;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
