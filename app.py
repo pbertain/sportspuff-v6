@@ -375,15 +375,28 @@ def api_stadiums():
 
 @app.route('/static/logos/<path:filename>')
 def serve_logo(filename):
-    """Serve logo files"""
-    return send_from_directory('logos', filename)
+    """Serve logo files from splitsp.lat"""
+    # Redirect to splitsp.lat for logos
+    from flask import redirect
+    return redirect(f'https://www.splitsp.lat/logos/{filename}', code=302)
 
 @app.template_filter('get_logo')
 def get_logo(team_id):
-    """Template filter to get team logo"""
+    """Template filter to get team logo from splitsp.lat"""
     if str(team_id) in LOGO_MAPPING:
-        return LOGO_MAPPING[str(team_id)]['logo_url']
-    return None
+        logo_info = LOGO_MAPPING[str(team_id)]
+        league = logo_info.get('league', '').lower()
+        team_name = logo_info.get('team_name', '').replace(' ', '_').lower()
+        return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
+    return '/static/images/no-logo.png'
+
+@app.template_filter('get_league_logo')
+def get_league_logo(league):
+    """Template filter to get league logo from splitsp.lat"""
+    if league:
+        league_lower = league.lower()
+        return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
+    return '/static/images/no-logo.png'
 
 if __name__ == '__main__':
     import sys
