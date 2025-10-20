@@ -21,13 +21,13 @@ function getContrastColorFromRGB(r, g, b) {
     // Calculate luminance using relative luminance formula
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     
-    // Return black for light backgrounds, white for dark backgrounds
-    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+    // Use a lower threshold for better contrast - anything above 0.3 gets black text
+    return luminance > 0.3 ? '#000000' : '#FFFFFF';
 }
 
 function adjustTextContrast() {
-    // Adjust contrast for all cards
-    const cards = document.querySelectorAll('.card, .stat-card, .league-card');
+    // Adjust contrast for all cards - be more aggressive
+    const cards = document.querySelectorAll('.card, .stat-card, .league-card, .division-card');
     
     cards.forEach(card => {
         const computedStyle = window.getComputedStyle(card);
@@ -42,37 +42,36 @@ function adjustTextContrast() {
             
             const contrastColor = getContrastColorFromRGB(r, g, b);
             
-            // Apply contrast color to text elements
-            const textElements = card.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div:not(.btn)');
+            // Apply contrast color to ALL text elements - be aggressive
+            const textElements = card.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, a, td, th');
             textElements.forEach(element => {
-                // Skip elements that already have specific color styling
-                if (!element.style.color || element.style.color === '') {
+                // Skip buttons and links that have their own styling
+                if (!element.classList.contains('btn') && !element.tagName.toLowerCase() === 'a') {
                     element.style.color = contrastColor;
+                    element.style.textShadow = contrastColor === '#FFFFFF' ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)';
                 }
             });
         }
     });
     
-    // Adjust contrast for league cards specifically
-    const leagueCards = document.querySelectorAll('.league-card');
-    leagueCards.forEach(card => {
-        const league = card.dataset.league;
-        if (league) {
-            // Apply league-specific styling with proper contrast
-            const leagueColors = {
-                'MLB': { bg: '#0E4C92', text: '#FFFFFF' },
-                'NHL': { bg: '#BFC9CA', text: '#000000' },
-                'NBA': { bg: '#7028E4', text: '#FFFFFF' },
-                'NFL': { bg: '#B3001B', text: '#FFFFFF' },
-                'WNBA': { bg: '#FF6F00', text: '#FFFFFF' },
-                'MLS': { bg: '#2BAE66', text: '#FFFFFF' }
-            };
+    // Force dark text on light backgrounds
+    const lightElements = document.querySelectorAll('.card, .stat-card, .league-card, .division-card');
+    lightElements.forEach(element => {
+        const computedStyle = window.getComputedStyle(element);
+        const bgColor = computedStyle.backgroundColor;
+        const rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        
+        if (rgbMatch) {
+            const r = parseInt(rgbMatch[1]);
+            const g = parseInt(rgbMatch[2]);
+            const b = parseInt(rgbMatch[3]);
             
-            if (leagueColors[league]) {
-                card.style.backgroundColor = leagueColors[league].bg;
-                const textElements = card.querySelectorAll('h5, p, .stat-number');
-                textElements.forEach(element => {
-                    element.style.color = leagueColors[league].text;
+            // If background is light (high RGB values), force dark text
+            if (r > 150 && g > 150 && b > 150) {
+                const textElements = element.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div');
+                textElements.forEach(textEl => {
+                    textEl.style.color = '#000000';
+                    textEl.style.textShadow = '1px 1px 2px rgba(255,255,255,0.8)';
                 });
             }
         }

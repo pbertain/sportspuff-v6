@@ -170,13 +170,14 @@ def teams():
         divisions = []
         if league_filter:
             divisions_query = """
-                SELECT division, COUNT(*) as team_count
-                FROM teams 
-                WHERE league = %s AND division IS NOT NULL AND division != ''
-                GROUP BY division
-                ORDER BY division
+                SELECT d.division_name as division, COUNT(t.team_id) as team_count
+                FROM divisions d
+                LEFT JOIN teams t ON d.division_id = t.division_id AND t.league = %s
+                WHERE d.league = %s
+                GROUP BY d.division_id, d.division_name
+                ORDER BY d.division_name
             """
-            cursor.execute(divisions_query, [league_filter])
+            cursor.execute(divisions_query, [league_filter, league_filter])
             divisions = cursor.fetchall()
         
         # Get leagues for filter dropdown
@@ -397,11 +398,30 @@ def serve_logo(filename):
 @app.template_filter('get_logo')
 def get_logo(team_id):
     """Template filter to get team logo from splitsp.lat"""
+    # First try the logo mapping
     if str(team_id) in LOGO_MAPPING:
         logo_info = LOGO_MAPPING[str(team_id)]
         league = logo_info.get('league', '').lower()
         team_name = logo_info.get('team_name', '').replace(' ', '_').lower()
         return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
+    
+    # Fallback: get team info from database
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT real_team_name, league FROM teams WHERE team_id = %s", [team_id])
+            team = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if team:
+                league = team['league'].lower()
+                team_name = team['real_team_name'].replace(' ', '_').lower()
+                return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
+        except:
+            pass
+    
     return '/static/images/no-logo.png'
 
 @app.template_filter('get_league_logo')
