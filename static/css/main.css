@@ -414,6 +414,93 @@ main, .main-content {
   100% { transform: rotate(360deg); }
 }
 
+/* Division Box Layout */
+.division-box {
+  background: rgba(30, 25, 50, 0.9);
+  border-radius: 15px;
+  padding: 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  height: 100%;
+  min-height: 400px;
+}
+
+.division-title {
+  color: var(--golden-yellow);
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  border-bottom: 2px solid var(--golden-yellow);
+  padding-bottom: 0.5rem;
+}
+
+.teams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.team-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(45, 27, 105, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.team-item:hover {
+  background: rgba(45, 27, 105, 0.8);
+  border-color: var(--electric-red);
+  transform: translateX(5px);
+}
+
+.team-logo-small {
+  width: 35px;
+  height: 35px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.team-logo-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.team-details {
+  flex-grow: 1;
+  color: var(--warm-white);
+}
+
+.team-name {
+  color: var(--warm-white);
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.stadium-info {
+  color: var(--soft-gray);
+  font-size: 0.8rem;
+  margin-bottom: 0.1rem;
+}
+
+.location-info {
+  color: var(--golden-yellow);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* League Page Styles */
 .league-title {
   color: var(--warm-white);

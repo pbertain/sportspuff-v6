@@ -119,14 +119,11 @@ def league_page(league_name):
         
         # Get teams for this league organized by divisions
         teams_query = """
-            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
-                   d.division_name, c.conference_name
+            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
             FROM teams t
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
-            LEFT JOIN divisions d ON t.division_id = d.division_id
-            LEFT JOIN conferences c ON d.conference_id = c.conference_id
-            WHERE t.league = %s
-            ORDER BY c.conference_name, d.division_name, t.real_team_name
+            WHERE t.league = %s AND t.division_name IS NOT NULL AND t.conference_name IS NOT NULL
+            ORDER BY t.conference_name, t.division_name, t.real_team_name
         """
         cursor.execute(teams_query, [league_name])
         teams = cursor.fetchall()
@@ -134,8 +131,8 @@ def league_page(league_name):
         # Organize teams by conference and division
         organized_teams = {}
         for team in teams:
-            conference = team['conference_name'] or 'Unknown'
-            division = team['division_name'] or 'Unknown'
+            conference = team['conference_name']
+            division = team['division_name']
             
             if conference not in organized_teams:
                 organized_teams[conference] = {}
@@ -467,6 +464,16 @@ def get_logo(team_id):
             if team:
                 league = team['league'].lower()
                 team_name = team['real_team_name'].replace(' ', '_').lower()
+                
+                # Special cases for team logo naming
+                if team_name == 'st._louis_cardinals':
+                    team_name = 'st_louis_cardinals'
+                elif team_name == 'new_york_yankees':
+                    team_name = 'new_york_yankees'
+                elif team_name == 'los_angeles_dodgers':
+                    team_name = 'los_angeles_dodgers'
+                # Add more special cases as needed
+                
                 return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
         except:
             pass
@@ -478,7 +485,21 @@ def get_league_logo(league):
     """Template filter to get league logo from splitsp.lat"""
     if league:
         league_lower = league.lower()
-        return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
+        # Special cases for logo naming
+        if league_lower == 'mlb':
+            return 'https://www.splitsp.lat/logos/mlb/mlb_logo.png'
+        elif league_lower == 'nfl':
+            return 'https://www.splitsp.lat/logos/nfl/nfl_logo.png'
+        elif league_lower == 'nba':
+            return 'https://www.splitsp.lat/logos/nba/nba_logo.png'
+        elif league_lower == 'nhl':
+            return 'https://www.splitsp.lat/logos/nhl/nhl_logo.png'
+        elif league_lower == 'mls':
+            return 'https://www.splitsp.lat/logos/mls/mls_logo.png'
+        elif league_lower == 'wnba':
+            return 'https://www.splitsp.lat/logos/wnba/wnba_logo.png'
+        else:
+            return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
     return '/static/images/no-logo.png'
 
 if __name__ == '__main__':

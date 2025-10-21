@@ -31,40 +31,32 @@
                     <img src="{{ league_name | get_league_logo }}" alt="{{ league_name }} Logo" style="height: 80px; margin-right: 20px;" onerror="this.style.display='none';">
                     {{ league_name }}
                 </h1>
-                <p class="league-subtitle">{{ organized_teams | length }} Conferences</p>
             </div>
         </div>
 
-        <!-- Teams by Conference and Division -->
+        <!-- Division Boxes Layout -->
         {% for conference_name, divisions in organized_teams.items() %}
-        <div class="row mb-5">
+        <div class="row mb-4">
             <div class="col-12">
                 <h2 class="conference-title">{{ conference_name }}</h2>
                 
                 <div class="row">
                     {% for division_name, teams in divisions.items() %}
                     <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="division-section">
+                        <div class="division-box">
                             <h3 class="division-title">{{ division_name }}</h3>
-                            <div class="teams-grid">
+                            <div class="teams-list">
                                 {% for team in teams %}
-                                <div class="team-card">
-                                    <div class="team-logo">
+                                <div class="team-item">
+                                    <div class="team-logo-small">
                                         <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                     </div>
-                                    <div class="team-info">
-                                        <h4 class="team-name">{{ team.real_team_name }}</h4>
+                                    <div class="team-details">
+                                        <div class="team-name">{{ team.real_team_name }}</div>
                                         {% if team.full_stadium_name %}
-                                        <p class="stadium-name">{{ team.full_stadium_name }}</p>
-                                        <p class="stadium-location">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</p>
-                                        {% else %}
-                                        <p class="stadium-name">No Stadium</p>
+                                        <div class="stadium-info">{{ team.full_stadium_name }}</div>
+                                        <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
                                         {% endif %}
-                                    </div>
-                                    <div class="team-actions">
-                                        <a href="{{ url_for('team_detail', team_id=team.team_id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
                                     </div>
                                 </div>
                                 {% endfor %}
