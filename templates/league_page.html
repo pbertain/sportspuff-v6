@@ -11,15 +11,28 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff v6
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
-                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
-                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
-            </div>
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                    <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                    <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                    <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Leagues
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        </ul>
+                    </div>
+                </div>
         </div>
     </nav>
 
@@ -34,45 +47,45 @@
             </div>
         </div>
 
-        <!-- Division Boxes Layout -->
-        {% for conference_name, divisions in organized_teams.items() %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2 class="conference-title">{{ conference_name }}</h2>
-                
-                <div class="row">
-                    {% for division_name, teams in divisions.items() %}
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="division-box">
-                            <h3 class="division-title">{{ division_name }}</h3>
-                            <div class="teams-list">
-                                {% for team in teams %}
-                                <div class="team-item">
-                                    <div class="team-logo-small">
-                                        <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+            <!-- Division Boxes Layout -->
+            {% for conference_name, divisions in organized_teams.items() %}
+            <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% elif league_name in ['MLS', 'WNBA'] %}no-divisions{% endif %}">
+                <div class="col-12">
+                    <h2 class="conference-title">{{ conference_name }}</h2>
+                    
+                    <div class="row">
+                        {% for division_name, teams in divisions.items() %}
+                        <div class="{% if league_name == 'NFL' %}col-lg-3{% elif league_name in ['MLS', 'WNBA'] %}col-lg-6{% else %}col-lg-4{% endif %} col-md-6 mb-4">
+                            <div class="division-box">
+                                <h3 class="division-title">{{ division_name }}</h3>
+                                <div class="teams-list">
+                                    {% for team in teams %}
+                                    <div class="team-item">
+                                        <div class="team-logo-small">
+                                            <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                        </div>
+                                        <div class="team-details">
+                                            <div class="team-name">{{ team.real_team_name }}</div>
+                                            {% if team.full_stadium_name %}
+                                            <div class="stadium-info">{{ team.full_stadium_name }}</div>
+                                            <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    <div class="team-details">
-                                        <div class="team-name">{{ team.real_team_name }}</div>
-                                        {% if team.full_stadium_name %}
-                                        <div class="stadium-info">{{ team.full_stadium_name }}</div>
-                                        <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
-                                        {% endif %}
-                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
         <div class="container">
-            <p>&copy; 2024 Sportspuff v6. Built with Flask and PostgreSQL.</p>
+            <p>&copy; 2024 Sportspuff. Built with Flask and PostgreSQL.</p>
         </div>
     </footer>
 

@@ -80,7 +80,7 @@ main, .main-content {
 }
 
 .league-card {
-  background: rgba(10, 5, 20, 0.95);
+  background: rgba(45, 27, 105, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--warm-white);
 }
@@ -327,11 +327,11 @@ main, .main-content {
 }
 
 .league-logo {
-  width: 150px;
-  height: 150px;
+  width: 300px;
+  height: 300px;
   margin: 0 auto 1rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -424,6 +424,42 @@ main, .main-content {
   min-height: 400px;
 }
 
+/* Center divisions within the page */
+.conference-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.conference-section .row {
+  justify-content: center;
+}
+
+/* For leagues with 4 divisions (NFL), put all on one line */
+.nfl-conference .row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nfl-conference .col-lg-4 {
+  flex: 0 0 22%;
+  max-width: 22%;
+  margin: 0 1%;
+}
+
+/* For MLS and WNBA (no divisions), put conferences side by side */
+.no-divisions .row {
+  display: flex;
+  justify-content: center;
+}
+
+.no-divisions .col-lg-6 {
+  flex: 0 0 45%;
+  max-width: 45%;
+  margin: 0 2.5%;
+}
+
 .division-title {
   color: var(--golden-yellow);
   font-size: 1.5rem;
@@ -462,7 +498,7 @@ main, .main-content {
   width: 35px;
   height: 35px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;

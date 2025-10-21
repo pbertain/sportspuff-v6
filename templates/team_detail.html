@@ -10,15 +10,28 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff v6
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
-                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
-                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
-            </div>
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                    <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                    <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                    <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Leagues
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        </ul>
+                    </div>
+                </div>
         </div>
     </nav>
 

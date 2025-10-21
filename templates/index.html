@@ -9,29 +9,42 @@
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff v6
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
-                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
-                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 200px; margin-right: 20px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                    <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                    <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                    <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Leagues
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
     <div class="hero-section">
         <div class="container text-center hero-content">
-            <h1 class="display-4 mb-4 fade-in-up">Welcome to Sportspuff v6</h1>
-            <p class="lead fade-in-up">Comprehensive database of sports teams and stadiums</p>
+            <h1 class="display-4 mb-4 fade-in-up">Welcome to Sportspuff</h1>
+            <p class="lead fade-in-up">Scores, Schedules, Standings and Stadiums</p>
             <div class="mt-4 fade-in-up">
                 <a href="#leagues" class="btn btn-primary btn-lg me-3">
                     <i class="fas fa-trophy me-2"></i>Explore Leagues
                 </a>
-                <a href="#admin" class="btn btn-outline-light btn-lg">
+                <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-light btn-lg">
                     <i class="fas fa-cog me-2"></i>Admin Panel
                 </a>
             </div>
@@ -46,33 +59,6 @@
             Database setup is pending. Teams and stadiums will appear once the database is configured.
         </div>
         {% endif %}
-        
-        <div class="row">
-            <div class="col-md-4">
-                <div class="stat-card text-center">
-                    <div class="stat-number">{{ team_count }}</div>
-                    <h5>Teams</h5>
-                    <p class="text-muted">Across all leagues</p>
-                    <a href="{{ url_for('teams') }}" class="btn btn-primary">View Teams</a>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card text-center">
-                    <div class="stat-number">{{ stadium_count }}</div>
-                    <h5>Stadiums</h5>
-                    <p class="text-muted">Sports venues</p>
-                    <a href="{{ url_for('stadiums') }}" class="btn btn-primary">View Stadiums</a>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card text-center">
-                    <div class="stat-number">{{ linked_count }}</div>
-                    <h5>Linked</h5>
-                    <p class="text-muted">Teams with stadiums</p>
-                    <a href="{{ url_for('teams') }}" class="btn btn-outline-primary">View Details</a>
-                </div>
-            </div>
-        </div>
 
         <!-- League Sections -->
         <div id="leagues" class="row mt-5">
@@ -162,60 +148,11 @@
                 </div>
             </div>
         </div>
-
-        <!-- Admin Panel -->
-        <div id="admin" class="row mt-5">
-            <div class="col-12">
-                <h2 class="text-center mb-5 fade-in-up">
-                    <i class="fas fa-cog me-2"></i>Admin Panel
-                </h2>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="card fade-in-up">
-                            <div class="card-header">
-                                <h5><i class="fas fa-database me-2"></i>Database Management</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <a href="{{ url_for('teams') }}" class="btn btn-outline-primary">
-                                        <i class="fas fa-users me-2"></i>Manage Teams
-                                    </a>
-                                    <a href="{{ url_for('stadiums') }}" class="btn btn-outline-primary">
-                                        <i class="fas fa-building me-2"></i>Manage Stadiums
-                                    </a>
-                                    <a href="{{ url_for('api_teams') }}" class="btn btn-outline-secondary" target="_blank">
-                                        <i class="fas fa-code me-2"></i>Teams API
-                                    </a>
-                                    <a href="{{ url_for('api_stadiums') }}" class="btn btn-outline-secondary" target="_blank">
-                                        <i class="fas fa-code me-2"></i>Stadiums API
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <div class="card fade-in-up">
-                            <div class="card-header">
-                                <h5><i class="fas fa-info-circle me-2"></i>System Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <p><strong>Total Teams:</strong> {{ team_count }}</p>
-                                <p><strong>Total Stadiums:</strong> {{ stadium_count }}</p>
-                                <p><strong>Linked Teams:</strong> {{ linked_count }}</p>
-                                <p class="mb-0"><strong>Coverage:</strong> 6 Major Leagues</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
         <div class="container">
-            <p>&copy; 2024 Sportspuff v6. Built with Flask and PostgreSQL.</p>
+            <p>&copy; 2024 Sportspuff. Built with Flask and PostgreSQL.</p>
         </div>
     </footer>
 
