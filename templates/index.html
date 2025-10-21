@@ -90,7 +90,7 @@
                         </div>
                         <h3 class="league-name">Major League Baseball</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLB') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='MLB') }}" class="btn btn-mlb">
+                        <a href="{{ url_for('league_page', league_name='MLB') }}" class="btn btn-mlb">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>
@@ -103,7 +103,7 @@
                         </div>
                         <h3 class="league-name">National Football League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NFL') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='NFL') }}" class="btn btn-nfl">
+                        <a href="{{ url_for('league_page', league_name='NFL') }}" class="btn btn-nfl">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>
@@ -116,7 +116,7 @@
                         </div>
                         <h3 class="league-name">National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NBA') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='NBA') }}" class="btn btn-nba">
+                        <a href="{{ url_for('league_page', league_name='NBA') }}" class="btn btn-nba">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>
@@ -129,7 +129,7 @@
                         </div>
                         <h3 class="league-name">National Hockey League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NHL') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='NHL') }}" class="btn btn-nhl">
+                        <a href="{{ url_for('league_page', league_name='NHL') }}" class="btn btn-nhl">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>
@@ -142,7 +142,7 @@
                         </div>
                         <h3 class="league-name">Major League Soccer</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLS') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='MLS') }}" class="btn btn-mls">
+                        <a href="{{ url_for('league_page', league_name='MLS') }}" class="btn btn-mls">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>
@@ -155,7 +155,7 @@
                         </div>
                         <h3 class="league-name">Women's National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'WNBA') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('teams', league='WNBA') }}" class="btn btn-wnba">
+                        <a href="{{ url_for('league_page', league_name='WNBA') }}" class="btn btn-wnba">
                             <i class="fas fa-eye me-2"></i>View Teams
                         </a>
                     </div>

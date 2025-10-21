@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ league_name }} - Sportspuff v6</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff v6
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- League Header -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="league-title">
+                    <img src="{{ league_name | get_league_logo }}" alt="{{ league_name }} Logo" style="height: 80px; margin-right: 20px;" onerror="this.style.display='none';">
+                    {{ league_name }}
+                </h1>
+                <p class="league-subtitle">{{ organized_teams | length }} Conferences</p>
+            </div>
+        </div>
+
+        <!-- Teams by Conference and Division -->
+        {% for conference_name, divisions in organized_teams.items() %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="conference-title">{{ conference_name }}</h2>
+                
+                <div class="row">
+                    {% for division_name, teams in divisions.items() %}
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="division-section">
+                            <h3 class="division-title">{{ division_name }}</h3>
+                            <div class="teams-grid">
+                                {% for team in teams %}
+                                <div class="team-card">
+                                    <div class="team-logo">
+                                        <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                    </div>
+                                    <div class="team-info">
+                                        <h4 class="team-name">{{ team.real_team_name }}</h4>
+                                        {% if team.full_stadium_name %}
+                                        <p class="stadium-name">{{ team.full_stadium_name }}</p>
+                                        <p class="stadium-location">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</p>
+                                        {% else %}
+                                        <p class="stadium-name">No Stadium</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="team-actions">
+                                        <a href="{{ url_for('team_detail', team_id=team.team_id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2024 Sportspuff v6. Built with Flask and PostgreSQL.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
+</body>
+</html>

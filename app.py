@@ -107,6 +107,54 @@ def index():
                              logo_mapping=LOGO_MAPPING,
                              db_available=False)
 
+@app.route('/league/<league_name>')
+def league_page(league_name):
+    """League page showing teams organized by divisions"""
+    conn = get_db_connection()
+    if not conn:
+        return render_template('error.html', message='Database connection failed')
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get teams for this league organized by divisions
+        teams_query = """
+            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
+                   d.division_name, c.conference_name
+            FROM teams t
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN divisions d ON t.division_id = d.division_id
+            LEFT JOIN conferences c ON d.conference_id = c.conference_id
+            WHERE t.league = %s
+            ORDER BY c.conference_name, d.division_name, t.real_team_name
+        """
+        cursor.execute(teams_query, [league_name])
+        teams = cursor.fetchall()
+        
+        # Organize teams by conference and division
+        organized_teams = {}
+        for team in teams:
+            conference = team['conference_name'] or 'Unknown'
+            division = team['division_name'] or 'Unknown'
+            
+            if conference not in organized_teams:
+                organized_teams[conference] = {}
+            if division not in organized_teams[conference]:
+                organized_teams[conference][division] = []
+            
+            organized_teams[conference][division].append(team)
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('league_page.html', 
+                             league_name=league_name,
+                             organized_teams=organized_teams,
+                             logo_mapping=LOGO_MAPPING)
+    
+    except Exception as e:
+        return render_template('error.html', message=str(e))
+
 @app.route('/teams')
 def teams():
     """List all teams with pagination"""
