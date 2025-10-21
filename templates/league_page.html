@@ -49,13 +49,13 @@
 
             <!-- Division Boxes Layout -->
             {% for conference_name, divisions in organized_teams.items() %}
-            <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% elif league_name == 'NHL' %}nhl-conference{% elif league_name in ['MLS', 'WNBA'] %}no-divisions{% endif %}">
+            <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% elif league_name == 'NHL' %}nhl-conference{% elif league_name == 'MLS' %}mls-conference{% elif league_name == 'WNBA' %}no-divisions{% endif %}">
                 <div class="col-12">
                     <h2 class="conference-title">{{ conference_name }}</h2>
                     
                     <div class="row">
                         {% for division_name, teams in divisions.items() %}
-                        <div class="{% if league_name == 'NFL' %}col-lg-3{% elif league_name == 'NHL' %}col-lg-4{% elif league_name in ['MLS', 'WNBA'] %}col-lg-6{% else %}col-lg-4{% endif %} col-md-6 mb-4">
+                        <div class="{% if league_name == 'NFL' %}col-lg-3{% elif league_name == 'NHL' %}col-lg-4{% elif league_name == 'MLS' %}col-lg-6{% elif league_name == 'WNBA' %}col-lg-6{% else %}col-lg-4{% endif %} col-md-6 mb-4">
                             <div class="division-box">
                                 <h3 class="division-title">{{ division_name }}</h3>
                                 <div class="teams-list">

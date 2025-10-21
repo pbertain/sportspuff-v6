@@ -450,6 +450,18 @@ main, .main-content {
   margin: 0 1%;
 }
 
+/* For MLS (2 conferences), put conferences side by side */
+.mls-conference .row {
+  display: flex;
+  justify-content: center;
+}
+
+.mls-conference .col-lg-6 {
+  flex: 0 0 45%;
+  max-width: 45%;
+  margin: 0 2.5%;
+}
+
 /* For MLS and WNBA (no divisions), put conferences side by side */
 .no-divisions .row {
   display: flex;
