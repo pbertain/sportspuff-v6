@@ -19,7 +19,7 @@ Chicago_Cubs,chicago_cubs,Chicago Cubs,1,mlb,1032,105,Central, NL Central,103,NL
 Cincinnati_Reds,cincinnati_reds,Cincinnati Reds,1,mlb,1037,105,Central, NL Central,103,NL, National League,MLB,122,cincinnati,oh,us,160,cincinnati_reds_logo.png
 Milwaukee_Brewers,milwaukee_brewers,Milwaukee Brewers,1,mlb,1092,105,Central, NL Central,103,NL, National League,MLB,123,milwaukee,wi,us,107,milwaukee_brewers_logo.png
 Pittsburgh_Pirates,pittsburgh_pirates,Pittsburgh Pirates,1,mlb,1131,105,Central, NL Central,103,NL, National League,MLB,124,pittsburgh,pa,us,199,pittsburgh_pirates_logo.png
-St._Louis_Cardinals,st._louis_cardinals,St. Louis Cardinals,1,mlb,1151,105,Central, NL Central,103,NL, National League,MLB,125,st_louis,mo,us,121,st._louis_cardinals_logo.png
+St._Louis_Cardinals,st_louis_cardinals,St. Louis Cardinals,1,mlb,1151,105,Central, NL Central,103,NL, National League,MLB,125,st_louis,mo,us,121,st_louis_cardinals_logo.png
 Atlanta_Braves,atlanta_braves,Atlanta Braves,1,mlb,1009,106,East, NL East,103,NL, National League,MLB,126,atlanta,ga,us,234,atlanta_braves_logo.png
 Miami_Marlins,miami_marlins,Miami Marlins,1,mlb,1091,106,East, NL East,103,NL, National League,MLB,127,miami,fl,us,176,miami_marlins_logo.png
 New_York_Mets,new_york_mets,New York Mets,1,mlb,1114,106,East, NL East,103,NL, National League,MLB,128,new_york,ny,us,131,new_york_mets_logo.png
@@ -36,7 +36,7 @@ Cf_Montréal,cf_montréal,CF Montréal,2,mls,1026,109,Eastern, Eastern Conference,1
 Charlotte_Fc,charlotte_fc,Charlotte FC,2,mls,1027,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,102,charlotte,nc,us,113,charlotte_fc_logo.png
 Chicago_Fire_Fc,chicago_fire_fc,Chicago Fire FC,2,mls,1033,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,103,chicago,il,us,219,chicago_fire_fc_logo.png
 Columbus_Crew,columbus_crew,Columbus Crew,2,mls,1045,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,105,columbus,oh,us,177,columbus_crew_logo.png
-D.C._United,d.c._united,D.C. United,2,mls,1047,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,106,washington,dc,us,111,d.c._united_logo.png
+D.C._United,dc_united,D.C. United,2,mls,1047,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,106,washington,dc,us,111,dc_united_logo.png
 Fc_Cincinnati,fc_cincinnati,FC Cincinnati,2,mls,1059,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,104,cincinnati,oh,us,233,fc_cincinnati_logo.png
 Inter_Miami_Cf,inter_miami_cf,Inter Miami CF,2,mls,1072,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,107,miami,fl,us,129,inter_miami_cf_logo.png
 Nashville_Sc,nashville_sc,Nashville SC,2,mls,1102,109,Eastern, Eastern Conference,105,Eastern, Eastern Conference,MLS,109,nashville,tn,us,154,nashville_sc_logo.png
@@ -59,7 +59,7 @@ San_Diego_Fc,san_diego_fc,San Diego FC,2,mls,1138,110,Western, Western Conferenc
 San_Jose_Earthquakes,san_jose_earthquakes,San Jose Earthquakes,2,mls,1142,110,Western, Western Conference,106,Western, Western Conference,MLS,126,san_jose,ca,us,196,san_jose_earthquakes_logo.png
 Seattle_Sounders_Fc,seattle_sounders_fc,Seattle Sounders FC,2,mls,1147,110,Western, Western Conference,106,Western, Western Conference,MLS,127,seattle,wa,us,179,seattle_sounders_fc_logo.png
 Sporting_Kansas_City,sporting_kansas_city,Sporting Kansas City,2,mls,1149,110,Western, Western Conference,106,Western, Western Conference,MLS,128,kansas_city,ks,us,130,sporting_kansas_city_logo.png
-St._Louis_City_Sc,st._louis_city_sc,St. Louis City SC,2,mls,1152,110,Western, Western Conference,106,Western, Western Conference,MLS,129,st_louis,mo,us,144,st._louis_city_sc_logo.png
+St._Louis_City_Sc,st_louis_city_sc,St. Louis City SC,2,mls,1152,110,Western, Western Conference,106,Western, Western Conference,MLS,129,st_louis,mo,us,144,st_louis_city_sc_logo.png
 Vancouver_Whitecaps_Fc,vancouver_whitecaps_fc,Vancouver Whitecaps FC,2,mls,1165,110,Western, Western Conference,106,Western, Western Conference,MLS,130,vancouver,bc,ca,115,vancouver_whitecaps_fc_logo.png
 NBA,nba,National Basketball Association,3,nba,1002,111,UA,Unaffiliated,105,UA,Unaffiliated,NBA,100,new_york,ny,us,,nba_logo.png
 Boston_Celtics,boston_celtics,Boston Celtics,3,nba,1018,112, Atlantic, Atlantic,106,Eastern, Eastern Conference,NBA,101,boston,ma,us,230,boston_celtics_logo.png
@@ -147,7 +147,7 @@ Colorado_Avalanche,colorado_avalanche,Colorado Avalanche,5,nhl,1041,130,Central,
 Dallas_Stars,dallas_stars,Dallas Stars,5,nhl,1050,130,Central, Central,113,Western, Western Conference,NHL,119,dallas,tx,us,106,dallas_stars_logo.png
 Minnesota_Wild,minnesota_wild,Minnesota Wild,5,nhl,1099,130,Central, Central,113,Western, Western Conference,NHL,120,minneapolis,mn,us,159,minnesota_wild_logo.png
 Nashville_Predators,nashville_predators,Nashville Predators,5,nhl,1101,130,Central, Central,113,Western, Western Conference,NHL,121,nashville,tn,us,120,nashville_predators_logo.png
-St._Louis_Blues,st._louis_blues,St. Louis Blues,5,nhl,1150,130,Central, Central,113,Western, Western Conference,NHL,122,st_louis,mo,us,145,st._louis_blues_logo.png
+St._Louis_Blues,st_louis_blues,St. Louis Blues,5,nhl,1150,130,Central, Central,113,Western, Western Conference,NHL,122,st_louis,mo,us,145,st_louis_blues_logo.png
 Utah_Mammoth,utah_mammoth,Utah Mammoth,5,nhl,1163,130,Central, Central,113,Western, Western Conference,NHL,123,salt_lake_city,ut,us,139,utah_mammoth_logo.png
 Winnipeg_Jets,winnipeg_jets,Winnipeg Jets,5,nhl,1172,130,Central, Central,113,Western, Western Conference,NHL,124,winnipeg,mb,ca,123,winnipeg_jets_logo.png
 Anaheim_Ducks,anaheim_ducks,Anaheim Ducks,5,nhl,1006,131,Pacific, Pacific,113,Western, Western Conference,NHL,125,anaheim,ca,us,163,anaheim_ducks_logo.png
