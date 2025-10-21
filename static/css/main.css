@@ -435,14 +435,16 @@ main, .main-content {
   justify-content: center;
 }
 
-/* For leagues with 4 divisions (NFL), put all on one line */
-.nfl-conference .row {
+/* For leagues with 4 divisions (NFL, NHL), put all on one line */
+.nfl-conference .row,
+.nhl-conference .row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-.nfl-conference .col-lg-4 {
+.nfl-conference .col-lg-4,
+.nhl-conference .col-lg-4 { /* Adjusted for 4 columns */
   flex: 0 0 22%;
   max-width: 22%;
   margin: 0 1%;
