@@ -151,18 +151,18 @@ def league_page(league_name):
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-            # Get teams for this league organized by divisions (exclude league placeholders)
-            teams_query = """
-                SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
-                FROM teams t
-                LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
-                WHERE t.league = %s 
-                AND t.division_name IS NOT NULL 
-                AND t.conference_name IS NOT NULL
-                AND t.real_team_name NOT LIKE '%League%'
-                AND t.real_team_name NOT LIKE '%Conference%'
-                ORDER BY t.conference_name, t.division_name, t.real_team_name
-            """
+        # Get teams for this league organized by divisions (exclude Unaffiliated teams)
+        teams_query = """
+            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
+            FROM teams t
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            WHERE t.league = %s 
+            AND t.division_name IS NOT NULL 
+            AND t.conference_name IS NOT NULL
+            AND t.division_name != 'UA'
+            AND t.conference_name != 'UA'
+            ORDER BY t.conference_name, t.division_name, t.real_team_name
+        """
         cursor.execute(teams_query, [league_name])
         teams = cursor.fetchall()
         
@@ -481,40 +481,20 @@ def serve_logo(filename):
 
 @app.template_filter('get_logo')
 def get_logo(team_id):
-    """Template filter to get team logo from splitsp.lat"""
-    # First try the logo mapping
-    if str(team_id) in LOGO_MAPPING:
-        logo_info = LOGO_MAPPING[str(team_id)]
-        league = logo_info.get('league', '').lower()
-        team_name = logo_info.get('team_name', '').replace(' ', '_').lower()
-        return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
-    
-    # Fallback: get team info from database
+    """Template filter to get team logo from splitsp.lat using logo_filename column"""
     conn = get_db_connection()
     if conn:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute("SELECT real_team_name, league FROM teams WHERE team_id = %s", [team_id])
+            cursor.execute("SELECT league, logo_filename FROM teams WHERE team_id = %s", [team_id])
             team = cursor.fetchone()
             cursor.close()
             conn.close()
             
-            if team:
+            if team and team['logo_filename']:
                 league = team['league'].lower()
-                team_name = team['real_team_name'].replace(' ', '_').lower()
-                
-                    # Special cases for team logo naming
-                    if team_name == 'st._louis_cardinals':
-                        team_name = 'st_louis_cardinals'
-                    elif team_name == 'st._louis_blues':
-                        team_name = 'st_louis_blues'
-                    elif team_name == 'new_york_yankees':
-                        team_name = 'new_york_yankees'
-                    elif team_name == 'los_angeles_dodgers':
-                        team_name = 'los_angeles_dodgers'
-                # Add more special cases as needed
-                
-                return f'https://www.splitsp.lat/logos/{league}/{team_name}_logo.png'
+                logo_filename = team['logo_filename']
+                return f'https://www.splitsp.lat/logos/{league}/{logo_filename}'
         except:
             pass
     
