@@ -151,7 +151,7 @@ def league_page(league_name):
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get teams for this league organized by divisions (exclude Unaffiliated teams, but include IPL)
+        # Get teams for this league organized by divisions (exclude ONLY the placeholder "India Premier League" team)
         teams_query = """
             SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
             FROM teams t
@@ -159,8 +159,7 @@ def league_page(league_name):
             WHERE t.league = %s 
             AND t.division_name IS NOT NULL 
             AND t.conference_name IS NOT NULL
-            AND (t.division_name != 'UA' OR t.league = 'IPL')
-            AND (t.conference_name != 'UA' OR t.league = 'IPL')
+            AND t.real_team_name != 'India Premier League'
             ORDER BY t.conference_name, t.division_name, t.real_team_name
         """
         cursor.execute(teams_query, [league_name])
