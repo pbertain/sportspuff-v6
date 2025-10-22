@@ -79,9 +79,10 @@ def index():
         
         # Get league breakdown
         cursor.execute("""
-            SELECT league, COUNT(*) as count 
-            FROM teams 
-            GROUP BY league 
+            SELECT l.league_name_proper as league, COUNT(t.team_id) as count 
+            FROM leagues l
+            LEFT JOIN teams t ON l.league_id = t.league_id
+            GROUP BY l.league_id, l.league_name_proper
             ORDER BY count DESC
         """)
         league_stats = cursor.fetchall()
