@@ -53,11 +53,11 @@
                         <h5 class="card-title">{{ stadium.full_stadium_name }}</h5>
                         <p class="card-text">
                             <i class="fas fa-map-marker-alt me-2"></i>
-                            {{ stadium.city_name.title() }}, {{ stadium.state_name.upper() }}
+                            {{ stadium.city_name.title() if stadium.city_name else "Unknown" }}, {{ stadium.state_name.upper() if stadium.state_name else "Unknown" }}
                         </p>
                         <div class="row text-center">
                             <div class="col-6">
-                                <strong>{{ "{:,}".format(stadium.capacity) }}</strong>
+                                <strong>{{ "{:,}".format(stadium.capacity) if stadium.capacity else "N/A" }}</strong>
                                 <br>
                                 <small class="text-muted">Capacity</small>
                             </div>
