@@ -112,10 +112,40 @@
                 </div>
                 {% endfor %}
             </div>
+            {% elif league_name == 'WNBA' %}
+            <!-- WNBA: Both conferences on same row -->
+            <div class="row mb-4 conference-section no-divisions">
+                {% for conference_name, divisions in organized_teams.items() %}
+                <div class="col-lg-6 col-md-6 mb-4">
+                    <h2 class="conference-title">{{ conference_name }}</h2>
+                    {% for division_name, teams in divisions.items() %}
+                    <div class="division-box">
+                        <h3 class="division-title">{{ division_name }}</h3>
+                        <div class="teams-list">
+                            {% for team in teams %}
+                            <div class="team-item">
+                                <div class="team-logo-small">
+                                    <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                </div>
+                                <div class="team-details">
+                                    <div class="team-name">{{ team.real_team_name }}</div>
+                                    {% if team.full_stadium_name %}
+                                    <div class="stadium-info">{{ team.full_stadium_name }}</div>
+                                    <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
             {% else %}
             <!-- Other leagues: Standard layout -->
             {% for conference_name, divisions in organized_teams.items() %}
-            <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% elif league_name == 'WNBA' %}no-divisions{% endif %}">
+            <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% endif %}">
                 <div class="col-12">
                     <h2 class="conference-title">{{ conference_name }}</h2>
                     
