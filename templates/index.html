@@ -70,82 +70,74 @@
                 
                 <div class="league-grid">
                     <!-- MLB -->
-                    <div class="league-card mlb fade-in-up" data-league="MLB">
+                    <a href="{{ url_for('league_page', league_name='MLB') }}" class="league-card mlb fade-in-up" data-league="MLB">
                         <div class="league-logo">
                             <img src="{{ 'MLB' | get_league_logo }}" alt="MLB Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-baseball-ball" style="color: var(--mlb-accent); display: none;"></i>
                         </div>
                         <h3 class="league-name">Major League Baseball</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLB') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='MLB') }}" class="btn btn-mlb">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
                     
                     <!-- NFL -->
-                    <div class="league-card nfl fade-in-up" data-league="NFL">
+                    <a href="{{ url_for('league_page', league_name='NFL') }}" class="league-card nfl fade-in-up" data-league="NFL">
                         <div class="league-logo">
                             <img src="{{ 'NFL' | get_league_logo }}" alt="NFL Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-football-ball" style="color: var(--nfl-accent); display: none;"></i>
                         </div>
                         <h3 class="league-name">National Football League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NFL') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='NFL') }}" class="btn btn-nfl">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
                     
                     <!-- NBA -->
-                    <div class="league-card nba fade-in-up" data-league="NBA">
+                    <a href="{{ url_for('league_page', league_name='NBA') }}" class="league-card nba fade-in-up" data-league="NBA">
                         <div class="league-logo">
                             <img src="{{ 'NBA' | get_league_logo }}" alt="NBA Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-basketball-ball" style="color: var(--nba-accent); display: none;"></i>
                         </div>
                         <h3 class="league-name">National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NBA') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='NBA') }}" class="btn btn-nba">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
                     
                     <!-- NHL -->
-                    <div class="league-card nhl fade-in-up" data-league="NHL">
+                    <a href="{{ url_for('league_page', league_name='NHL') }}" class="league-card nhl fade-in-up" data-league="NHL">
                         <div class="league-logo">
                             <img src="{{ 'NHL' | get_league_logo }}" alt="NHL Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-hockey-puck" style="color: var(--nhl-accent-dark); display: none;"></i>
                         </div>
                         <h3 class="league-name">National Hockey League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'NHL') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='NHL') }}" class="btn btn-nhl">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
                     
                     <!-- MLS -->
-                    <div class="league-card mls fade-in-up" data-league="MLS">
+                    <a href="{{ url_for('league_page', league_name='MLS') }}" class="league-card mls fade-in-up" data-league="MLS">
                         <div class="league-logo">
                             <img src="{{ 'MLS' | get_league_logo }}" alt="MLS Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-futbol" style="color: var(--mls-accent); display: none;"></i>
                         </div>
                         <h3 class="league-name">Major League Soccer</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLS') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='MLS') }}" class="btn btn-mls">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
                     
                     <!-- WNBA -->
-                    <div class="league-card wnba fade-in-up" data-league="WNBA">
+                    <a href="{{ url_for('league_page', league_name='WNBA') }}" class="league-card wnba fade-in-up" data-league="WNBA">
                         <div class="league-logo">
                             <img src="{{ 'WNBA' | get_league_logo }}" alt="WNBA Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-basketball-ball" style="color: var(--wnba-accent); display: none;"></i>
                         </div>
                         <h3 class="league-name">Women's National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'WNBA') | map(attribute='count') | first or 0 }} Teams</p>
-                        <a href="{{ url_for('league_page', league_name='WNBA') }}" class="btn btn-wnba">
-                            <i class="fas fa-eye me-2"></i>View Teams
-                        </a>
-                    </div>
+                    </a>
+                    
+                    <!-- IPL -->
+                    <a href="{{ url_for('league_page', league_name='IPL') }}" class="league-card ipl fade-in-up" data-league="IPL">
+                        <div class="league-logo">
+                            <img src="{{ 'IPL' | get_league_logo }}" alt="IPL Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-cricket" style="color: var(--ipl-accent); display: none;"></i>
+                        </div>
+                        <h3 class="league-name">Indian Premier League</h3>
+                        <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'IPL') | map(attribute='count') | first or 0 }} Teams</p>
+                    </a>
                 </div>
             </div>
         </div>

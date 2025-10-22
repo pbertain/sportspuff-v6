@@ -20,6 +20,11 @@
   --nba-accent: #7028E4;      /* Vibrant Purple */
   --nfl-accent: #B3001B;      /* Deep Crimson */
   --wnba-accent: #FF6F00;     /* Bright Orange */
+  --wnba-accent-dark: #E55A00;
+  
+  /* IPL Colors */
+  --ipl-accent: #FF6B35;      /* Orange-Red */
+  --ipl-accent-dark: #E55A2B;
   --mls-accent: #2BAE66;      /* Emerald Green */
   
   /* Gradients */
@@ -80,8 +85,20 @@ main, .main-content {
 }
 
 .league-card {
-  background: rgba(45, 27, 105, 0.95);
+  background: rgba(20, 10, 40, 0.95); /* Much darker aubergine */
   border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--warm-white);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+
+.league-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: rgba(25, 15, 45, 0.98); /* Even darker on hover */
+  text-decoration: none;
   color: var(--warm-white);
 }
 
@@ -261,6 +278,7 @@ main, .main-content {
 .btn-nfl { background: var(--nfl-accent); border-color: var(--nfl-accent); }
 .btn-wnba { background: var(--wnba-accent); border-color: var(--wnba-accent); }
 .btn-mls { background: var(--mls-accent); border-color: var(--mls-accent); }
+.btn-ipl { background: var(--ipl-accent); border-color: var(--ipl-accent); }
 
 /* Statistics Cards */
 .stat-card {
@@ -320,6 +338,7 @@ main, .main-content {
 .league-card.nfl::before { background: var(--nfl-accent); }
 .league-card.wnba::before { background: var(--wnba-accent); }
 .league-card.mls::before { background: var(--mls-accent); }
+.league-card.ipl::before { background: var(--ipl-accent); }
 
 .league-card:hover {
   transform: translateY(-10px);
