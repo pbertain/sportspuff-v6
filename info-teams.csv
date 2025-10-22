@@ -1,0 +1,178 @@
+full_team_name,team_name,real_team_name,league_id,team_id,division_id,conference_id,team_league_id,city_name,state_name,country,stadium_id,logo_filename
+Anaheim_Ducks,anaheim_ducks,Anaheim Ducks,5,1001,131,113,125,anaheim,ca,us,163,anaheim_ducks_logo.png
+Arizona_Cardinals,arizona_cardinals,Arizona Cardinals,4,1002,126,110,129,glendale,az,us,223,arizona_cardinals_logo.png
+Arizona_Diamondbacks,arizona_diamondbacks,Arizona Diamondbacks,1,1003,107,103,116,phoenix,az,us,128,arizona_diamondbacks_logo.png
+Atlanta_Braves,atlanta_braves,Atlanta Braves,1,1004,106,103,126,atlanta,ga,us,234,atlanta_braves_logo.png
+Atlanta_Dream,atlanta_dream,Atlanta Dream,6,1005,133,115,101,atlanta,ga,us,153,atlanta_dream_logo.png
+Atlanta_Falcons,atlanta_falcons,Atlanta Falcons,4,1006,125,110,125,atlanta,ga,us,182,atlanta_falcons_logo.png
+Atlanta_Hawks,atlanta_hawks,Atlanta Hawks,3,1007,114,106,111,atlanta,ga,us,222,atlanta_hawks_logo.png
+Atlanta_United_Fc,atlanta_united_fc,Atlanta United FC,2,1008,109,105,101,atlanta,ga,us,182,atlanta_united_fc_logo.png
+Austin_Fc,austin_fc,Austin FC,2,1009,110,106,116,austin,tx,us,204,austin_fc_logo.png
+Baltimore_Orioles,baltimore_orioles,Baltimore Orioles,1,1010,103,102,101,baltimore,md,us,193,baltimore_orioles_logo.png
+Baltimore_Ravens,baltimore_ravens,Baltimore Ravens,4,1011,120,109,105,baltimore,md,us,180,baltimore_ravens_logo.png
+Boston_Bruins,boston_bruins,Boston Bruins,5,1012,128,112,101,boston,ma,us,230,boston_bruins_logo.png
+Boston_Celtics,boston_celtics,Boston Celtics,3,1013,112,106,101,boston,ma,us,230,boston_celtics_logo.png
+Boston_Red_Sox,boston_red_sox,Boston Red Sox,1,1014,103,102,102,boston,ma,us,148,boston_red_sox_logo.png
+Brooklyn_Nets,brooklyn_nets,Brooklyn Nets,3,1015,112,106,102,brooklyn,ny,us,114,brooklyn_nets_logo.png
+Buffalo_Bills,buffalo_bills,Buffalo Bills,4,1016,119,109,101,buffalo,ny,us,162,buffalo_bills_logo.png
+Buffalo_Sabres,buffalo_sabres,Buffalo Sabres,5,1017,128,112,102,buffalo,ny,us,169,buffalo_sabres_logo.png
+Calgary_Flames,calgary_flames,Calgary Flames,5,1018,131,113,126,calgary,ab,ca,214,calgary_flames_logo.png
+Carolina_Hurricanes,carolina_hurricanes,Carolina Hurricanes,5,1019,129,112,109,raleigh,nc,us,172,carolina_hurricanes_logo.png
+Carolina_Panthers,carolina_panthers,Carolina Panthers,4,1020,125,110,126,charlotte,nc,us,113,carolina_panthers_logo.png
+Cf_Montréal,cf_montréal,CF Montréal,2,1021,109,105,108,montreal,qc,ca,212,cf_montréal_logo.png
+Charlotte_Fc,charlotte_fc,Charlotte FC,2,1022,109,105,102,charlotte,nc,us,113,charlotte_fc_logo.png
+Charlotte_Hornets,charlotte_hornets,Charlotte Hornets,3,1023,114,106,112,charlotte,nc,us,220,charlotte_hornets_logo.png
+Chennai_Super_Kings ,chennai_super_kings ,Chennai Super Kings ,7,1024,136,118,101,chennai,tn,in,242,chennai_super_kings _logo.png
+Chicago_Bears,chicago_bears,Chicago Bears,4,1025,124,110,121,chicago,il,us,219,chicago_bears_logo.png
+Chicago_Blackhawks,chicago_blackhawks,Chicago Blackhawks,5,1026,130,113,117,chicago,il,us,237,chicago_blackhawks_logo.png
+Chicago_Bulls,chicago_bulls,Chicago Bulls,3,1027,113,106,106,chicago,il,us,237,chicago_bulls_logo.png
+Chicago_Cubs,chicago_cubs,Chicago Cubs,1,1028,105,103,121,chicago,il,us,239,chicago_cubs_logo.png
+Chicago_Fire_Fc,chicago_fire_fc,Chicago Fire FC,2,1029,109,105,103,chicago,il,us,219,chicago_fire_fc_logo.png
+Chicago_Sky,chicago_sky,Chicago Sky,6,1030,133,115,102,chicago,il,us,238,chicago_sky_logo.png
+Chicago_White_Sox,chicago_white_sox,Chicago White Sox,1,1031,102,102,106,chicago,il,us,205,chicago_white_sox_logo.png
+Cincinnati_Bengals,cincinnati_bengals,Cincinnati Bengals,4,1032,120,109,106,cincinnati,oh,us,195,cincinnati_bengals_logo.png
+Cincinnati_Reds,cincinnati_reds,Cincinnati Reds,1,1033,105,103,122,cincinnati,oh,us,160,cincinnati_reds_logo.png
+Cleveland_Browns,cleveland_browns,Cleveland Browns,4,1034,120,109,107,cleveland,oh,us,164,cleveland_browns_logo.png
+Cleveland_Cavaliers,cleveland_cavaliers,Cleveland Cavaliers,3,1035,113,106,107,cleveland,oh,us,207,cleveland_cavaliers_logo.png
+Cleveland_Guardians,cleveland_guardians,Cleveland Guardians,1,1036,102,102,107,cleveland,oh,us,201,cleveland_guardians_logo.png
+Colorado_Avalanche,colorado_avalanche,Colorado Avalanche,5,1037,130,113,118,colorado,co,us,112,colorado_avalanche_logo.png
+Colorado_Rapids,colorado_rapids,Colorado Rapids,2,1038,110,106,117,denver,co,us,140,colorado_rapids_logo.png
+Colorado_Rockies,colorado_rockies,Colorado Rockies,1,1039,107,103,117,denver,co,us,136,colorado_rockies_logo.png
+Columbus_Blue_Jackets,columbus_blue_jackets,Columbus Blue Jackets,5,1040,129,112,110,columbus,oh,us,188,columbus_blue_jackets_logo.png
+Columbus_Crew,columbus_crew,Columbus Crew,2,1041,109,105,105,columbus,oh,us,177,columbus_crew_logo.png
+Connecticut_Sun,connecticut_sun,Connecticut Sun,6,1042,133,115,103,uncasville,ct,us,186,connecticut_sun_logo.png
+Dallas_Cowboys,dallas_cowboys,Dallas Cowboys,4,1043,123,110,117,dallas,tx,us,110,dallas_cowboys_logo.png
+Dallas_Mavericks,dallas_mavericks,Dallas Mavericks,3,1044,117,107,126,dallas,tx,us,106,dallas_mavericks_logo.png
+Dallas_Stars,dallas_stars,Dallas Stars,5,1045,130,113,119,dallas,tx,us,106,dallas_stars_logo.png
+Dallas_Wings,dallas_wings,Dallas Wings,6,1046,134,116,107,dallas,tx,us,134,dallas_wings_logo.png
+DC_United,dc_united,D.C. United,2,1047,109,105,106,washington,dc,us,111,dc_united_logo.png
+Delhi_Capitals,delhi_capitals,Delhi Capitals,7,1048,136,118,102,delhi,dl,in,243,delhi_capitals_logo.png
+Denver_Broncos,denver_broncos,Denver Broncos,4,1049,122,109,113,denver,co,us,143,denver_broncos_logo.png
+Denver_Nuggets,denver_nuggets,Denver Nuggets,3,1050,115,107,116,denver,co,us,112,denver_nuggets_logo.png
+Detroit_Lions,detroit_lions,Detroit Lions,4,1051,124,110,122,detroit,mi,us,150,detroit_lions_logo.png
+Detroit_Pistons,detroit_pistons,Detroit Pistons,3,1052,113,106,108,detroit,mi,us,175,detroit_pistons_logo.png
+Detroit_Red_Wings,detroit_red_wings,Detroit Red Wings,5,1053,128,112,103,detroit,mi,us,175,detroit_red_wings_logo.png
+Detroit_Tigers,detroit_tigers,Detroit Tigers,1,1054,102,102,108,detroit,mi,us,135,detroit_tigers_logo.png
+Edmonton_Oilers,edmonton_oilers,Edmonton Oilers,5,1055,131,113,127,edmonton,ab,ca,210,edmonton_oilers_logo.png
+Fc_Cincinnati,fc_cincinnati,FC Cincinnati,2,1056,109,105,104,cincinnati,oh,us,233,fc_cincinnati_logo.png
+Fc_Dallas,fc_dallas,FC Dallas,2,1057,110,106,118,dallas,tx,us,232,fc_dallas_logo.png
+Florida_Panthers,florida_panthers,Florida Panthers,5,1058,128,112,104,miami,fl,us,104,florida_panthers_logo.png
+Golden_State_Valkyries,golden_state_valkyries,Golden State Valkyries,6,1059,134,116,108,san_francisco,ca,us,127,golden_state_valkyries_logo.png
+Golden_State_Warriors,golden_state_warriors,Golden State Warriors,3,1060,116,107,121,san_francisco,ca,us,127,golden_state_warriors_logo.png
+Green_Bay_Packers,green_bay_packers,Green Bay Packers,4,1061,124,110,123,green_bay,wi,us,171,green_bay_packers_logo.png
+Gujarat_Titans,gujarat_titans,Gujarat Titans,7,1062,136,118,103,ahmedabad,gj,in,244,gujarat_titans_logo.png
+Houston_Astros,houston_astros,Houston Astros,1,1063,104,102,111,houston,tx,us,138,houston_astros_logo.png
+Houston_Dynamo_Fc,houston_dynamo_fc,Houston Dynamo FC,2,1064,110,106,119,houston,tx,us,215,houston_dynamo_fc_logo.png
+Houston_Rockets,houston_rockets,Houston Rockets,3,1065,117,107,127,houston,tx,us,231,houston_rockets_logo.png
+Houston_Texans,houston_texans,Houston Texans,4,1066,121,109,109,houston,tx,us,191,houston_texans_logo.png
+Indiana_Fever,indiana_fever,Indiana Fever,6,1067,133,115,104,indiana,in,us,152,indiana_fever_logo.png
+Indiana_Pacers,indiana_pacers,Indiana Pacers,3,1068,113,106,109,indiana,in,us,152,indiana_pacers_logo.png
+Indianapolis_Colts,indianapolis_colts,Indianapolis Colts,4,1069,121,109,110,indianapolis,in,us,178,indianapolis_colts_logo.png
+Inter_Miami_Cf,inter_miami_cf,Inter Miami CF,2,1070,109,105,107,miami,fl,us,129,inter_miami_cf_logo.png
+Jacksonville_Jaguars,jacksonville_jaguars,Jacksonville Jaguars,4,1071,121,109,111,jacksonville,fl,us,146,jacksonville_jaguars_logo.png
+Kansas_City_Chiefs,kansas_city_chiefs,Kansas City Chiefs,4,1072,122,109,114,kansas_city,mo,us,109,kansas_city_chiefs_logo.png
+Kansas_City_Royals,kansas_city_royals,Kansas City Royals,1,1073,102,102,109,kansas_city,mo,us,168,kansas_city_royals_logo.png
+Kolkata_Knight_Riders,kolkata_knight_riders,Kolkata Knight Riders,7,1074,136,118,104,kolkata,wb,in,245,kolkata_knight_riders_logo.png
+La_Clippers,la_clippers,Los Angeles Clippers,3,1075,116,107,122,los_angeles,ca,us,166,la_clippers_logo.png
+La_Galaxy,la_galaxy,Los Angeles Galaxy,2,1076,110,106,120,los_angeles,ca,us,141,la_galaxy_logo.png
+Las_Vegas_Aces,las_vegas_aces,Las Vegas Aces,6,1077,134,116,109,las_vegas,nv,us,184,las_vegas_aces_logo.png
+Las_Vegas_Raiders,las_vegas_raiders,Las Vegas Raiders,4,1078,122,109,115,las_vegas,nv,us,102,las_vegas_raiders_logo.png
+Los_Angeles_Angels,los_angeles_angels,Los Angeles Angels,1,1079,104,102,112,los_angeles,ca,us,108,los_angeles_angels_logo.png
+Los_Angeles_Chargers,los_angeles_chargers,Los Angeles Chargers,4,1080,122,109,116,los_angeles,ca,us,218,los_angeles_chargers_logo.png
+Los_Angeles_Dodgers,los_angeles_dodgers,Los Angeles Dodgers,1,1081,107,103,118,los_angeles,ca,us,142,los_angeles_dodgers_logo.png
+Los_Angeles_Fc,los_angeles_fc,Los Angeles FC,2,1082,110,106,121,los_angeles,ca,us,119,los_angeles_fc_logo.png
+Los_Angeles_Kings,los_angeles_kings,Los Angeles Kings,5,1083,131,113,128,los_angeles,ca,us,137,los_angeles_kings_logo.png
+Los_Angeles_Lakers,los_angeles_lakers,Los Angeles Lakers,3,1084,116,107,123,los_angeles,ca,us,137,los_angeles_lakers_logo.png
+Los_Angeles_Rams,los_angeles_rams,Los Angeles Rams,4,1085,126,110,130,los_angeles,ca,us,218,los_angeles_rams_logo.png
+Los_Angeles_Sparks,los_angeles_sparks,Los Angeles Sparks,6,1086,134,116,110,los_angeles,ca,us,137,los_angeles_sparks_logo.png
+Lucknow_Super_Giants,lucknow_super_giants,Lucknow Super Giants,7,1087,136,118,105,lucknow,up,in,246,lucknow_super_giants_logo.png
+Memphis_Grizzlies,memphis_grizzlies,Memphis Grizzlies,3,1088,117,107,128,memphis,tn,us,147,memphis_grizzlies_logo.png
+Miami_Dolphins,miami_dolphins,Miami Dolphins,4,1089,119,109,102,miami,fl,us,161,miami_dolphins_logo.png
+Miami_Heat,miami_heat,Miami Heat,3,1090,114,106,113,miami,fl,us,167,miami_heat_logo.png
+Miami_Marlins,miami_marlins,Miami Marlins,1,1091,106,103,127,miami,fl,us,176,miami_marlins_logo.png
+Milwaukee_Brewers,milwaukee_brewers,Milwaukee Brewers,1,1092,105,103,123,milwaukee,wi,us,107,milwaukee_brewers_logo.png
+Milwaukee_Bucks,milwaukee_bucks,Milwaukee Bucks,3,1093,113,106,110,milwaukee,wi,us,149,milwaukee_bucks_logo.png
+Minnesota_Lynx,minnesota_lynx,Minnesota Lynx,6,1094,134,116,111,minneapolis,mn,us,228,minnesota_lynx_logo.png
+Minnesota_Timberwolves,minnesota_timberwolves,Minnesota Timberwolves,3,1095,115,107,117,minneapolis,mn,us,228,minnesota_timberwolves_logo.png
+Minnesota_Twins,minnesota_twins,Minnesota Twins,1,1096,102,102,110,minneapolis,mn,us,229,minnesota_twins_logo.png
+Minnesota_United_Fc,minnesota_united_fc,Minnesota United FC,2,1097,110,106,122,minneapolis,mn,us,103,minnesota_united_fc_logo.png
+Minnesota_Vikings,minnesota_vikings,Minnesota Vikings,4,1098,124,110,124,minneapolis,mn,us,235,minnesota_vikings_logo.png
+Minnesota_Wild,minnesota_wild,Minnesota Wild,5,1099,130,113,120,minneapolis,mn,us,159,minnesota_wild_logo.png
+Montreal_Canadiens,montreal_canadiens,Montreal Canadiens,5,1100,128,112,105,montreal,qc,ca,116,montreal_canadiens_logo.png
+Mumbai_Indians,mumbai_indians,Mumbai Indians,7,1101,136,118,106,mumbai,mh,in,247,mumbai_indians_logo.png
+Nashville_Predators,nashville_predators,Nashville Predators,5,1102,130,113,121,nashville,tn,us,120,nashville_predators_logo.png
+Nashville_Sc,nashville_sc,Nashville SC,2,1103,109,105,109,nashville,tn,us,154,nashville_sc_logo.png
+New_England_Patriots,new_england_patriots,New England Patriots,4,1104,119,109,103,foxborough,ma,us,156,new_england_patriots_logo.png
+New_England_Revolution,new_england_revolution,New England Revolution,2,1105,109,105,110,foxborough,ma,us,156,new_england_revolution_logo.png
+New_Jersey_Devils,new_jersey_devils,New Jersey Devils,5,1106,129,112,111,newark,nj,us,203,new_jersey_devils_logo.png
+New_Orleans_Pelicans,new_orleans_pelicans,New Orleans Pelicans,3,1107,117,107,129,new_orleans,la,us,216,new_orleans_pelicans_logo.png
+New_Orleans_Saints,new_orleans_saints,New Orleans Saints,4,1108,125,110,127,new_orleans,la,us,122,new_orleans_saints_logo.png
+New_York_City_Fc,new_york_city_fc,New York City FC,2,1109,109,105,111,new_york,ny,us,241,new_york_city_fc_logo.png
+New_York_Giants,new_york_giants,New York Giants,4,1110,123,110,118,new_york,ny,us,183,new_york_giants_logo.png
+New_York_Islanders,new_york_islanders,New York Islanders,5,1111,129,112,112,new_york,ny,us,236,new_york_islanders_logo.png
+New_York_Jets,new_york_jets,New York Jets,4,1112,119,109,104,new_york,ny,us,183,new_york_jets_logo.png
+New_York_Knicks,new_york_knicks,New York Knicks,3,1113,112,106,103,new_york,ny,us,181,new_york_knicks_logo.png
+New_York_Liberty,new_york_liberty,New York Liberty,6,1114,133,115,105,new_york,ny,us,114,new_york_liberty_logo.png
+New_York_Mets,new_york_mets,New York Mets,1,1115,106,103,128,new_york,ny,us,131,new_york_mets_logo.png
+New_York_Rangers,new_york_rangers,New York Rangers,5,1116,129,112,113,new_york,ny,us,181,new_york_rangers_logo.png
+New_York_Red_Bulls,new_york_red_bulls,New York Red Bulls,2,1117,109,105,112,new_york,ny,us,221,new_york_red_bulls_logo.png
+New_York_Yankees,new_york_yankees,New York Yankees,1,1118,103,102,103,new_york,ny,us,241,new_york_yankees_logo.png
+Oakland_Athletics,oakland_athletics,Oakland Athletics,1,1119,104,102,113,west_sacramento,ca,us,225,oakland_athletics_logo.png
+Oklahoma_City_Thunder,oklahoma_city_thunder,Oklahoma City Thunder,3,1120,115,107,118,oklahoma_city,ok,us,194,oklahoma_city_thunder_logo.png
+Orlando_City_Sc,orlando_city_sc,Orlando City SC,2,1121,109,105,113,orlando,fl,us,165,orlando_city_sc_logo.png
+Orlando_Magic,orlando_magic,Orlando Magic,3,1122,114,106,114,orlando,fl,us,170,orlando_magic_logo.png
+Ottawa_Senators,ottawa_senators,Ottawa Senators,5,1123,128,112,106,ottawa,on,ca,124,ottawa_senators_logo.png
+Philadelphia_76Ers,philadelphia_76ers,Philadelphia 76ers,3,1124,112,106,104,philadelphia,pa,us,240,philadelphia_76ers_logo.png
+Philadelphia_Eagles,philadelphia_eagles,Philadelphia Eagles,4,1125,123,110,119,philadelphia,pa,us,174,philadelphia_eagles_logo.png
+Philadelphia_Flyers,philadelphia_flyers,Philadelphia Flyers,5,1126,129,112,114,philadelphia,pa,us,240,philadelphia_flyers_logo.png
+Philadelphia_Phillies,philadelphia_phillies,Philadelphia Phillies,1,1127,106,103,129,philadelphia,pa,us,132,philadelphia_phillies_logo.png
+Philadelphia_Union,philadelphia_union,Philadelphia Union,2,1128,109,105,114,philadelphia,pa,us,224,philadelphia_union_logo.png
+Phoenix_Mercury,phoenix_mercury,Phoenix Mercury,6,1129,134,116,112,phoenix,az,us,198,phoenix_mercury_logo.png
+Phoenix_Suns,phoenix_suns,Phoenix Suns,3,1130,116,107,124,phoenix,az,us,198,phoenix_suns_logo.png
+Pittsburgh_Penguins,pittsburgh_penguins,Pittsburgh Penguins,5,1131,129,112,115,pittsburgh,pa,us,200,pittsburgh_penguins_logo.png
+Pittsburgh_Pirates,pittsburgh_pirates,Pittsburgh Pirates,1,1132,105,103,124,pittsburgh,pa,us,199,pittsburgh_pirates_logo.png
+Pittsburgh_Steelers,pittsburgh_steelers,Pittsburgh Steelers,4,1133,120,109,108,pittsburgh,pa,us,101,pittsburgh_steelers_logo.png
+Portland_Timbers,portland_timbers,Portland Timbers,2,1134,110,106,123,portland,orleans,us,202,portland_timbers_logo.png
+Portland_Trail_Blazers,portland_trail_blazers,Portland Trail Blazers,3,1135,115,107,119,portland,or,us,185,portland_trail_blazers_logo.png
+Punjab_Kings,punjab_kings,Punjab Kings,7,1136,136,118,107,mohali,pb,in,248,punjab_kings_logo.png
+Rajasthan_Royals,rajasthan_royals,Rajasthan Royals,7,1137,136,118,108,jaipur,rj,in,249,rajasthan_royals_logo.png
+Real_Salt_Lake,real_salt_lake,Real Salt Lake,2,1138,110,106,124,salt_lake_city,ut,us,105,real_salt_lake_logo.png
+Royal_Challengers_Bengaluru,royal_challengers_bengaluru,Royal Challengers Bengaluru,7,1139,136,118,109,bengaluru,ka,in,250,royal_challengers_bengaluru_logo.png
+Sacramento_Kings,sacramento_kings,Sacramento Kings,3,1140,116,107,125,sacramento,ca,us,158,sacramento_kings_logo.png
+San_Antonio_Spurs,san_antonio_spurs,San Antonio Spurs,3,1141,117,107,130,san_antonio,tx,us,151,san_antonio_spurs_logo.png
+San_Diego_Fc,san_diego_fc,San Diego FC,2,1142,110,106,125,san_diego,ca,us,217,san_diego_fc_logo.png
+San_Diego_Padres,san_diego_padres,San Diego Padres,1,1143,107,103,119,san_diego,ca,us,197,san_diego_padres_logo.png
+San_Francisco_49Ers,san_francisco_49ers,San Francisco 49ers,4,1144,126,110,131,san_francisco,ca,us,173,san_francisco_49ers_logo.png
+San_Francisco_Giants,san_francisco_giants,San Francisco Giants,1,1145,107,103,120,san_francisco,ca,us,192,san_francisco_giants_logo.png
+San_Jose_Earthquakes,san_jose_earthquakes,San Jose Earthquakes,2,1146,110,106,126,san_jose,ca,us,196,san_jose_earthquakes_logo.png
+San_Jose_Sharks,san_jose_sharks,San Jose Sharks,5,1147,131,113,129,san_jose,ca,us,211,san_jose_sharks_logo.png
+Seattle_Kraken,seattle_kraken,Seattle Kraken,5,1148,131,113,130,seattle,wa,us,133,seattle_kraken_logo.png
+Seattle_Mariners,seattle_mariners,Seattle Mariners,1,1149,104,102,114,seattle,wa,us,227,seattle_mariners_logo.png
+Seattle_Seahawks,seattle_seahawks,Seattle Seahawks,4,1150,126,110,132,seattle,wa,us,179,seattle_seahawks_logo.png
+Seattle_Sounders_Fc,seattle_sounders_fc,Seattle Sounders FC,2,1151,110,106,127,seattle,wa,us,179,seattle_sounders_fc_logo.png
+Seattle_Storm,seattle_storm,Seattle Storm,6,1152,134,116,113,seattle,wa,us,133,seattle_storm_logo.png
+Sporting_Kansas_City,sporting_kansas_city,Sporting Kansas City,2,1153,110,106,128,kansas_city,ks,us,130,sporting_kansas_city_logo.png
+St_Louis_Blues,st_louis_blues,St. Louis Blues,5,1154,130,113,122,st_louis,mo,us,145,st_louis_blues_logo.png
+St_Louis_Cardinals,st_louis_cardinals,St. Louis Cardinals,1,1155,105,103,125,st_louis,mo,us,121,st_louis_cardinals_logo.png
+St_Louis_City_Sc,st_louis_city_sc,St. Louis City SC,2,1156,110,106,129,st_louis,mo,us,144,st_louis_city_sc_logo.png
+Sunrisers_Hyderabad,sunrisers_hyderabad,Sunrisers Hyderabad,7,1157,136,118,110,hyderabad,tg,in,251,sunrisers_hyderabad_logo.png
+Tampa_Bay_Buccaneers,tampa_bay_buccaneers,Tampa Bay Buccaneers,4,1158,125,110,128,tampa_bay,fl,us,206,tampa_bay_buccaneers_logo.png
+Tampa_Bay_Lightning,tampa_bay_lightning,Tampa Bay Lightning,5,1159,128,112,107,tampa_bay,fl,us,117,tampa_bay_lightning_logo.png
+Tampa_Bay_Rays,tampa_bay_rays,Tampa Bay Rays,1,1160,103,102,104,tampa_bay,fl,us,155,tampa_bay_rays_logo.png
+Tennessee_Titans,tennessee_titans,Tennessee Titans,4,1161,121,109,112,nashville,tn,us,189,tennessee_titans_logo.png
+Texas_Rangers,texas_rangers,Texas Rangers,1,1162,104,102,115,arlington,tx,us,157,texas_rangers_logo.png
+Toronto_Blue_Jays,toronto_blue_jays,Toronto Blue Jays,1,1163,103,102,105,toronto,on,ca,209,toronto_blue_jays_logo.png
+Toronto_Fc,toronto_fc,Toronto FC,2,1164,109,105,115,toronto,on,ca,118,toronto_fc_logo.png
+Toronto_Maple_Leafs,toronto_maple_leafs,Toronto Maple Leafs,5,1165,128,112,108,toronto,on,ca,213,toronto_maple_leafs_logo.png
+Toronto_Raptors,toronto_raptors,Toronto Raptors,3,1166,112,106,105,toronto,on,ca,213,toronto_raptors_logo.png
+Utah_Jazz,utah_jazz,Utah Jazz,3,1167,115,107,120,salt_lake_city,ut,us,139,utah_jazz_logo.png
+Utah_Mammoth,utah_mammoth,Utah Mammoth,5,1168,130,113,123,salt_lake_city,ut,us,139,utah_mammoth_logo.png
+Vancouver_Canucks,vancouver_canucks,Vancouver Canucks,5,1169,131,113,131,vancouver,bc,ca,208,vancouver_canucks_logo.png
+Vancouver_Whitecaps_Fc,vancouver_whitecaps_fc,Vancouver Whitecaps FC,2,1170,110,106,130,vancouver,bc,ca,115,vancouver_whitecaps_fc_logo.png
+Vegas_Golden_Knights,vegas_golden_knights,Vegas Golden Knights,5,1171,131,113,132,las_vegas,nv,us,226,vegas_golden_knights_logo.png
+Washington_Capitals,washington_capitals,Washington Capitals,5,1172,129,112,116,washington,dc,us,125,washington_capitals_logo.png
+Washington_Commanders,washington_commanders,Washington Commanders,4,1173,123,110,120,washington,dc,us,190,washington_commanders_logo.png
+Washington_Mystics,washington_mystics,Washington Mystics,6,1174,133,115,106,washington,dc,us,126,washington_mystics_logo.png
+Washington_Nationals,washington_nationals,Washington Nationals,1,1175,106,103,130,washington,dc,us,187,washington_nationals_logo.png
+Washington_Wizards,washington_wizards,Washington Wizards,3,1176,114,106,115,washington,dc,us,125,washington_wizards_logo.png
+Winnipeg_Jets,winnipeg_jets,Winnipeg Jets,5,1177,130,113,124,winnipeg,mb,ca,123,winnipeg_jets_logo.png

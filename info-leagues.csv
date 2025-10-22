@@ -1,0 +1,8 @@
+﻿league_name_full,league_id,league_name,league_name_proper,city_name,state_name,country,logo_filename,team_count,conference_count,division_count,current_champion_id
+Major League Baseball,1,mlb,MLB,new_york,ny,us,mlb_logo.png,30,2,6,1082
+Major League Soccer,2,mls,MLS,new_york,ny,us,mls_logo.png,30,2,0,1077
+National Basketball Association,3,nba,NBA,new_york,ny,us,nba_logo.png,30,2,6,1119
+National Football League,4,nfl,NFL,new_york,ny,us,nfl_logo.png,32,2,8,1124
+National Hockey League,5,nhl,NHL,new_york,ny,us,nhl_logo.png,32,2,4,1025
+Women's National Basketball League,6,wnba,WNBA,new_york,ny,us,wnba_logo.png,13,2,0,1078
+India Premier League,7,Ipl,IPL,mumbai,mh,in,ipl_logo.png,10,1,0,1182
