@@ -16,9 +16,9 @@ fi
 echo "Uninstalling pandas and numpy..."
 /opt/sportspuff-v6-prod/venv/bin/pip uninstall -y pandas numpy
 
-# Reinstall with compatible versions
-echo "Installing compatible pandas and numpy versions..."
-/opt/sportspuff-v6-prod/venv/bin/pip install numpy==1.24.3 pandas==1.5.3
+# Reinstall with Python 3.12 compatible versions
+echo "Installing Python 3.12 compatible pandas and numpy versions..."
+/opt/sportspuff-v6-prod/venv/bin/pip install numpy==1.26.4 pandas==2.0.3
 
 echo "Pandas/numpy compatibility fix completed!"
 echo ""
