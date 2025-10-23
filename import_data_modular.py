@@ -254,11 +254,26 @@ def import_teams(conn):
         df = pd.read_csv('info-teams.csv', encoding='latin-1')  # Use latin-1 for teams
         cursor = conn.cursor()
         
+        # Get division and conference mappings
+        cursor.execute("SELECT division_id, division_name, league_id FROM divisions")
+        division_map = {(row[2], row[0]): row[1] for row in cursor.fetchall()}
+        
+        cursor.execute("SELECT conference_id, conference_name, league_id FROM conferences")
+        conference_map = {(row[2], row[0]): row[1] for row in cursor.fetchall()}
+        
         for _, row in df.iterrows():
             # Handle stadium_id - set to NULL if 0 or NaN
             stadium_id = safe_numeric(row.get('stadium_id'))
             if stadium_id == 0:
                 stadium_id = None
+            
+            # Get division and conference names from IDs
+            league_id = int(row['league_id'])
+            division_id = safe_numeric(row.get('division_id'))
+            conference_id = safe_numeric(row.get('conference_id'))
+            
+            division_name = division_map.get((league_id, division_id)) if division_id else None
+            conference_name = conference_map.get((league_id, conference_id)) if conference_id else None
             
             cursor.execute("""
                 INSERT INTO teams (
@@ -284,9 +299,9 @@ def import_teams(conn):
                 row['full_team_name'],
                 row['team_name'],
                 row['real_team_name'],
-                int(row['league_id']),
-                row.get('division_name'),
-                row.get('conference_name'),
+                league_id,
+                division_name,
+                conference_name,
                 safe_numeric(row.get('team_league_id')),
                 row.get('city_name'),
                 row.get('state_name'),

@@ -157,7 +157,8 @@ def league_page(league_name):
             SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
             FROM teams t
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
-            WHERE t.league = %s 
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            WHERE l.league_name_proper = %s 
             AND t.division_name IS NOT NULL 
             AND t.conference_name IS NOT NULL
             AND t.real_team_name NOT IN (
@@ -221,7 +222,7 @@ def teams():
         params = []
         
         if league_filter:
-            where_conditions.append("t.league = %s")
+            where_conditions.append("l.league_name_proper = %s")
             params.append(league_filter)
         
         if search:
@@ -235,6 +236,7 @@ def teams():
             SELECT COUNT(*) as count 
             FROM teams t 
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
             {where_clause}
         """
         cursor.execute(count_query, params)
@@ -246,6 +248,7 @@ def teams():
             SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
             FROM teams t 
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
             {where_clause}
             ORDER BY t.real_team_name
             LIMIT %s OFFSET %s
