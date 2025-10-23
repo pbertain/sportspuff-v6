@@ -279,8 +279,8 @@ def import_teams(conn):
                 INSERT INTO teams (
                     team_id, full_team_name, team_name, real_team_name, league_id,
                     division_name, conference_name, team_league_id, city_name, state_name,
-                    country, stadium_id, logo_filename
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    country, stadium_id, logo_filename, team_color_1, team_color_2, team_color_3
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (team_id) DO UPDATE SET
                     full_team_name = EXCLUDED.full_team_name,
                     team_name = EXCLUDED.team_name,
@@ -293,7 +293,10 @@ def import_teams(conn):
                     state_name = EXCLUDED.state_name,
                     country = EXCLUDED.country,
                     stadium_id = EXCLUDED.stadium_id,
-                    logo_filename = EXCLUDED.logo_filename
+                    logo_filename = EXCLUDED.logo_filename,
+                    team_color_1 = EXCLUDED.team_color_1,
+                    team_color_2 = EXCLUDED.team_color_2,
+                    team_color_3 = EXCLUDED.team_color_3
             """, (
                 int(row['team_id']),
                 row['full_team_name'],
@@ -307,7 +310,10 @@ def import_teams(conn):
                 row.get('state_name'),
                 row.get('country'),
                 stadium_id,
-                row.get('logo_filename')
+                row.get('logo_filename'),
+                None,  # team_color_1 - will be updated later
+                None,  # team_color_2 - will be updated later
+                None   # team_color_3 - will be updated later
             ))
         
         conn.commit()
