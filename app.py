@@ -493,13 +493,18 @@ def get_logo(team_id):
     if conn:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute("SELECT league, logo_filename FROM teams WHERE team_id = %s", [team_id])
+            cursor.execute("""
+                SELECT l.league_name, t.logo_filename 
+                FROM teams t 
+                LEFT JOIN leagues l ON t.league_id = l.league_id 
+                WHERE t.team_id = %s
+            """, [team_id])
             team = cursor.fetchone()
             cursor.close()
             conn.close()
             
             if team and team['logo_filename']:
-                league = team['league'].lower()
+                league = team['league_name'].lower()
                 logo_filename = team['logo_filename']
                 return f'https://www.splitsp.lat/logos/{league}/{logo_filename}'
         except:
