@@ -159,14 +159,12 @@ def league_page(league_name):
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
             LEFT JOIN leagues l ON t.league_id = l.league_id
             WHERE l.league_name_proper = %s 
-            AND t.division_name IS NOT NULL 
-            AND t.conference_name IS NOT NULL
             AND t.real_team_name NOT IN (
                 'Major League Baseball', 'National Football League', 'National Basketball Association',
                 'National Hockey League', 'Major League Soccer', 'Women''s National Basketball League',
                 'India Premier League'
             )
-            ORDER BY t.conference_name, t.division_name, t.real_team_name
+            ORDER BY COALESCE(t.conference_name, 'No Conference'), COALESCE(t.division_name, 'No Division'), t.real_team_name
         """
         cursor.execute(teams_query, [league_name])
         teams = cursor.fetchall()
@@ -174,8 +172,8 @@ def league_page(league_name):
         # Organize teams by conference and division
         organized_teams = {}
         for team in teams:
-            conference = team['conference_name']
-            division = team['division_name']
+            conference = team['conference_name'] or 'No Conference'
+            division = team['division_name'] or 'No Division'
             
             if conference not in organized_teams:
                 organized_teams[conference] = {}
