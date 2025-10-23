@@ -18,9 +18,9 @@ if [ ! -f "info-leagues.csv" ] || [ ! -f "info-divisions.csv" ] || [ ! -f "info-
     exit 1
 fi
 
-# Run the import script
+# Run the import script using the virtual environment Python
 echo "Running data import..."
-python3 import_data_modular.py
+/opt/sportspuff-v6-prod/venv/bin/python import_data_modular.py
 
 echo "Data re-import completed successfully!"
 echo ""
