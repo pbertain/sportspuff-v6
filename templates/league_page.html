@@ -59,15 +59,15 @@
                         <h3 class="division-title">{{ division_name }}</h3>
                         <div class="teams-list">
                             {% for team in teams %}
-                            <div class="team-item">
+                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }};">
                                 <div class="team-logo-small">
                                     <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                 </div>
                                 <div class="team-details">
-                                    <div class="team-name">{{ team.real_team_name }}</div>
+                                    <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }};">{{ team.real_team_name }}</div>
                                     {% if team.full_stadium_name %}
-                                    <div class="stadium-info">{{ team.full_stadium_name }}</div>
-                                    <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
+                                    <div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.full_stadium_name }}</div>
+                                    <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -123,15 +123,15 @@
                         <h3 class="division-title">{{ division_name }}</h3>
                         <div class="teams-list">
                             {% for team in teams %}
-                            <div class="team-item">
+                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }};">
                                 <div class="team-logo-small">
                                     <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                 </div>
                                 <div class="team-details">
-                                    <div class="team-name">{{ team.real_team_name }}</div>
+                                    <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }};">{{ team.real_team_name }}</div>
                                     {% if team.full_stadium_name %}
-                                    <div class="stadium-info">{{ team.full_stadium_name }}</div>
-                                    <div class="location-info">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
+                                    <div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.full_stadium_name }}</div>
+                                    <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
                                     {% endif %}
                                 </div>
                             </div>
