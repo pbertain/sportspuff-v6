@@ -1,178 +1,30 @@
-﻿league_id,division_id,division_name,division_full_name
-5,131,Pacific, Pacific
-4,126,West, NFC West
-1,107,West, NL West
-1,106,East, NL East
-6,133,Eastern, Eastern Conference
-4,125,South, NFC South
-3,114,Southeast, Southeast
-2,109,Eastern, Eastern Conference
-2,110,Western, Western Conference
-1,103,East, AL East
-4,120,North, AFC North
-5,128, Atlantic, Atlantic
-3,112, Atlantic, Atlantic
-1,103,East, AL East
-3,112, Atlantic, Atlantic
-4,119,East, AFC East
-5,128, Atlantic, Atlantic
-5,131,Pacific, Pacific
-5,129,Metropolitan, Metropolitan
-4,125,South, NFC South
-2,109,Eastern, Eastern Conference
-2,109,Eastern, Eastern Conference
-3,114,Southeast, Southeast
-4,124,North, NFC North
-5,130,Central, Central
-3,113,Central, Central
-1,105,Central, NL Central
-2,109,Eastern, Eastern Conference
-6,133,Eastern, Eastern Conference
-1,102,Central, AL Central
-4,120,North, AFC North
-1,105,Central, NL Central
-4,120,North, AFC North
-3,113,Central, Central
-1,102,Central, AL Central
-5,130,Central, Central
-2,110,Western, Western Conference
-1,107,West, NL West
-5,129,Metropolitan, Metropolitan
-2,109,Eastern, Eastern Conference
-6,133,Eastern, Eastern Conference
-2,109,Eastern, Eastern Conference
-4,123,East, NFC East
-3,117,Southwest, Southwest
-5,130,Central, Central
-6,134,Western, Western Conference
-4,122,West, AFC West
-3,115,Northwest, Northwest
-4,124,North, NFC North
-3,113,Central, Central
-5,128, Atlantic, Atlantic
-1,102,Central, AL Central
-5,131,Pacific, Pacific
-2,109,Eastern, Eastern Conference
-2,110,Western, Western Conference
-5,128, Atlantic, Atlantic
-6,134,Western, Western Conference
-3,116,Pacific, Pacific
-4,124,North, NFC North
-1,104,West, AL West
-2,110,Western, Western Conference
-3,117,Southwest, Southwest
-4,121,South, AFC South
-6,133,Eastern, Eastern Conference
-3,113,Central, Central
-4,121,South, AFC South
-2,109,Eastern, Eastern Conference
-4,121,South, AFC South
-4,122,West, AFC West
-1,102,Central, AL Central
-3,116,Pacific, Pacific
-2,110,Western, Western Conference
-6,134,Western, Western Conference
-4,122,West, AFC West
-1,104,West, AL West
-4,122,West, AFC West
-1,107,West, NL West
-2,110,Western, Western Conference
-5,131,Pacific, Pacific
-3,116,Pacific, Pacific
-4,126,West, NFC West
-6,134,Western, Western Conference
-3,117,Southwest, Southwest
-4,119,East, AFC East
-3,114,Southeast, Southeast
-1,106,East, NL East
-1,105,Central, NL Central
-3,113,Central, Central
-6,134,Western, Western Conference
-3,115,Northwest, Northwest
-1,102,Central, AL Central
-2,110,Western, Western Conference
-4,124,North, NFC North
-5,130,Central, Central
-5,128, Atlantic, Atlantic
-5,130,Central, Central
-2,109,Eastern, Eastern Conference
-4,119,East, AFC East
-2,109,Eastern, Eastern Conference
-5,129,Metropolitan, Metropolitan
-3,117,Southwest, Southwest
-4,125,South, NFC South
-2,109,Eastern, Eastern Conference
-4,123,East, NFC East
-5,129,Metropolitan, Metropolitan
-4,119,East, AFC East
-3,112, Atlantic, Atlantic
-6,133,Eastern, Eastern Conference
-1,106,East, NL East
-5,129,Metropolitan, Metropolitan
-2,109,Eastern, Eastern Conference
-1,103,East, AL East
-1,104,West, AL West
-3,115,Northwest, Northwest
-2,109,Eastern, Eastern Conference
-3,114,Southeast, Southeast
-5,128, Atlantic, Atlantic
-3,112, Atlantic, Atlantic
-4,123,East, NFC East
-5,129,Metropolitan, Metropolitan
-1,106,East, NL East
-2,109,Eastern, Eastern Conference
-6,134,Western, Western Conference
-3,116,Pacific, Pacific
-5,129,Metropolitan, Metropolitan
-1,105,Central, NL Central
-4,120,North, AFC North
-2,110,Western, Western Conference
-3,115,Northwest, Northwest
-2,110,Western, Western Conference
-3,116,Pacific, Pacific
-3,117,Southwest, Southwest
-2,110,Western, Western Conference
-1,107,West, NL West
-4,126,West, NFC West
-1,107,West, NL West
-2,110,Western, Western Conference
-5,131,Pacific, Pacific
-5,131,Pacific, Pacific
-1,104,West, AL West
-4,126,West, NFC West
-2,110,Western, Western Conference
-6,134,Western, Western Conference
-2,110,Western, Western Conference
-5,130,Central, Central
-1,105,Central, NL Central
-2,110,Western, Western Conference
-4,125,South, NFC South
-5,128, Atlantic, Atlantic
-1,103,East, AL East
-4,121,South, AFC South
-1,104,West, AL West
-1,103,East, AL East
-2,109,Eastern, Eastern Conference
-5,128, Atlantic, Atlantic
-3,112, Atlantic, Atlantic
-3,115,Northwest, Northwest
-5,130,Central, Central
-5,131,Pacific, Pacific
-2,110,Western, Western Conference
-5,131,Pacific, Pacific
-5,129,Metropolitan, Metropolitan
-4,123,East, NFC East
-6,133,Eastern, Eastern Conference
-1,106,East, NL East
-3,114,Southeast, Southeast
-5,130,Central, Central
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
-7,136,IPL,India Premier League
+league_id,division_id,division_name,division_full_name
+1,101,East,AL East
+1,102,Central,AL Central
+1,103,West,AL West
+1,104,East,NL East
+1,105,Central,NL Central
+1,106,West,NL West
+2,201,Eastern,Eastern Conference
+2,202,Western,Western Conference
+3,301,Atlantic,Atlantic Division
+3,302,Central,Central Division
+3,303,Southeast,Southeast Division
+3,304,Northwest,Northwest Division
+3,305,Pacific,Pacific Division
+3,306,Southwest,Southwest Division
+4,401,East,AFC East
+4,402,North,AFC North
+4,403,South,AFC South
+4,404,West,AFC West
+4,405,East,NFC East
+4,406,North,NFC North
+4,407,South,NFC South
+4,408,West,NFC West
+5,501,Atlantic,Atlantic Division
+5,502,Metropolitan,Metropolitan Division
+5,503,Central,Central Division
+5,504,Pacific,Pacific Division
+6,601,Eastern,Eastern Conference
+6,602,Western,Western Conference
+7,701,IPL,India Premier League
