@@ -59,7 +59,7 @@
                         <h3 class="division-title">{{ division_name }}</h3>
                         <div class="teams-list">
                             {% for team in teams %}
-                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}" onclick="showTeamModal(this)">
+                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}">
                                 <div class="team-logo-small">
                                     <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                 </div>
@@ -91,7 +91,7 @@
                                 <h3 class="division-title">{{ division_name }}</h3>
                                 <div class="teams-list">
                                     {% for team in teams %}
-                                    <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}" onclick="showTeamModal(this)">
+                                    <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}">
                                         <div class="team-logo-small">
                                             <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                         </div>
@@ -123,7 +123,7 @@
                         <h3 class="division-title">{{ division_name }}</h3>
                         <div class="teams-list">
                             {% for team in teams %}
-                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}" onclick="showTeamModal(this)">
+                            <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}">
                                 <div class="team-logo-small">
                                     <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                 </div>
@@ -156,7 +156,7 @@
                                 <h3 class="division-title">{{ division_name }}</h3>
                                 <div class="teams-list">
                                     {% for team in teams %}
-                                    <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}" onclick="showTeamModal(this)">
+                                    <div class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#teamModal" data-team-name="{{ team.real_team_name }}" data-team-logo="{{ team.team_id | get_logo }}" data-team-stadium="{{ team.full_stadium_name or '' }}" data-team-location="{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}">
                                         <div class="team-logo-small">
                                             <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
                                         </div>
@@ -208,18 +208,33 @@
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
     
     <script>
-        function showTeamModal(element) {
-            const teamName = element.getAttribute('data-team-name');
-            const teamLogo = element.getAttribute('data-team-logo');
-            const teamStadium = element.getAttribute('data-team-stadium');
-            const teamLocation = element.getAttribute('data-team-location');
+        // Add event listener for modal show event
+        document.addEventListener('DOMContentLoaded', function() {
+            const teamModal = document.getElementById('teamModal');
             
-            document.getElementById('modalTeamLogo').src = teamLogo;
-            document.getElementById('modalTeamLogo').alt = teamName + ' logo';
-            document.getElementById('modalTeamName').textContent = teamName;
-            document.getElementById('modalTeamStadium').textContent = teamStadium || 'Stadium information not available';
-            document.getElementById('modalTeamLocation').textContent = teamLocation || 'Location information not available';
-        }
+            teamModal.addEventListener('show.bs.modal', function (event) {
+                // Get the button that triggered the modal
+                const button = event.relatedTarget;
+                
+                // Extract data from data attributes
+                const teamName = button.getAttribute('data-team-name');
+                const teamLogo = button.getAttribute('data-team-logo');
+                const teamStadium = button.getAttribute('data-team-stadium');
+                const teamLocation = button.getAttribute('data-team-location');
+                
+                // Update modal content
+                const modalLogo = teamModal.querySelector('#modalTeamLogo');
+                const modalName = teamModal.querySelector('#modalTeamName');
+                const modalStadium = teamModal.querySelector('#modalTeamStadium');
+                const modalLocation = teamModal.querySelector('#modalTeamLocation');
+                
+                modalLogo.src = teamLogo;
+                modalLogo.alt = teamName + ' logo';
+                modalName.textContent = teamName;
+                modalStadium.textContent = teamStadium || 'Stadium information not available';
+                modalLocation.textContent = teamLocation || 'Location information not available';
+            });
+        });
     </script>
 </body>
 </html>
