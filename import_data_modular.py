@@ -224,14 +224,16 @@ def import_divisions(conn):
         
         for _, row in df.iterrows():
             cursor.execute("""
-                INSERT INTO divisions (division_id, league_id, division_name, division_full_name)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO divisions (division_id, league_id, conference_id, division_name, division_full_name)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (league_id, division_name) DO UPDATE SET
                     division_id = EXCLUDED.division_id,
+                    conference_id = EXCLUDED.conference_id,
                     division_full_name = EXCLUDED.division_full_name
             """, (
                 int(row['division_id']),
                 int(row['league_id']),
+                safe_numeric(row.get('conference_id')),
                 row['division_name'],
                 row['division_full_name']
             ))

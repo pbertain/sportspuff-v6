@@ -66,10 +66,11 @@ CREATE TABLE conferences (
     UNIQUE(league_id, conference_full_name)
 );
 
--- Create divisions table (depends on leagues)
+-- Create divisions table (depends on leagues and conferences)
 CREATE TABLE divisions (
     division_id INTEGER,
     league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+    conference_id INTEGER REFERENCES conferences(conference_id) ON DELETE SET NULL,
     division_name VARCHAR(100) NOT NULL,
     division_full_name VARCHAR(200) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
