@@ -321,15 +321,24 @@ class NBAFullScheduleImporter:
             # Detect season type based on date
             season_type, season_description = self.detect_season_type(game_date_obj, {})
             
+            # Get team name to ID mapping
+            team_name_mapping = self.get_team_name_mapping()
+            
+            # Map team names to team IDs
+            home_team_id = team_name_mapping.get(home_team.strip())
+            away_team_id = team_name_mapping.get(away_team.strip())
+            
+            if not home_team_id or not away_team_id:
+                logger.warning(f"Skipping game {row.get('GAME_ID', 'unknown')} - team mapping not found for {home_team.strip()} or {away_team.strip()}")
+                return None
+            
             enhanced_game = {
-                'game_id': row.get('GAME_ID', f"{season}_{game_date}_{home_team}_{away_team}"),
+                'game_id': row.get('GAME_ID', f"{season}_{game_date}_{home_team_id}_{away_team_id}"),
                 'season': season,
                 'game_date': game_date,
                 'game_time_est': '',  # Not available in LeagueGameFinder
-                'home_team_id': None,  # Will be mapped later
-                'away_team_id': None,  # Will be mapped later
-                'home_team_name': home_team.strip(),
-                'away_team_name': away_team.strip(),
+                'home_team_id': home_team_id,
+                'away_team_id': away_team_id,
                 'home_score': row.get('PTS', 0) if row.get('WL') == 'W' else 0,
                 'away_score': row.get('PTS', 0) if row.get('WL') == 'L' else 0,
                 'game_status': 'final' if row.get('WL') else 'scheduled',
@@ -491,6 +500,46 @@ class NBAFullScheduleImporter:
             
         except Exception as e:
             logger.error(f"Error getting team mapping: {e}")
+            return {}
+        finally:
+            cursor.close()
+            conn.close()
+    
+    def get_team_name_mapping(self) -> Dict[str, int]:
+        """
+        Get mapping from NBA team names to our team IDs.
+        
+        Returns:
+            Dictionary mapping NBA team name to our team ID
+        """
+        conn = self.get_db_connection()
+        if not conn:
+            return {}
+        
+        try:
+            from psycopg2.extras import RealDictCursor
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Get NBA teams from our database
+            cursor.execute("""
+                SELECT team_id, real_team_name 
+                FROM teams 
+                WHERE league_id = (SELECT league_id FROM leagues WHERE league_name_proper = 'NBA')
+            """)
+            
+            teams = cursor.fetchall()
+            
+            # Create mapping from team name to our team ID
+            mapping = {}
+            for team in teams:
+                team_name = team['real_team_name']
+                mapping[team_name] = team['team_id']
+            
+            logger.info(f"Created team name mapping for {len(mapping)} NBA teams")
+            return mapping
+            
+        except Exception as e:
+            logger.error(f"Error getting team name mapping: {e}")
             return {}
         finally:
             cursor.close()
