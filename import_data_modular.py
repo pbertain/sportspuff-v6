@@ -256,31 +256,21 @@ def import_teams(conn):
         df = pd.read_csv('info-teams.csv', encoding='latin-1')  # Use latin-1 for teams
         cursor = conn.cursor()
         
-        # Get division and conference mappings
-        cursor.execute("SELECT division_id, division_name, league_id FROM divisions")
-        division_map = {(row[2], row[0]): row[1] for row in cursor.fetchall()}
-        
-        cursor.execute("SELECT conference_id, conference_name, league_id FROM conferences")
-        conference_map = {(row[2], row[0]): row[1] for row in cursor.fetchall()}
-        
         for _, row in df.iterrows():
             # Handle stadium_id - set to NULL if 0 or NaN
             stadium_id = safe_numeric(row.get('stadium_id'))
             if stadium_id == 0:
                 stadium_id = None
             
-            # Get division and conference names from IDs
+            # Get division and conference IDs directly
             league_id = int(row['league_id'])
             division_id = safe_numeric(row.get('division_id'))
             conference_id = safe_numeric(row.get('conference_id'))
             
-            division_name = division_map.get((league_id, division_id)) if division_id else None
-            conference_name = conference_map.get((league_id, conference_id)) if conference_id else None
-            
             cursor.execute("""
                 INSERT INTO teams (
                     team_id, full_team_name, team_name, real_team_name, league_id,
-                    division_name, conference_name, team_league_id, city_name, state_name,
+                    division_id, conference_id, team_league_id, city_name, state_name,
                     country, stadium_id, logo_filename, team_color_1, team_color_2, team_color_3
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (team_id) DO UPDATE SET
@@ -288,8 +278,8 @@ def import_teams(conn):
                     team_name = EXCLUDED.team_name,
                     real_team_name = EXCLUDED.real_team_name,
                     league_id = EXCLUDED.league_id,
-                    division_name = EXCLUDED.division_name,
-                    conference_name = EXCLUDED.conference_name,
+                    division_id = EXCLUDED.division_id,
+                    conference_id = EXCLUDED.conference_id,
                     team_league_id = EXCLUDED.team_league_id,
                     city_name = EXCLUDED.city_name,
                     state_name = EXCLUDED.state_name,
@@ -305,8 +295,8 @@ def import_teams(conn):
                 row['team_name'],
                 row['real_team_name'],
                 league_id,
-                division_name,
-                conference_name,
+                division_id,
+                conference_id,
                 safe_numeric(row.get('team_league_id')),
                 row.get('city_name'),
                 row.get('state_name'),
