@@ -291,6 +291,7 @@ class NBAFullScheduleImporter:
             
             # Convert abbreviations to full team names
             team_abbrev_to_name = {
+                # NBA Teams
                 'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'CLE': 'Cleveland Cavaliers',
                 'NOP': 'New Orleans Pelicans', 'CHI': 'Chicago Bulls', 'DAL': 'Dallas Mavericks',
                 'DEN': 'Denver Nuggets', 'GSW': 'Golden State Warriors', 'HOU': 'Houston Rockets',
@@ -300,7 +301,10 @@ class NBAFullScheduleImporter:
                 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
                 'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs', 'OKC': 'Oklahoma City Thunder',
                 'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'MEM': 'Memphis Grizzlies',
-                'WAS': 'Washington Wizards', 'DET': 'Detroit Pistons', 'CHA': 'Charlotte Hornets'
+                'WAS': 'Washington Wizards', 'DET': 'Detroit Pistons', 'CHA': 'Charlotte Hornets',
+                # WNBA Teams (that appear in NBA data)
+                'CON': 'Connecticut Sun', 'GSV': 'Golden State Valkyries', 'LAS': 'Las Vegas Aces',
+                'LVA': 'Las Vegas Aces', 'NYL': 'New York Liberty', 'SEA': 'Seattle Storm'
             }
             
             home_team = team_abbrev_to_name.get(home_team.strip(), home_team.strip())
@@ -574,12 +578,12 @@ class NBAFullScheduleImporter:
             
             for game in games:
                 try:
-                    # Map NBA team names to our team IDs
-                    home_team_id = team_mapping.get(game['home_team_name'])
-                    away_team_id = team_mapping.get(game['away_team_name'])
+                    # Use team IDs directly from enhanced game data
+                    home_team_id = game.get('home_team_id')
+                    away_team_id = game.get('away_team_id')
                     
                     if not home_team_id or not away_team_id:
-                        logger.warning(f"Skipping game {game['game_id']} - team mapping not found for {game['home_team_name']} or {game['away_team_name']}")
+                        logger.warning(f"Skipping game {game['game_id']} - missing team IDs")
                         continue
                     
                     # Insert or update game
