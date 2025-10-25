@@ -126,19 +126,12 @@ class NBAFullScheduleImporter:
         try:
             from nba_api.stats.endpoints import LeagueGameFinder
             
-            # Try to get games for the entire season (October to June)
-            # NBA seasons typically run from October to June
-            start_date = f"{season.split('-')[0]}-10-01"  # October 1st
-            end_date = f"{season.split('-')[1]}-06-30"    # June 30th
+            # Try to get games for the entire season
+            # Note: NBA may only have partial schedule available for future seasons
+            # For 2025-26, only October games are currently available
             
-            logger.info(f"Searching for games from {start_date} to {end_date}")
-            
-            # Get games using LeagueGameFinder
-            gamefinder = LeagueGameFinder(
-                season_nullable=season,
-                date_from_nullable=start_date,
-                date_to_nullable=end_date
-            )
+            # Get games using LeagueGameFinder (no date restrictions to get all available games)
+            gamefinder = LeagueGameFinder(season_nullable=season)
             
             games_df = gamefinder.get_data_frames()[0]
             
