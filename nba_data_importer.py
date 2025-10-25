@@ -215,9 +215,14 @@ class NBADataImporter:
             if game_data.get('gameType') == 'allstar' or game_data.get('isAllStar'):
                 return 'all_star_break'
         
-        # Determine season type based on month
+        # Determine season type based on month and date
+        # NBA 2025-26 regular season started in October
         if month in [10]:
-            return 'preseason'
+            # October: Check if it's early October (preseason) or later (regular season)
+            if date_obj.day <= 15:  # Early October is typically preseason
+                return 'preseason'
+            else:  # Late October is regular season
+                return 'regular'
         elif month in [11, 12, 1, 2, 3, 4]:
             # Check for All-Star Break (typically mid-February)
             if month == 2 and 10 <= date_obj.day <= 20:
