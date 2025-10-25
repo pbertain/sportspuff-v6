@@ -124,6 +124,7 @@ class NBAScoresUpdater:
             return []
         
         try:
+            from psycopg2.extras import RealDictCursor
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             if date:
@@ -283,6 +284,7 @@ class NBAScoresUpdater:
             return {}
         
         try:
+            from psycopg2.extras import RealDictCursor
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # Get live games

@@ -74,6 +74,7 @@ class NBADataImporter:
             return {}
         
         try:
+            from psycopg2.extras import RealDictCursor
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT team_id, real_team_name 
