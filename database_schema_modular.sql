@@ -66,11 +66,10 @@ CREATE TABLE conferences (
     UNIQUE(league_id, conference_full_name)
 );
 
--- Create divisions table (depends on leagues and conferences)
+-- Create divisions table (depends on leagues)
 CREATE TABLE divisions (
     division_id INTEGER,
     league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
-    conference_id INTEGER REFERENCES conferences(conference_id) ON DELETE SET NULL,
     division_name VARCHAR(100) NOT NULL,
     division_full_name VARCHAR(200) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -111,12 +110,60 @@ CREATE INDEX idx_teams_stadium_id ON teams(stadium_id);
 CREATE INDEX idx_divisions_league_id ON divisions(league_id);
 CREATE INDEX idx_conferences_league_id ON conferences(league_id);
 
+-- NBA Games table (unified schedule + scores)
+CREATE TABLE nba_games (
+    game_id TEXT PRIMARY KEY,
+    season TEXT NOT NULL,
+    game_date DATE NOT NULL,
+    game_time_est TEXT,
+    home_team_id INTEGER,
+    away_team_id INTEGER,
+    home_score INTEGER DEFAULT 0,
+    away_score INTEGER DEFAULT 0,
+    game_status TEXT DEFAULT 'scheduled',
+    game_status_text TEXT,
+    current_period INTEGER,
+    period_time_remaining TEXT,
+    season_type TEXT NOT NULL,
+    arena_name TEXT,
+    is_nba_cup BOOLEAN DEFAULT FALSE,
+    winner_team_id INTEGER,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Foreign key constraints
+    FOREIGN KEY (home_team_id) REFERENCES teams(team_id) ON DELETE SET NULL,
+    FOREIGN KEY (away_team_id) REFERENCES teams(team_id) ON DELETE SET NULL,
+    FOREIGN KEY (winner_team_id) REFERENCES teams(team_id) ON DELETE SET NULL
+);
+
+-- NBA Seasons metadata table
+CREATE TABLE nba_seasons (
+    season TEXT PRIMARY KEY,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    regular_season_start DATE,
+    playoffs_start DATE,
+    total_games INTEGER DEFAULT 0,
+    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for NBA tables
+CREATE INDEX idx_nba_games_date ON nba_games(game_date);
+CREATE INDEX idx_nba_games_season ON nba_games(season);
+CREATE INDEX idx_nba_games_teams ON nba_games(home_team_id, away_team_id);
+CREATE INDEX idx_nba_games_status ON nba_games(game_status);
+CREATE INDEX idx_nba_games_season_type ON nba_games(season_type);
+
 -- Add comments for documentation
 COMMENT ON TABLE leagues IS 'Sports leagues (MLB, NFL, NBA, NHL, MLS, WNBA, IPL)';
 COMMENT ON TABLE stadiums IS 'Sports venues and stadiums';
 COMMENT ON TABLE conferences IS 'League conferences (e.g., Eastern, Western, NFC, AFC)';
 COMMENT ON TABLE divisions IS 'League divisions (e.g., Atlantic, Pacific, East, West)';
 COMMENT ON TABLE teams IS 'Sports teams with foreign key references to leagues, divisions, conferences, and stadiums';
+COMMENT ON TABLE nba_games IS 'NBA games with unified schedule and scores - tracks complete game lifecycle from scheduled to final';
+COMMENT ON TABLE nba_seasons IS 'NBA season metadata including start/end dates and game counts';
 
 COMMENT ON COLUMN teams.league_id IS 'Foreign key to leagues table';
 COMMENT ON COLUMN teams.division_name IS 'Foreign key to divisions table (composite with league_id)';

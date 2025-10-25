@@ -1,152 +1,152 @@
-image,full_stadium_name,stadium_name,stadium_id,location_name,city_name,full_state_name,state_name,country,capacity,surface,year_opened,roof_type,coordinates,stadium_type,baseball_distance_to_center_field_ft,baseball_distance_to_center_field_m,first_sport_year,soccer_field_width_yd,soccer_field_width_m,soccer_field_length_yd,soccer_field_length_m
-,Acrisure Stadium,acrisure_stadium,101,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,68400,Kentucky bluegrass,2001,Open-air,,,,,,,,,
-,Allegiant Stadium,allegiant_stadium,102,"Paradise, Nevada",paradise,nevada,nv,us,65000,Bermuda grass,2020,Translucent,,,,,,,,,
-,Allianz Field,allianz_field,103,"Saint Paul, Minnesota",saint_paul,minnesota,mn,us,19400,Grass,2019,Open,44°57′10″N 93°9′54″W,,,,2019,115,75,75,68.58
-,Amerant Bank Arena,amerant_bank_arena,104,"Sunrise, Florida",sunrise,florida,fl,us,19250,,1998,,,,,,1998–99,,,,
-,America First Field,america_first_field,105,"Sandy, Utah",sandy,utah,ut,us,20213,Grass,2008,Open,40.582923°N 111.893156°W,,,,2008,120,109.728,75,68.58
-,American Airlines Center,american_airlines_center,106,"Dallas, Texas",dallas,texas,tx,us,19200,,2001,,,,,,2001–02,,,,
-,American Family Field,american_family_field,107,"Milwaukee, Wisconsin",milwaukee,wisconsin,wi,us,41900,Grass,2001,Retractable,,Retro-modern,400,121.92000000048768,,,,,
-,Angel Stadium,angel_stadium,108,"Anaheim, California",anaheim,california,ca,us,45517,Grass,1966,Open,,Modern Retro-modern,396,120.7008000004828,,,,,
-,Arrowhead Stadium,arrowhead_stadium,109,"Kansas City, Missouri",kansas_city,missouri,mo,us,76416,Bermuda grass,1972,Open-air,,,,,,,,,
-,AT&T Stadium,at&t_stadium,110,"Arlington, Texas",arlington,texas,tx,us,80000,Hellas Matrix Turf,2009,Retractable,,,,,,,,,
-,Audi Field,audi_field,111,"Washington, D.C.",washington,district of columbia,dc,us,20000,Grass,2018,Open,38°52′6″N 77°0′44″W,,,,2018,115,105.156,75,68.58
-,Ball Arena,ball_arena,112,"Denver, Colorado",denver,colorado,co,us,19520,,1999,,,,,,1999–2000,,,,
-,Bank of America Stadium,bank_of_america_stadium,113,"Charlotte, North Carolina",charlotte,north_carolina,nc,us,38000,FieldTurf,1996,Open,35°13′33″N 80°51′10″W,,,,2022,,,,
-,Barclays Center,barclays_center,114,"Brooklyn, New York",brooklyn,new_york,ny,us,17732,,2012,,,,,,2012–13,,,,
-,BC Place,bc_place,115,"Vancouver, British Columbia",vancouver,british_columbia,bc,us,22120,Polytan,1983,Retractable,49°16′36″N 123°6′43″W,,,,2011,117.01662292213473,107,75.45931758530183,69
-,Bell Centre,bell_centre,116,"Montreal, Quebec",montreal,quebec,qc,ca,21105,,1996,,,,,,1995–96,,,,
-,Benchmark International Arena,benchmark_international_arena,117,"Tampa, Florida",tampa,florida,fl,us,19092,,1996,,,,,,1996–97,,,,
-,BMO Field,bmo_field,118,"Toronto, Ontario",toronto,ontario,on,us,30991,Hybrid grass,2007,Open,43°37′58″N 79°25′07″W,,,,2007,115,105.156,74,67.6656
-,BMO Stadium,bmo_stadium,119,"Los Angeles, California",los_angeles,california,ca,us,22000,Grass,2018,Open,34°00′47″N 118°17′6″W,,,,2018,115,105.156,75,68.58
-,Bridgestone Arena,bridgestone_arena,120,"Nashville, Tennessee",nashville,tennessee,tn,us,17159,,1996,,,,,,1998–99,,,,
-,Busch Stadium,busch_stadium,121,"St. Louis, Missouri",st._louis,missouri,mo,us,44383,Grass,2006,Open,,Retro-classic,400,121.92000000048768,,,,,
-,Caesars Superdome,caesars_superdome,122,"New Orleans, Louisiana",new_orleans,louisiana,la,us,73208,FieldTurf Revolution 360,1975,Dome,,,,,,,,,
-,Canada Life Centre,canada_life_centre,123,"Winnipeg, Manitoba",winnipeg,manitoba,mb,ca,15321,,2004,,,,,,2011–12,,,,
-,Canadian Tire Centre,canadian_tire_centre,124,"Ottawa, Ontario",ottawa,ontario,on,ca,19347,,1996,,,,,,1995–96,,,,
-,Capital One Arena,capital_one_arena,125,"Washington, D.C.",washington,district of columbia,dc,us,20356,,1997,,,,,,1997–98,,,,
-,CareFirst Arena,carefirst_arena,126,"Washington, D.C.",washington,district of columbia,dc,us,4200,,,,,,,,1998,,,,
-,Chase Center,chase_center,127,"San Francisco, California",san_francisco,california,ca,us,18064,,2019,,,,,,2019–20,,,,
-,Chase Field,chase_field,128,"Phoenix, Arizona",phoenix,arizona,az,us,48330,Artificial turf,1998,Retractable,,Retro-modern,407,124.0536000004962,,,,,
-,Chase Stadium,chase_stadium,129,"Fort Lauderdale, Florida",fort_lauderdale,florida,fl,us,21550,Grass,2020,Open,26°11′35″N 80°9′40″W,,,,2020,115,105.156,75,68.58
-,Children's Mercy Park,children's_mercy_park,130,"Kansas City, Kansas",kansas_city,kansas,ks,us,18467,Grass,2011,Open,39.1218°N 94.8237°W,,,,2011,120,109.728,75,68.58
-,Citi Field,citi_field,131,"Queens, New York",queens,new_york,ny,us,41922,Grass,2009,Open,,Retro-classic,408,124.35840000049743,,,,,
-,Citizens Bank Park,citizens_bank_park,132,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,42901,Grass,2004,Open,,Retro-classic,401,122.2248000004889,,,,,
-,Climate Pledge Arena,climate_pledge_arena,133,"Seattle, Washington",seattle,washington,wa,us,18300,,2021,,,,,,2021–22,,,,
-,College Park Center,college_park_center,134,"Arlington, Texas",arlington,texas,tx,us,7000,,,,,,,,1998,,,,
-,Comerica Park,comerica_park,135,"Detroit, Michigan",detroit,michigan,mi,us,41083,Grass,2000,Open,,Retro-classic,412,125.5776000005023,,,,,
-,Coors Field,coors_field,136,"Denver, Colorado",denver,colorado,co,us,46897,Grass,1995,Open,,Retro-classic,415,126.49200000050597,,,,,
-,Crypto.com Arena,crypto.com_arena,137,"Los Angeles, California",los_angeles,california,ca,us,19079,,1999,,,,,,1999–2000,,,,
-,Daikin Park,daikin_park,138,"Houston, Texas",houston,texas,tx,us,41168,Grass,2000,Retractable,,Retro-modern,409,124.66320000049865,,,,,
-,Delta Center,delta_center,139,"Salt Lake City, Utah",salt_lake_city,utah,ut,us,18306,,1991,,,,,,1991–92,,,,
-,Dick's Sporting Goods Park,dick's_sporting_goods_park,140,"Commerce City, Colorado",commerce_city,colorado,co,us,18061,Grass,2007,Open,39°48′20″N 104°53′31″W,,,,2007,120,109.728,75,68.58
-,Dignity Health Sports Park,dignity_health_sports_park,141,"Carson, California",carson,california,ca,us,27000,Grass,2003,Open,33°51′52″N 118°15′40″W,,,,2003,120,109.728,75,68.58
-,Dodger Stadium,dodger_stadium,142,"Los Angeles, California",los_angeles,california,ca,us,56000,Grass,1962,Open,,Modern,395,120.39600000048158,,,,,
-,Empower Field at Mile High,empower_field_at_mile_high,143,"Denver, Colorado",denver,colorado,co,us,76125,Kentucky bluegrass,2001,Open-air,,,,,,,,,
-,Energizer Park,energizer_park,144,"St. Louis, Missouri",st._louis,missouri,mo,us,22423,Grass,2022,Open,38°37′51.7″N 90°12′39.3″W,,,,2023,114,104.2416,74,67.6656
-,Enterprise Center,enterprise_center,145,"St. Louis, Missouri",st._louis,missouri,mo,us,18096,,1994,,,,,,1994–95,,,,
-,EverBank Stadium,everbank_stadium,146,"Jacksonville, Florida",jacksonville,florida,fl,us,67838,Bermuda grass,1995,Open-air,,,,,,,,,
-,FedExForum,fedexforum,147,"Memphis, Tennessee",memphis,tennessee,tn,us,17794,,2004,,,,,,2004–05,,,,
-,Fenway Park,fenway_park,148,"Boston, Massachusetts",boston,massachusetts,ma,us,37755,Grass,1912,Open,,Jewel box,390,118.87200000047548,,,,,
-,Fiserv Forum,fiserv_forum,149,"Milwaukee, Wisconsin",milwaukee,wisconsin,wi,us,17500,,2018,,,,,,2018–19,,,,
-,Ford Field,ford_field,150,"Detroit, Michigan",detroit,michigan,mi,us,65000,FieldTurf CORE,2002,Dome,,,,,,,,,
-,Frost Bank Center,frost_bank_center,151,"San Antonio, Texas",san_antonio,texas,tx,us,18418,,2002,,,,,,2002–03,,,,
-,Gainbridge Fieldhouse,gainbridge_fieldhouse,152,"Indianapolis, Indiana",indianapolis,indiana,in,us,17923,,1999,,,,,,1999–2000,,,,
-,Gateway Center Arena,gateway_center_arena,153,"College Park, Georgia",college_park,georgia,ga,us,3500,,,,,,,,2008,,,,
-,Geodis Park,geodis_park,154,"Nashville, Tennessee",nashville,tennessee,tn,us,30000,Grass,2022,Open,36°7′49″N 86°45′56″W,,,,2022,120,109.728,75,68.58
-,George M. Steinbrenner Field,george_m._steinbrenner_field,155,"Tampa, Florida",tampa,florida,fl,us,11026,Grass,1996,Open,,Retro-modern,408,124.35840000049743,,,,,
-,Gillette Stadium,gillette_stadium,156,"Foxborough, Massachusetts",foxborough,massachusetts,ma,us,66829,FieldTurf,2002,Open,42°05′27.40″N 71°15′51.64″W,,,,2002,115,105.156,75,68.58
-,Globe Life Field,globe_life_field,157,"Arlington, Texas",arlington,texas,tx,us,40300,Artificial turf,2020,Retractable,,Retro-modern,407,124.0536000004962,,,,,
-,Golden 1 Center,golden_1_center,158,"Sacramento, California",sacramento,california,ca,us,17583,,2016,,,,,,2016–17,,,,
-,Grand Casino Arena,grand_casino_arena,159,"Saint Paul, Minnesota",saint_paul,minnesota,mn,us,17954,,2000,,,,,,2000–01,,,,
-,Great American Ball Park,great_american_ball_park,160,"Cincinnati, Ohio",cincinnati,ohio,oh,us,43500,Grass,2003,Open,,Retro-modern,404,123.13920000049255,,,,,
-,Hard Rock Stadium,hard_rock_stadium,161,"Miami Gardens, Florida",miami_gardens,florida,fl,us,65326,Bermuda grass,1987,Open-air,,,,,,,,,
-,Highmark Stadium,highmark_stadium,162,"Orchard Park, New York",orchard_park,new_york,ny,us,71608,A-Turf Titan 50,1973,Open-air,,,,,,,,,
-,Honda Center,honda_center,163,"Anaheim, California",anaheim,california,ca,us,17174,,1993,,,,,,1993–94,,,,
-,Huntington Bank Field,huntington_bank_field,164,"Cleveland, Ohio",cleveland,ohio,oh,us,67431,Kentucky bluegrass,1999,Open-air,,,,,,,,,
-,Inter&Co Stadium,inter_co_stadium,165,"Orlando, Florida",orlando,florida,fl,us,25500,Grass,2017,Open,28°37′27.83″N 81°23′20.53″W,,,,2017,120,109.728,75,68.58
-,Intuit Dome,intuit_dome,166,"Inglewood, California",inglewood,california,ca,us,18000,,2024,,,,,,2024–25,,,,
-,Kaseya Center,kaseya_center,167,"Miami, Florida",miami,florida,fl,us,19600,,1999,,,,,,1999–2000,,,,
-,Kauffman Stadium,kauffman_stadium,168,"Kansas City, Missouri",kansas_city,missouri,mo,us,37903,Grass,1973,Open,,Modern Retro-modern,410,124.96800000049987,,,,,
-,KeyBank Center,keybank_center,169,"Buffalo, New York",buffalo,new_york,ny,us,19070,,1996,,,,,,1996–97,,,,
-,Kia Center,kia_center,170,"Orlando, Florida",orlando,florida,fl,us,18846,,2010,,,,,,2010–11,,,,
-,Lambeau Field,lambeau_field,171,"Green Bay, Wisconsin",green_bay,wisconsin,wi,us,81441,Kentucky bluegrass reinforced with SIS Grass,1957,Open-air,,,,,,,,,
-,Lenovo Center,lenovo_center,172,"Raleigh, North Carolina",raleigh,north_carolina,nc,us,18700,,1999,,,,,,1999–2000,,,,
-,Levi's Stadium,levis_stadium,173,"Santa Clara, California",santa_clara,california,ca,us,68500,Bermuda grass Perennial Rye grass mixture,2014,Open-air,,,,,,,,,
-,Lincoln Financial Field,lincoln_financial_field,174,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,69596,GrassMaster,2003,Open-air,,,,,,,,,
-,Little Caesars Arena,little_caesars_arena,175,"Detroit, Michigan",detroit,michigan,mi,us,20332,,2017,,,,,,2017–18,,,,
-,LoanDepot Park,loandepot_park,176,"Miami, Florida",miami,florida,fl,us,36742,Artificial turf,2012,Retractable,,Contemporary,407,124.0536000004962,,,,,
-,Lower.com Field,lower_com_field,177,"Columbus, Ohio",columbus,ohio,oh,us,20371,Grass,2021,Open,39°58′6.46″N 83°1′1.52″W,,,,2021,120,109.728,75,68.58
-,Lucas Oil Stadium,lucas_oil_stadium,178,"Indianapolis, Indiana",indianapolis,indiana,in,us,67000,Hellas Matrix Turf,2008,Retractable,,,,,,,,,
-,Lumen Field,lumen_field,179,"Seattle, Washington",seattle,washington,wa,us,69000,FieldTurf Revolution 360,2002,Open,47.5952°N 122.3316°W,,,,2009,114,104.2416,74,67.6656
-,M&T Bank Stadium,m&t_bank_stadium,180,"Baltimore, Maryland",baltimore,maryland,ma,us,71008,Bermuda grass,1998,Open-air,,,,,,,,,
-,Madison Square Garden,madison_square_garden,181,"New York, New York",new_york,new_york,ny,us,19812,,1968,,,,,,1967–68,,,,
-,Mercedes-Benz Stadium,mercedes-benz_stadium,182,"Atlanta, Georgia",atlanta,georgia,ga,us,71000,FieldTurf Revolution 360,2017,Retractable,33°45′19.30″N 84°24′4.29″W,,,,2017,115,105.156,75,68.58
-,MetLife Stadium,metlife_stadium,183,"East Rutherford, New Jersey",east_rutherford,new_jersey,nj,us,82500,FieldTurf Core,2010,Open-air,,,,,,,,,
-,Michelob Ultra Arena,michelob_ultra_arena,184,"Paradise, Nevada",paradise,nevada,nv,us,12000,,,,,,,,1997,,,,
-,Moda Center,moda_center,185,"Portland, Oregon",portland,oregon,or,us,19441,,1995,,,,,,1995–96,,,,
-,Mohegan Sun Arena,mohegan_sun_arena,186,"Uncasville, Connecticut",uncasville,connecticut,ct,us,9323,,,,,,,,1999,,,,
-,Nationals Park,nationals_park,187,"Washington, D.C.",washington,district of columbia,dc,us,41373,Grass,2008,Open,,Retro-modern,402,122.5296000004901,,,,,
-,Nationwide Arena,nationwide_arena,188,"Columbus, Ohio",columbus,ohio,oh,us,18144,,2000,,,,,,2000–01,,,,
-,Nissan Stadium,nissan_stadium,189,"Nashville, Tennessee",nashville,tennessee,tn,us,69143,Matrix Helix Turf with organic infill,1999,Open-air,,,,,,,,,
-,Northwest Stadium,northwest_stadium,190,"Landover, Maryland",landover,maryland,md,us,64000,Bermuda grass,1997,Open-air,,,,,,,,,
-,NRG Stadium,nrg_stadium,191,"Houston, Texas",houston,texas,tx,us,72220,Hellas Matrix Turf,2002,Retractable,,,,,,,,,
-,Oracle Park,oracle_park,192,"San Francisco, California",san_francisco,california,ca,us,41331,Grass,2000,Open,,Retro-classic,391,119.1768000004767,,,,,
-,Oriole Park at Camden Yards,oriole_park_at_camden_yards,193,"Baltimore, Maryland",baltimore,maryland,md,us,44970,Grass,1992,Open,,Retro-classic,410,124.96800000049987,,,,,
-,Paycom Center,paycom_center,194,"Oklahoma City, Oklahoma",oklahoma_city,oklahoma,ok,us,18203,,2002,,,,,,2008–09,,,,
-,Paycor Stadium,paycor_stadium,195,"Cincinnati, Ohio",cincinnati,ohio,oh,us,65515,UBU Speed Series S5-M Synthetic Turf,2000,Open-air,,,,,,,,,
-,PayPal Park,paypal_park,196,"San Jose, California",san_jose,california,ca,us,18000,SISGrass (Hybrid),2015,Open,37°21′5″N 121°55′30″W,,,,2015,115,105.156,75,68.58
-,Petco Park,petco_park,197,"San Diego, California",san_diego,california,ca,us,39860,Grass,2004,Open,,Retro-modern,396,120.7008000004828,,,,,
-,PHX Arena,phx_arena,198,"Phoenix, Arizona",phoenix,arizona,az,us,17071,,1992,,,,,,1992–93,,,,
-,PNC Park,pnc_park,199,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,38747,Grass,2001,Open,,Retro-classic,399,121.61520000048645,,,,,
-,PPG Paints Arena,ppg_paints_arena,200,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,18387,,2010,,,,,,2010–11,,,,
-,Progressive Field,progressive_field,201,"Cleveland, Ohio",cleveland,ohio,oh,us,34820,Grass,1994,Open,,Retro-modern,410,124.96800000049987,,,,,
-,Providence Park,providence_park,202,"Portland, Oregon",portland,oregon,or,us,25218,FieldTurf,1926,Open,45°31′17″N 122°41′30″W,,,,2011,110,100.584,75,68.58
-,Prudential Center,prudential_center,203,"Newark, New Jersey",newark,new_jersey,nj,us,16514,,2007,,,,,,2007–08,,,,
-,Q2 Stadium,q2_stadium,204,"Austin, Texas",austin,texas,tx,us,20738,Grass,2021,Open,30°23′17.54″N 97°43′11.51″W,,,,2021,115,105.156,75,68.58
-,Rate Field,rate_field,205,"Chicago, Illinois",chicago,illinois,il,us,40615,Grass,1991,Open,,Modern Retro-classic,400,121.92000000048768,,,,,
-,Raymond James Stadium,raymond_james_stadium,206,"Tampa, Florida",tampa,florida,fl,us,69218,Bermuda grass,1998,Open-air,,,,,,,,,
-,Rocket Arena,rocket_arena,207,"Cleveland, Ohio",cleveland,ohio,oh,us,19432,,1994,,,,,,1994–95,,,,
-,Rogers Arena,rogers_arena,208,"Vancouver, British Columbia",vancouver,british_columbia,bc,ca,18910,,1995,,,,,,1995–96,,,,
-,Rogers Centre,rogers_centre,209,"Toronto, Ontario",toronto,ontario,on,ca,39150,Artificial turf,1989,Retractable,,Modern,400,121.92000000048768,,,,,
-,Rogers Place,rogers_place,210,"Edmonton, Alberta",edmonton,alberta,ab,ca,18347,,2016,,,,,,2016–17,,,,
-,SAP Center,sap_center,211,"San Jose, California",san_jose,california,ca,us,17435,,1993,,,,,,1993–94,,,,
-,Saputo Stadium,saputo_stadium,212,"Montreal, Quebec",montreal,quebec,qc,ca,19619,Grass,2008,Open,45°33′47″N 73°33′9″W,,,,2012,120,109.728,77,70.4088
-,Scotiabank Arena,scotiabank_arena,213,"Toronto, Ontario",toronto,ontario,on,ca,19800,,1999,,,,,,1998–99,,,,
-,Scotiabank Saddledome,scotiabank_saddledome,214,"Calgary, Alberta",calgary,alberta,ab,ca,19289,,1983,,,,,,1983–84,,,,
-,Shell Energy Stadium,shell_energy_stadium,215,"Houston, Texas",houston,texas,tx,us,20656,Grass,2012,Open,29°45.132′N 95°21.144′W,,,,2012,115,105.156,73,66.7512
-,Smoothie King Center,smoothie_king_center,216,"New Orleans, Louisiana",new_orleans,louisiana,la,us,16867,,1999,,,,,,2002–03,,,,
-,Snapdragon Stadium,snapdragon_stadium,217,"San Diego, California",san_diego,california,ca,us,35000,Grass,2022,Open,32°47′04.0″N 117°7′22.2″W,,,,2025,110,100.584,70,64.008
-,SoFi Stadium,sofi_stadium,218,"Inglewood, California",inglewood,california,ca,us,70240,Hellas Matrix Turf,2020,Translucent,,,,,,,,,
-,Soldier Field,soldier_field,219,"Chicago, Illinois",chicago,illinois,il,us,61500,Bermuda grass,1924,Open,41.8623°N 87.6167°W,,,,1998,114,104.2416,74,67.6656
-,Spectrum Center,spectrum_center,220,"Charlotte, North Carolina",charlotte,north_carolina,nc,us,19077,,2005,,,,,,2005–06,,,,
-,Sports Illustrated Stadium,sports_illustrated_stadium,221,"Harrison, New Jersey",harrison,new_jersey,nj,us,25000,Grass,2010,Open,40°44′12″N 74°9′1″W,,,,2010,120,109.728,75,68.58
-,State Farm Arena,state_farm_arena,222,"Atlanta, Georgia",atlanta,georgia,ga,us,17044,,1999,,,,,,1999–2000,,,,
-,State Farm Stadium,state_farm_stadium,223,"Glendale, Arizona",glendale,arizona,az,us,63400,Bermuda grass,2006,Retractable,,,,,,,,,
-,Subaru Park,subaru_park,224,"Chester, Pennsylvania",chester,pennsylvania,pa,us,18500,Grass,2010,Open,39°49′56″N 75°22′44″W,,,,2010,120,109.728,75,68.58
-,Sutter Health Park,sutter_health_park,225,"West Sacramento, California",west_sacramento,california,ca,us,13416,Grass,2000,Open,,Retro-modern,403,122.83440000049133,,,,,
-,T-Mobile Arena,t-mobile_arena,226,"Paradise, Nevada",paradise,nevada,nv,us,17367,,2016,,,,,,2017–18,,,,
-,T-Mobile Park,t-mobile_park,227,"Seattle, Washington",seattle,washington,wa,us,47929,Grass,1999,Retractable,,Retro-modern,401,122.2248000004889,,,,,
-,Target Center,target_center,228,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,18978,,1990,,,,,,1990–91,,,,
-,Target Field,target_field,229,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,38544,Grass,2010,Open,,Retro-modern,404,123.13920000049255,,,,,
-,TD Garden,td_garden,230,"Boston, Massachusetts",boston,massachusetts,ma,us,19580,,1995,,,,,,1995–96,,,,
-,Toyota Center,toyota_center,231,"Houston, Texas",houston,texas,tx,us,18055,,2003,,,,,,2003–04,,,,
-,Toyota Stadium,toyota_stadium,232,"Frisco, Texas",frisco,texas,tx,us,19096,Grass,2005,Open,33°9′16″N 96°50′7″W,,,,2005,117,106.98479999999999,74,67.6656
-,TQL Stadium,tql_stadium,233,"Cincinnati, Ohio",cincinnati,ohio,oh,us,26000,Hybrid grass,2021,Open,39°06′41″N 84°31′20″W,,,,2021,110,100.584,75,68.58
-,Truist Park,truist_park,234,"Cumberland, Georgia",cumberland,georgia,ga,us,41084,Grass,2017,Open,,Retro-modern,400,121.92000000048768,,,,,
-,U.S. Bank Stadium,us_bank_stadium,235,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,66655,Act Global Xtreme Turf DX,2016,Translucent,,,,,,,,,
-,UBS Arena,ubs_arena,236,"Elmont, New York",elmont,new_york,ny,us,17255,,2021,,,,,,2021–22,,,,
-,United Center,united_center,237,"Chicago, Illinois",chicago,illinois,il,us,20917,,1994,,,,,,1994–95,,,,
-,Wintrust Arena,wintrust_arena,238,"Chicago, Illinois",chicago,illinois,il,us,10387,,,,,,,,2006,,,,
-,Wrigley Field,wrigley_field,239,"Chicago, Illinois",chicago,illinois,il,us,41649,Grass,1914,Open,,Jewel box,400,121.92000000048768,,,,,
-,Xfinity Mobile Arena,xfinity_mobile_arena,240,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,20478,,1996,,,,,,1996–97,,,,
-,Yankee Stadium,yankee_stadium,241,"The Bronx, New York",the_bronx,new_york,ny,us,46537,Grass,2009,Open,40°49′45″N 73°55′35″W,Retro-classic,408,124.35840000049743,2015,110,100.584,70,64.008
-,M. A. Chidambaram Stadium,m_a_chidambaram_stadium,242,"Chennai, Tamil Nadu",chennai,tamil_nadu,tn,in," 38,200 ",,1916,,,,,,,,,,
-,Arun Jaitley Cricket Stadium,,243,"Delhi, Delhi",delhi,delhi,dl,in," 35,200 ",,1883,,,,,,,,,,
-,Narendra Modi Stadium,,244,"Ahmedabad, Gujarat",ahmedabad,gujarat,gj,in," 132,000 ",,2020,,,,,,,,,,
-,Eden Gardens,,245,"Kolkata, West Bengal",kolkata,west_bengal,wb,in," 68,000 ",,1864,,,,,,,,,,
-,Ekana Cricket Stadium,,246,"Lucknow, Uttar Pratesh",lucknow,uttar_pratesh,up,in," 50,000 ",,2017,,,,,,,,,,
-,Wankhede Stadium,,247,"Mumbai, Mumbai",mumbai,maharashtra,mh,in," 33,100 ",,1974,,,,,,,,,,
-,Maharaja Yadavindra Singh International Cricket Stadium,,248,"Mohali, Punjab",mohali,punjab,pb,in," 38,000 ",,2021,,,,,,,,,,
-,Sawai Mansingh Stadium,,249,"Jaipur, Rajasthan",jaipur,rajasthan,rj,in," 30,000 ",,1969,,,,,,,,,,
-,M. Chinnaswamy Stadium,,250,"Bengaluru, Karnataka",bengaluru,karnataka,ka,in," 40,000 ",,1969,,,,,,,,,,
-,"Rajiv Gandhi International Cricket (""Uppal"") Stadium",,251,"Hyderabad, Telangana",hyderabad,telangana,tg,in," 39,200 ",,2003,,,,,,,,,,
+full_stadium_name,stadium_name,stadium_id,location_name,city_name,full_state_name,state_name,country,capacity,surface,year_opened,roof_type
+Acrisure Stadium,acrisure_stadium,101,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,68400,Kentucky bluegrass,2001,Open-air
+Allegiant Stadium,allegiant_stadium,102,"Paradise, Nevada",paradise,nevada,nv,us,65000,Bermuda grass,2020,Translucent
+Allianz Field,allianz_field,103,"Saint Paul, Minnesota",saint_paul,minnesota,mn,us,19400,Grass,2019,Open
+Amerant Bank Arena,amerant_bank_arena,104,"Sunrise, Florida",sunrise,florida,fl,us,19250,,1998,
+America First Field,america_first_field,105,"Sandy, Utah",sandy,utah,ut,us,20213,Grass,2008,Open
+American Airlines Center,american_airlines_center,106,"Dallas, Texas",dallas,texas,tx,us,19200,,2001,
+American Family Field,american_family_field,107,"Milwaukee, Wisconsin",milwaukee,wisconsin,wi,us,41900,Grass,2001,Retractable
+Angel Stadium,angel_stadium,108,"Anaheim, California",anaheim,california,ca,us,45517,Grass,1966,Open
+Arrowhead Stadium,arrowhead_stadium,109,"Kansas City, Missouri",kansas_city,missouri,mo,us,76416,Bermuda grass,1972,Open-air
+AT&T Stadium,at&t_stadium,110,"Arlington, Texas",arlington,texas,tx,us,80000,Hellas Matrix Turf,2009,Retractable
+Audi Field,audi_field,111,"Washington, D.C.",washington,district of columbia,dc,us,20000,Grass,2018,Open
+Ball Arena,ball_arena,112,"Denver, Colorado",denver,colorado,co,us,19520,,1999,
+Bank of America Stadium,bank_of_america_stadium,113,"Charlotte, North Carolina",charlotte,north_carolina,nc,us,38000,FieldTurf,1996,Open
+Barclays Center,barclays_center,114,"Brooklyn, New York",brooklyn,new_york,ny,us,17732,,2012,
+BC Place,bc_place,115,"Vancouver, British Columbia",vancouver,british_columbia,bc,us,22120,Polytan,1983,Retractable
+Bell Centre,bell_centre,116,"Montreal, Quebec",montreal,quebec,qc,ca,21105,,1996,
+Benchmark International Arena,benchmark_international_arena,117,"Tampa, Florida",tampa,florida,fl,us,19092,,1996,
+BMO Field,bmo_field,118,"Toronto, Ontario",toronto,ontario,on,us,30991,Hybrid grass,2007,Open
+BMO Stadium,bmo_stadium,119,"Los Angeles, California",los_angeles,california,ca,us,22000,Grass,2018,Open
+Bridgestone Arena,bridgestone_arena,120,"Nashville, Tennessee",nashville,tennessee,tn,us,17159,,1996,
+Busch Stadium,busch_stadium,121,"St. Louis, Missouri",st._louis,missouri,mo,us,44383,Grass,2006,Open
+Caesars Superdome,caesars_superdome,122,"New Orleans, Louisiana",new_orleans,louisiana,la,us,73208,FieldTurf Revolution 360,1975,Dome
+Canada Life Centre,canada_life_centre,123,"Winnipeg, Manitoba",winnipeg,manitoba,mb,ca,15321,,2004,
+Canadian Tire Centre,canadian_tire_centre,124,"Ottawa, Ontario",ottawa,ontario,on,ca,19347,,1996,
+Capital One Arena,capital_one_arena,125,"Washington, D.C.",washington,district of columbia,dc,us,20356,,1997,
+CareFirst Arena,carefirst_arena,126,"Washington, D.C.",washington,district of columbia,dc,us,4200,,,
+Chase Center,chase_center,127,"San Francisco, California",san_francisco,california,ca,us,18064,,2019,
+Chase Field,chase_field,128,"Phoenix, Arizona",phoenix,arizona,az,us,48330,Artificial turf,1998,Retractable
+Chase Stadium,chase_stadium,129,"Fort Lauderdale, Florida",fort_lauderdale,florida,fl,us,21550,Grass,2020,Open
+Children's Mercy Park,children's_mercy_park,130,"Kansas City, Kansas",kansas_city,kansas,ks,us,18467,Grass,2011,Open
+Citi Field,citi_field,131,"Queens, New York",queens,new_york,ny,us,41922,Grass,2009,Open
+Citizens Bank Park,citizens_bank_park,132,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,42901,Grass,2004,Open
+Climate Pledge Arena,climate_pledge_arena,133,"Seattle, Washington",seattle,washington,wa,us,18300,,2021,
+College Park Center,college_park_center,134,"Arlington, Texas",arlington,texas,tx,us,7000,,,
+Comerica Park,comerica_park,135,"Detroit, Michigan",detroit,michigan,mi,us,41083,Grass,2000,Open
+Coors Field,coors_field,136,"Denver, Colorado",denver,colorado,co,us,46897,Grass,1995,Open
+Crypto.com Arena,crypto.com_arena,137,"Los Angeles, California",los_angeles,california,ca,us,19079,,1999,
+Daikin Park,daikin_park,138,"Houston, Texas",houston,texas,tx,us,41168,Grass,2000,Retractable
+Delta Center,delta_center,139,"Salt Lake City, Utah",salt_lake_city,utah,ut,us,18306,,1991,
+Dick's Sporting Goods Park,dick's_sporting_goods_park,140,"Commerce City, Colorado",commerce_city,colorado,co,us,18061,Grass,2007,Open
+Dignity Health Sports Park,dignity_health_sports_park,141,"Carson, California",carson,california,ca,us,27000,Grass,2003,Open
+Dodger Stadium,dodger_stadium,142,"Los Angeles, California",los_angeles,california,ca,us,56000,Grass,1962,Open
+Empower Field at Mile High,empower_field_at_mile_high,143,"Denver, Colorado",denver,colorado,co,us,76125,Kentucky bluegrass,2001,Open-air
+Energizer Park,energizer_park,144,"St. Louis, Missouri",st._louis,missouri,mo,us,22423,Grass,2022,Open
+Enterprise Center,enterprise_center,145,"St. Louis, Missouri",st._louis,missouri,mo,us,18096,,1994,
+EverBank Stadium,everbank_stadium,146,"Jacksonville, Florida",jacksonville,florida,fl,us,67838,Bermuda grass,1995,Open-air
+FedExForum,fedexforum,147,"Memphis, Tennessee",memphis,tennessee,tn,us,17794,,2004,
+Fenway Park,fenway_park,148,"Boston, Massachusetts",boston,massachusetts,ma,us,37755,Grass,1912,Open
+Fiserv Forum,fiserv_forum,149,"Milwaukee, Wisconsin",milwaukee,wisconsin,wi,us,17500,,2018,
+Ford Field,ford_field,150,"Detroit, Michigan",detroit,michigan,mi,us,65000,FieldTurf CORE,2002,Dome
+Frost Bank Center,frost_bank_center,151,"San Antonio, Texas",san_antonio,texas,tx,us,18418,,2002,
+Gainbridge Fieldhouse,gainbridge_fieldhouse,152,"Indianapolis, Indiana",indianapolis,indiana,in,us,17923,,1999,
+Gateway Center Arena,gateway_center_arena,153,"College Park, Georgia",college_park,georgia,ga,us,3500,,,
+Geodis Park,geodis_park,154,"Nashville, Tennessee",nashville,tennessee,tn,us,30000,Grass,2022,Open
+George M. Steinbrenner Field,george_m._steinbrenner_field,155,"Tampa, Florida",tampa,florida,fl,us,11026,Grass,1996,Open
+Gillette Stadium,gillette_stadium,156,"Foxborough, Massachusetts",foxborough,massachusetts,ma,us,66829,FieldTurf,2002,Open
+Globe Life Field,globe_life_field,157,"Arlington, Texas",arlington,texas,tx,us,40300,Artificial turf,2020,Retractable
+Golden 1 Center,golden_1_center,158,"Sacramento, California",sacramento,california,ca,us,17583,,2016,
+Grand Casino Arena,grand_casino_arena,159,"Saint Paul, Minnesota",saint_paul,minnesota,mn,us,17954,,2000,
+Great American Ball Park,great_american_ball_park,160,"Cincinnati, Ohio",cincinnati,ohio,oh,us,43500,Grass,2003,Open
+Hard Rock Stadium,hard_rock_stadium,161,"Miami Gardens, Florida",miami_gardens,florida,fl,us,65326,Bermuda grass,1987,Open-air
+Highmark Stadium,highmark_stadium,162,"Orchard Park, New York",orchard_park,new_york,ny,us,71608,A-Turf Titan 50,1973,Open-air
+Honda Center,honda_center,163,"Anaheim, California",anaheim,california,ca,us,17174,,1993,
+Huntington Bank Field,huntington_bank_field,164,"Cleveland, Ohio",cleveland,ohio,oh,us,67431,Kentucky bluegrass,1999,Open-air
+Inter&Co Stadium,inter_co_stadium,165,"Orlando, Florida",orlando,florida,fl,us,25500,Grass,2017,Open
+Intuit Dome,intuit_dome,166,"Inglewood, California",inglewood,california,ca,us,18000,,2024,
+Kaseya Center,kaseya_center,167,"Miami, Florida",miami,florida,fl,us,19600,,1999,
+Kauffman Stadium,kauffman_stadium,168,"Kansas City, Missouri",kansas_city,missouri,mo,us,37903,Grass,1973,Open
+KeyBank Center,keybank_center,169,"Buffalo, New York",buffalo,new_york,ny,us,19070,,1996,
+Kia Center,kia_center,170,"Orlando, Florida",orlando,florida,fl,us,18846,,2010,
+Lambeau Field,lambeau_field,171,"Green Bay, Wisconsin",green_bay,wisconsin,wi,us,81441,Kentucky bluegrass reinforced with SIS Grass,1957,Open-air
+Lenovo Center,lenovo_center,172,"Raleigh, North Carolina",raleigh,north_carolina,nc,us,18700,,1999,
+Levi's Stadium,levis_stadium,173,"Santa Clara, California",santa_clara,california,ca,us,68500,Bermuda grass Perennial Rye grass mixture,2014,Open-air
+Lincoln Financial Field,lincoln_financial_field,174,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,69596,GrassMaster,2003,Open-air
+Little Caesars Arena,little_caesars_arena,175,"Detroit, Michigan",detroit,michigan,mi,us,20332,,2017,
+LoanDepot Park,loandepot_park,176,"Miami, Florida",miami,florida,fl,us,36742,Artificial turf,2012,Retractable
+Lower.com Field,lower_com_field,177,"Columbus, Ohio",columbus,ohio,oh,us,20371,Grass,2021,Open
+Lucas Oil Stadium,lucas_oil_stadium,178,"Indianapolis, Indiana",indianapolis,indiana,in,us,67000,Hellas Matrix Turf,2008,Retractable
+Lumen Field,lumen_field,179,"Seattle, Washington",seattle,washington,wa,us,69000,FieldTurf Revolution 360,2002,Open
+M&T Bank Stadium,m&t_bank_stadium,180,"Baltimore, Maryland",baltimore,maryland,ma,us,71008,Bermuda grass,1998,Open-air
+Madison Square Garden,madison_square_garden,181,"New York, New York",new_york,new_york,ny,us,19812,,1968,
+Mercedes-Benz Stadium,mercedes-benz_stadium,182,"Atlanta, Georgia",atlanta,georgia,ga,us,71000,FieldTurf Revolution 360,2017,Retractable
+MetLife Stadium,metlife_stadium,183,"East Rutherford, New Jersey",east_rutherford,new_jersey,nj,us,82500,FieldTurf Core,2010,Open-air
+Michelob Ultra Arena,michelob_ultra_arena,184,"Paradise, Nevada",paradise,nevada,nv,us,12000,,,
+Moda Center,moda_center,185,"Portland, Oregon",portland,oregon,or,us,19441,,1995,
+Mohegan Sun Arena,mohegan_sun_arena,186,"Uncasville, Connecticut",uncasville,connecticut,ct,us,9323,,,
+Nationals Park,nationals_park,187,"Washington, D.C.",washington,district of columbia,dc,us,41373,Grass,2008,Open
+Nationwide Arena,nationwide_arena,188,"Columbus, Ohio",columbus,ohio,oh,us,18144,,2000,
+Nissan Stadium,nissan_stadium,189,"Nashville, Tennessee",nashville,tennessee,tn,us,69143,Matrix Helix Turf with organic infill,1999,Open-air
+Northwest Stadium,northwest_stadium,190,"Landover, Maryland",landover,maryland,md,us,64000,Bermuda grass,1997,Open-air
+NRG Stadium,nrg_stadium,191,"Houston, Texas",houston,texas,tx,us,72220,Hellas Matrix Turf,2002,Retractable
+Oracle Park,oracle_park,192,"San Francisco, California",san_francisco,california,ca,us,41331,Grass,2000,Open
+Oriole Park at Camden Yards,oriole_park_at_camden_yards,193,"Baltimore, Maryland",baltimore,maryland,md,us,44970,Grass,1992,Open
+Paycom Center,paycom_center,194,"Oklahoma City, Oklahoma",oklahoma_city,oklahoma,ok,us,18203,,2002,
+Paycor Stadium,paycor_stadium,195,"Cincinnati, Ohio",cincinnati,ohio,oh,us,65515,UBU Speed Series S5-M Synthetic Turf,2000,Open-air
+PayPal Park,paypal_park,196,"San Jose, California",san_jose,california,ca,us,18000,SISGrass (Hybrid),2015,Open
+Petco Park,petco_park,197,"San Diego, California",san_diego,california,ca,us,39860,Grass,2004,Open
+PHX Arena,phx_arena,198,"Phoenix, Arizona",phoenix,arizona,az,us,17071,,1992,
+PNC Park,pnc_park,199,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,38747,Grass,2001,Open
+PPG Paints Arena,ppg_paints_arena,200,"Pittsburgh, Pennsylvania",pittsburgh,pennsylvania,pa,us,18387,,2010,
+Progressive Field,progressive_field,201,"Cleveland, Ohio",cleveland,ohio,oh,us,34820,Grass,1994,Open
+Providence Park,providence_park,202,"Portland, Oregon",portland,oregon,or,us,25218,FieldTurf,1926,Open
+Prudential Center,prudential_center,203,"Newark, New Jersey",newark,new_jersey,nj,us,16514,,2007,
+Q2 Stadium,q2_stadium,204,"Austin, Texas",austin,texas,tx,us,20738,Grass,2021,Open
+Rate Field,rate_field,205,"Chicago, Illinois",chicago,illinois,il,us,40615,Grass,1991,Open
+Raymond James Stadium,raymond_james_stadium,206,"Tampa, Florida",tampa,florida,fl,us,69218,Bermuda grass,1998,Open-air
+Rocket Arena,rocket_arena,207,"Cleveland, Ohio",cleveland,ohio,oh,us,19432,,1994,
+Rogers Arena,rogers_arena,208,"Vancouver, British Columbia",vancouver,british_columbia,bc,ca,18910,,1995,
+Rogers Centre,rogers_centre,209,"Toronto, Ontario",toronto,ontario,on,ca,39150,Artificial turf,1989,Retractable
+Rogers Place,rogers_place,210,"Edmonton, Alberta",edmonton,alberta,ab,ca,18347,,2016,
+SAP Center,sap_center,211,"San Jose, California",san_jose,california,ca,us,17435,,1993,
+Saputo Stadium,saputo_stadium,212,"Montreal, Quebec",montreal,quebec,qc,ca,19619,Grass,2008,Open
+Scotiabank Arena,scotiabank_arena,213,"Toronto, Ontario",toronto,ontario,on,ca,19800,,1999,
+Scotiabank Saddledome,scotiabank_saddledome,214,"Calgary, Alberta",calgary,alberta,ab,ca,19289,,1983,
+Shell Energy Stadium,shell_energy_stadium,215,"Houston, Texas",houston,texas,tx,us,20656,Grass,2012,Open
+Smoothie King Center,smoothie_king_center,216,"New Orleans, Louisiana",new_orleans,louisiana,la,us,16867,,1999,
+Snapdragon Stadium,snapdragon_stadium,217,"San Diego, California",san_diego,california,ca,us,35000,Grass,2022,Open
+SoFi Stadium,sofi_stadium,218,"Inglewood, California",inglewood,california,ca,us,70240,Hellas Matrix Turf,2020,Translucent
+Soldier Field,soldier_field,219,"Chicago, Illinois",chicago,illinois,il,us,61500,Bermuda grass,1924,Open
+Spectrum Center,spectrum_center,220,"Charlotte, North Carolina",charlotte,north_carolina,nc,us,19077,,2005,
+Sports Illustrated Stadium,sports_illustrated_stadium,221,"Harrison, New Jersey",harrison,new_jersey,nj,us,25000,Grass,2010,Open
+State Farm Arena,state_farm_arena,222,"Atlanta, Georgia",atlanta,georgia,ga,us,17044,,1999,
+State Farm Stadium,state_farm_stadium,223,"Glendale, Arizona",glendale,arizona,az,us,63400,Bermuda grass,2006,Retractable
+Subaru Park,subaru_park,224,"Chester, Pennsylvania",chester,pennsylvania,pa,us,18500,Grass,2010,Open
+Sutter Health Park,sutter_health_park,225,"West Sacramento, California",west_sacramento,california,ca,us,13416,Grass,2000,Open
+T-Mobile Arena,t-mobile_arena,226,"Paradise, Nevada",paradise,nevada,nv,us,17367,,2016,
+T-Mobile Park,t-mobile_park,227,"Seattle, Washington",seattle,washington,wa,us,47929,Grass,1999,Retractable
+Target Center,target_center,228,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,18978,,1990,
+Target Field,target_field,229,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,38544,Grass,2010,Open
+TD Garden,td_garden,230,"Boston, Massachusetts",boston,massachusetts,ma,us,19580,,1995,
+Toyota Center,toyota_center,231,"Houston, Texas",houston,texas,tx,us,18055,,2003,
+Toyota Stadium,toyota_stadium,232,"Frisco, Texas",frisco,texas,tx,us,19096,Grass,2005,Open
+TQL Stadium,tql_stadium,233,"Cincinnati, Ohio",cincinnati,ohio,oh,us,26000,Hybrid grass,2021,Open
+Truist Park,truist_park,234,"Cumberland, Georgia",cumberland,georgia,ga,us,41084,Grass,2017,Open
+U.S. Bank Stadium,us_bank_stadium,235,"Minneapolis, Minnesota",minneapolis,minnesota,mn,us,66655,Act Global Xtreme Turf DX,2016,Translucent
+UBS Arena,ubs_arena,236,"Elmont, New York",elmont,new_york,ny,us,17255,,2021,
+United Center,united_center,237,"Chicago, Illinois",chicago,illinois,il,us,20917,,1994,
+Wintrust Arena,wintrust_arena,238,"Chicago, Illinois",chicago,illinois,il,us,10387,,,
+Wrigley Field,wrigley_field,239,"Chicago, Illinois",chicago,illinois,il,us,41649,Grass,1914,Open
+Xfinity Mobile Arena,xfinity_mobile_arena,240,"Philadelphia, Pennsylvania",philadelphia,pennsylvania,pa,us,20478,,1996,
+Yankee Stadium,yankee_stadium,241,"The Bronx, New York",the_bronx,new_york,ny,us,46537,Grass,2009,Open
+M. A. Chidambaram Stadium,m_a_chidambaram_stadium,242,"Chennai, Tamil Nadu",chennai,tamil_nadu,tn,in,"38,200",,1916,
+Arun Jaitley Cricket Stadium,,243,"Delhi, Delhi",delhi,delhi,dl,in,"35,200",,1883,
+Narendra Modi Stadium,,244,"Ahmedabad, Gujarat",ahmedabad,gujarat,gj,in,"132,000",,2020,
+Eden Gardens,,245,"Kolkata, West Bengal",kolkata,west_bengal,wb,in,"68,000",,1864,
+Ekana Cricket Stadium,,246,"Lucknow, Uttar Pratesh",lucknow,uttar_pratesh,up,in,"50,000",,2017,
+Wankhede Stadium,,247,"Mumbai, Mumbai",mumbai,maharashtra,mh,in,"33,100",,1974,
+Maharaja Yadavindra Singh International Cricket Stadium,,248,"Mohali, Punjab",mohali,punjab,pb,in,"38,000",,2021,
+Sawai Mansingh Stadium,,249,"Jaipur, Rajasthan",jaipur,rajasthan,rj,in,"30,000",,1969,
+M. Chinnaswamy Stadium,,250,"Bengaluru, Karnataka",bengaluru,karnataka,ka,in,"40,000",,1969,
+"Rajiv Gandhi International Cricket (""Uppal"") Stadium",,251,"Hyderabad, Telangana",hyderabad,telangana,tg,in,"39,200",,2003,

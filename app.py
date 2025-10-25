@@ -484,6 +484,123 @@ def serve_logo(filename):
     from flask import redirect
     return redirect(f'https://www.splitsp.lat/logos/{filename}', code=302)
 
+@app.route('/api/nba/schedule')
+def api_nba_schedule():
+    """API endpoint to get NBA schedule by date or team."""
+    date = request.args.get('date')
+    team_id = request.args.get('team_id')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        if date:
+            # Get games by date
+            cursor.execute("""
+                SELECT g.*, 
+                       ht.real_team_name as home_team_name,
+                       at.real_team_name as away_team_name
+                FROM nba_games g
+                LEFT JOIN teams ht ON g.home_team_id = ht.team_id
+                LEFT JOIN teams at ON g.away_team_id = at.team_id
+                WHERE g.game_date = %s
+                ORDER BY g.game_time_est
+            """, (date,))
+        elif team_id:
+            # Get games by team
+            cursor.execute("""
+                SELECT g.*, 
+                       ht.real_team_name as home_team_name,
+                       at.real_team_name as away_team_name
+                FROM nba_games g
+                LEFT JOIN teams ht ON g.home_team_id = ht.team_id
+                LEFT JOIN teams at ON g.away_team_id = at.team_id
+                WHERE g.home_team_id = %s OR g.away_team_id = %s
+                ORDER BY g.game_date DESC, g.game_time_est
+            """, (team_id, team_id))
+        else:
+            # Get today's games
+            cursor.execute("""
+                SELECT g.*, 
+                       ht.real_team_name as home_team_name,
+                       at.real_team_name as away_team_name
+                FROM nba_games g
+                LEFT JOIN teams ht ON g.home_team_id = ht.team_id
+                LEFT JOIN teams at ON g.away_team_id = at.team_id
+                WHERE g.game_date = CURRENT_DATE
+                ORDER BY g.game_time_est
+            """)
+        
+        games = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify([dict(game) for game in games])
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/nba/scores/live')
+def api_nba_scores_live():
+    """API endpoint to get all live NBA games."""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT g.*, 
+                   ht.real_team_name as home_team_name,
+                   at.real_team_name as away_team_name
+            FROM nba_games g
+            LEFT JOIN teams ht ON g.home_team_id = ht.team_id
+            LEFT JOIN teams at ON g.away_team_id = at.team_id
+            WHERE g.game_status = 'live'
+            ORDER BY g.game_date, g.game_time_est
+        """)
+        
+        games = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify([dict(game) for game in games])
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/nba/scores/today')
+def api_nba_scores_today():
+    """API endpoint to get today's NBA games and scores."""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT g.*, 
+                   ht.real_team_name as home_team_name,
+                   at.real_team_name as away_team_name
+            FROM nba_games g
+            LEFT JOIN teams ht ON g.home_team_id = ht.team_id
+            LEFT JOIN teams at ON g.away_team_id = at.team_id
+            WHERE g.game_date = CURRENT_DATE
+            ORDER BY g.game_time_est
+        """)
+        
+        games = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify([dict(game) for game in games])
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.template_filter('get_logo')
 def get_logo(team_id):
     """Template filter to get team logo from splitsp.lat using logo_filename column"""

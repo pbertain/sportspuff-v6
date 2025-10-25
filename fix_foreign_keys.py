@@ -199,3 +199,4 @@ def fix_team_foreign_keys():
 
 if __name__ == "__main__":
     fix_team_foreign_keys()
+
