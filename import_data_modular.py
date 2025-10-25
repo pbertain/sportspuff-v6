@@ -180,9 +180,7 @@ def import_conferences(conn):
     
     try:
         df = pd.read_csv('info-conferences.csv', encoding='utf-8-sig')  # Handle BOM
-        # Remove duplicates based on league_id and conference_name
-        df = df.drop_duplicates(subset=['league_id', 'conference_name'])
-        print(f"Importing {len(df)} unique conferences")
+        print(f"Importing {len(df)} conferences")
         
         cursor = conn.cursor()
         
@@ -217,9 +215,7 @@ def import_divisions(conn):
     
     try:
         df = pd.read_csv('info-divisions.csv', encoding='utf-8-sig')  # Handle BOM
-        # Remove duplicates based on league_id and division_name
-        df = df.drop_duplicates(subset=['league_id', 'division_name'])
-        print(f"Importing {len(df)} unique divisions")
+        print(f"Importing {len(df)} divisions")
         
         cursor = conn.cursor()
         
