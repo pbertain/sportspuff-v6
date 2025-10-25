@@ -56,26 +56,22 @@ CREATE TABLE stadiums (
 
 -- Create conferences table (depends on leagues)
 CREATE TABLE conferences (
-    conference_id INTEGER,
+    conference_id INTEGER PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
     conference_name VARCHAR(100) NOT NULL,
     conference_full_name VARCHAR(200) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (league_id, conference_name),
-    UNIQUE(league_id, conference_full_name)
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create divisions table (depends on leagues)
 CREATE TABLE divisions (
-    division_id INTEGER,
+    division_id INTEGER PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
     division_name VARCHAR(100) NOT NULL,
     division_full_name VARCHAR(200) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (league_id, division_name),
-    UNIQUE(league_id, division_full_name)
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create teams table last (depends on all other tables)
@@ -85,8 +81,8 @@ CREATE TABLE teams (
     team_name VARCHAR(255) NOT NULL,
     real_team_name VARCHAR(255) NOT NULL,
     league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
-    division_name VARCHAR(100),
-    conference_name VARCHAR(100),
+    division_id INTEGER REFERENCES divisions(division_id) ON DELETE SET NULL,
+    conference_id INTEGER REFERENCES conferences(conference_id) ON DELETE SET NULL,
     team_league_id INTEGER,
     city_name VARCHAR(100),
     state_name VARCHAR(100),
@@ -98,14 +94,12 @@ CREATE TABLE teams (
     team_color_3 VARCHAR(7),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (league_id, division_name) REFERENCES divisions(league_id, division_name) ON DELETE SET NULL,
-    FOREIGN KEY (league_id, conference_name) REFERENCES conferences(league_id, conference_name) ON DELETE SET NULL
 );
 
 -- Create indexes for better performance
 CREATE INDEX idx_teams_league_id ON teams(league_id);
-CREATE INDEX idx_teams_division_name ON teams(league_id, division_name);
-CREATE INDEX idx_teams_conference_name ON teams(league_id, conference_name);
+CREATE INDEX idx_teams_division_id ON teams(division_id);
+CREATE INDEX idx_teams_conference_id ON teams(conference_id);
 CREATE INDEX idx_teams_stadium_id ON teams(stadium_id);
 CREATE INDEX idx_divisions_league_id ON divisions(league_id);
 CREATE INDEX idx_conferences_league_id ON conferences(league_id);
@@ -119,6 +113,6 @@ COMMENT ON TABLE divisions IS 'League divisions (e.g., Atlantic, Pacific, East, 
 COMMENT ON TABLE teams IS 'Sports teams with foreign key references to leagues, divisions, conferences, and stadiums';
 
 COMMENT ON COLUMN teams.league_id IS 'Foreign key to leagues table';
-COMMENT ON COLUMN teams.division_name IS 'Foreign key to divisions table (composite with league_id)';
-COMMENT ON COLUMN teams.conference_name IS 'Foreign key to conferences table (composite with league_id)';
+COMMENT ON COLUMN teams.division_id IS 'Foreign key to divisions table';
+COMMENT ON COLUMN teams.conference_id IS 'Foreign key to conferences table';
 COMMENT ON COLUMN teams.stadium_id IS 'Foreign key to stadiums table';
