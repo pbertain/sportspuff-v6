@@ -172,9 +172,11 @@ class NBAFullScheduleImporter:
             if not matchup:
                 return None
             
-            # MATCHUP format: "ATL @ ORL" or "ORL vs ATL"
+            # MATCHUP format: "ATL @ ORL" or "ORL vs. ATL" (with periods)
             if ' @ ' in matchup:
                 away_team, home_team = matchup.split(' @ ')
+            elif ' vs. ' in matchup:
+                home_team, away_team = matchup.split(' vs. ')
             elif ' vs ' in matchup:
                 home_team, away_team = matchup.split(' vs ')
             else:
