@@ -154,17 +154,22 @@ def league_page(league_name):
         
         # Get teams for this league organized by divisions (exclude ALL placeholder league teams)
         teams_query = """
-            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
+            SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
+                   t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
+                   s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
+                   c.conference_name, d.division_name
             FROM teams t
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
             LEFT JOIN leagues l ON t.league_id = l.league_id
+            LEFT JOIN conferences c ON t.conference_id = c.conference_id
+            LEFT JOIN divisions d ON t.division_id = d.division_id
             WHERE l.league_name_proper = %s 
             AND t.real_team_name NOT IN (
                 'Major League Baseball', 'National Football League', 'National Basketball Association',
                 'National Hockey League', 'Major League Soccer', 'Women''s National Basketball League',
                 'India Premier League'
             )
-            ORDER BY COALESCE(t.conference_name, 'No Conference'), COALESCE(t.division_name, 'No Division'), t.real_team_name
+            ORDER BY COALESCE(c.conference_name, 'No Conference'), COALESCE(d.division_name, 'No Division'), t.real_team_name
         """
         cursor.execute(teams_query, [league_name])
         teams = cursor.fetchall()
