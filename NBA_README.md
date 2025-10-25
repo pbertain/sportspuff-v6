@@ -86,7 +86,7 @@ NBA scores updater for live game data:
 - Updates game status, scores, period information
 - Determines winners when games are final
 - Provides live games summary
-- Can be run via cron for automatic updates
+- Can be run via systemd timer for automatic updates
 
 **Usage:**
 ```bash
@@ -150,9 +150,9 @@ Complete NBA database setup:
 ```
 
 ### 2. `scripts/update_nba_scores.sh`
-NBA scores update script for cron:
+NBA scores update script for systemd:
 - Updates live scores for today's games
-- Can be scheduled for automatic updates
+- Deployed automatically via Ansible as systemd service
 - Provides logging and error handling
 
 **Usage:**
@@ -160,10 +160,19 @@ NBA scores update script for cron:
 ./scripts/update_nba_scores.sh
 ```
 
-**Cron Setup:**
+**Systemd Timer Setup:**
+The NBA scores updater runs automatically via systemd timer (deployed via Ansible):
 ```bash
-# Update scores every 5 minutes during games
-*/5 * * * * cd /path/to/sportspuff-v6 && ./scripts/update_nba_scores.sh
+# Check timer status
+systemctl status nba-scores-updater.timer
+
+# Check service logs
+journalctl -u nba-scores-updater.service -f
+
+# Manual timer control
+systemctl start nba-scores-updater.timer
+systemctl stop nba-scores-updater.timer
+systemctl enable nba-scores-updater.timer
 ```
 
 ## Dependencies
