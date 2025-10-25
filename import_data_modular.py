@@ -263,6 +263,20 @@ def import_teams(conn):
             division_id = safe_numeric(row.get('division_id'))
             conference_id = safe_numeric(row.get('conference_id'))
             
+            # Check if division_id and conference_id exist in the database
+            valid_division_id = None
+            valid_conference_id = None
+            
+            if division_id:
+                cursor.execute("SELECT division_id FROM divisions WHERE division_id = %s", (division_id,))
+                if cursor.fetchone():
+                    valid_division_id = division_id
+            
+            if conference_id:
+                cursor.execute("SELECT conference_id FROM conferences WHERE conference_id = %s", (conference_id,))
+                if cursor.fetchone():
+                    valid_conference_id = conference_id
+            
             cursor.execute("""
                 INSERT INTO teams (
                     team_id, full_team_name, team_name, real_team_name, league_id,
@@ -291,17 +305,17 @@ def import_teams(conn):
                 row['team_name'],
                 row['real_team_name'],
                 league_id,
-                division_id,
-                conference_id,
+                valid_division_id,
+                valid_conference_id,
                 safe_numeric(row.get('team_league_id')),
                 row.get('city_name'),
                 row.get('state_name'),
                 row.get('country'),
                 stadium_id,
                 row.get('logo_filename'),
-                None,  # team_color_1 - will be updated later
-                None,  # team_color_2 - will be updated later
-                None   # team_color_3 - will be updated later
+                row['team_color_1'],
+                row['team_color_2'],
+                row['team_color_3']
             ))
         
         conn.commit()
