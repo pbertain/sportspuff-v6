@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+"""
+NBA Full Schedule Importer
+
+This script downloads the complete NBA season schedule with proper season type detection
+and imports it into the PostgreSQL database.
+
+Usage:
+    python nba_full_schedule_importer.py --season 2025-26
+"""
+
+import sys
+import os
+import argparse
+import json
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+from dotenv import load_dotenv
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
+
+
+class NBAFullScheduleImporter:
+    """NBA full schedule importer with proper season type detection."""
+    
+    def __init__(self):
+        """Initialize the NBA schedule importer."""
+        self.season_types = {
+            'preseason': {
+                'months': [10],  # October
+                'description': 'Preseason games'
+            },
+            'regular_season': {
+                'months': [11, 12, 1, 2, 3, 4],  # November to April
+                'description': 'Regular season games'
+            },
+            'all_star_break': {
+                'months': [2],  # February (typically mid-February)
+                'description': 'All-Star Break period'
+            },
+            'nba_cup': {
+                'months': [11, 12],  # November-December (In-Season Tournament)
+                'description': 'NBA Cup (In-Season Tournament)'
+            },
+            'playoffs': {
+                'months': [4, 5, 6],  # April to June
+                'description': 'Playoffs and Finals'
+            }
+        }
+    
+    def get_db_connection(self):
+        """Get PostgreSQL database connection."""
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            
+            conn = psycopg2.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                database=os.getenv('DB_NAME', 'sportspuff_v6'),
+                user=os.getenv('DB_USER', 'postgres'),
+                password=os.getenv('DB_PASSWORD')
+            )
+            return conn
+        except Exception as e:
+            logger.error(f"Error connecting to database: {e}")
+            return None
+    
+    def detect_season_type(self, date_obj: datetime, game_data: Dict = None) -> Tuple[str, str]:
+        """
+        Detect NBA season type based on game data from NBA API.
+        
+        Args:
+            date_obj: Date object for the game
+            game_data: Game data from NBA API
+            
+        Returns:
+            Tuple of (season_type, description)
+        """
+        if not game_data:
+            return 'regular_season', 'Regular Season'
+        
+        # Use NBA API gameLabel and gameSubtype fields
+        game_label = game_data.get('gameLabel', '')
+        game_subtype = game_data.get('gameSubtype', '')
+        
+        # Check for specific game types
+        if game_label == 'Preseason':
+            if game_subtype == 'Global Games':
+                return 'preseason', 'Preseason (Global Games)'
+            else:
+                return 'preseason', 'Preseason'
+        
+        elif game_label == 'Emirates NBA Cup':
+            if game_subtype == 'in-season-knockout':
+                return 'nba_cup', 'NBA Cup (Knockout Round)'
+            elif game_subtype == 'in-season':
+                return 'nba_cup', 'NBA Cup (Group Stage)'
+            else:
+                return 'nba_cup', 'NBA Cup'
+        
+        # Default to regular season for empty gameLabel
+        else:
+            return 'regular_season', 'Regular Season'
+    
+    def get_season_schedule(self, season: str) -> List[Dict]:
+        """
+        Get complete season schedule for NBA using ScheduleLeagueV2.
+        
+        Args:
+            season: NBA season (e.g., '2025-26')
+            
+        Returns:
+            List of all games in the season
+        """
+        logger.info(f"Fetching complete schedule for NBA season {season}")
+        
+        try:
+            from nba_api.stats.endpoints import scheduleleaguev2
+            
+            # Get the full season schedule directly from NBA API
+            schedule_data = scheduleleaguev2.ScheduleLeagueV2(season=season)
+            data = schedule_data.get_dict()
+            
+            if not data or 'leagueSchedule' not in data or 'gameDates' not in data['leagueSchedule']:
+                logger.warning(f"No schedule data found for season {season}")
+                return []
+            
+            # Process all games from all dates
+            all_games = []
+            game_dates = data['leagueSchedule']['gameDates']
+            
+            for game_date in game_dates:
+                games_for_date = game_date.get('games', [])
+                game_date_str = game_date.get('gameDate', '')
+                
+                for game in games_for_date:
+                    # Pass the date from the parent game_date object
+                    enhanced_game = self._enhance_game_data(game, season, game_date_str)
+                    if enhanced_game:
+                        all_games.append(enhanced_game)
+            
+            logger.info(f"Processed {len(all_games)} games for season {season}")
+            return all_games
+            
+        except Exception as e:
+            logger.error(f"Error fetching season schedule: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    def _enhance_game_data(self, game: Dict, season: str, game_date_str: str = None) -> Optional[Dict]:
+        """
+        Enhance game data with additional information.
+        
+        Args:
+            game: Raw game data from API
+            season: NBA season
+            game_date_str: Game date string from parent game_date object
+            
+        Returns:
+            Enhanced game data or None if invalid
+        """
+        try:
+            # Extract team information
+            home_team = game.get('homeTeam', {})
+            away_team = game.get('awayTeam', {})
+            
+            if not home_team or not away_team:
+                logger.warning(f"No team data found for game {game.get('gameId', 'unknown')}")
+                return None
+            
+            # Use the provided date string or try to get it from the game
+            if not game_date_str:
+                game_date_str = game.get('gameDate', '')
+                if not game_date_str:
+                    logger.warning(f"No game date found for game {game.get('gameId', 'unknown')}")
+                    return None
+            
+            # Convert date format (MM/DD/YYYY to YYYY-MM-DD)
+            try:
+                # Handle different date formats
+                if ' ' in game_date_str:
+                    # Format: "10/02/2025 00:00:00"
+                    game_date_str = game_date_str.split(' ')[0]
+                
+                game_date_obj = datetime.strptime(game_date_str, '%m/%d/%Y')
+                game_date = game_date_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                logger.warning(f"Invalid date format: {game_date_str}")
+                return None
+            
+            # Detect season type
+            season_type, season_description = self.detect_season_type(game_date_obj, game)
+            
+            # Extract arena information
+            arena = game.get('arena', {})
+            
+            enhanced_game = {
+                'game_id': game.get('gameId', f"{season}_{game_date}_{home_team.get('teamId', '')}_{away_team.get('teamId', '')}"),
+                'season': season,
+                'game_date': game_date,
+                'game_time_est': game.get('gameTimeEst', ''),
+                'home_team_id': home_team.get('teamId'),
+                'away_team_id': away_team.get('teamId'),
+                'home_score': home_team.get('score', 0),
+                'away_score': away_team.get('score', 0),
+                'game_status': game.get('gameStatus', 'scheduled'),
+                'game_status_text': game.get('gameStatusText', ''),
+                'season_type': season_type,
+                'arena_name': arena.get('name', ''),
+                'is_nba_cup': season_type == 'nba_cup',
+                'winner_team_id': None  # Will be set when game is final
+            }
+            
+            return enhanced_game
+            
+        except Exception as e:
+            logger.error(f"Error enhancing game data: {e}")
+            logger.error(f"Game data: {game}")
+            return None
+    
+    def get_team_mapping(self) -> Dict[int, int]:
+        """
+        Get mapping from NBA team IDs to our team IDs.
+        
+        Returns:
+            Dictionary mapping NBA team ID to our team ID
+        """
+        conn = self.get_db_connection()
+        if not conn:
+            return {}
+        
+        try:
+            from psycopg2.extras import RealDictCursor
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Get NBA teams from our database
+            cursor.execute("""
+                SELECT team_id, real_team_name 
+                FROM teams 
+                WHERE league_id = (SELECT league_id FROM leagues WHERE league_name_proper = 'NBA')
+            """)
+            
+            teams = cursor.fetchall()
+            
+            # NBA team ID mapping (from NBA API)
+            nba_team_mapping = {
+                1610612737: 'Atlanta Hawks',           # ATL
+                1610612738: 'Boston Celtics',          # BOS
+                1610612739: 'Cleveland Cavaliers',     # CLE
+                1610612740: 'New Orleans Pelicans',    # NOP
+                1610612741: 'Chicago Bulls',           # CHI
+                1610612742: 'Dallas Mavericks',        # DAL
+                1610612743: 'Denver Nuggets',          # DEN
+                1610612744: 'Golden State Warriors',   # GSW
+                1610612745: 'Houston Rockets',         # HOU
+                1610612746: 'Los Angeles Clippers',   # LAC
+                1610612747: 'Los Angeles Lakers',     # LAL
+                1610612748: 'Miami Heat',              # MIA
+                1610612749: 'Milwaukee Bucks',         # MIL
+                1610612750: 'Minnesota Timberwolves', # MIN
+                1610612751: 'Brooklyn Nets',           # BKN
+                1610612752: 'New York Knicks',         # NYK
+                1610612753: 'Orlando Magic',           # ORL
+                1610612754: 'Indiana Pacers',          # IND
+                1610612755: 'Philadelphia 76ers',      # PHI
+                1610612756: 'Phoenix Suns',            # PHX
+                1610612757: 'Portland Trail Blazers', # POR
+                1610612758: 'Sacramento Kings',        # SAC
+                1610612759: 'San Antonio Spurs',       # SAS
+                1610612760: 'Oklahoma City Thunder',  # OKC
+                1610612761: 'Toronto Raptors',         # TOR
+                1610612762: 'Utah Jazz',               # UTA
+                1610612763: 'Memphis Grizzlies',       # MEM
+                1610612764: 'Washington Wizards',      # WAS
+                1610612765: 'Detroit Pistons',         # DET
+                1610612766: 'Charlotte Hornets'        # CHA
+            }
+            
+            # Create mapping from NBA team ID to our team ID
+            mapping = {}
+            for team in teams:
+                team_name = team['real_team_name']
+                for nba_id, nba_name in nba_team_mapping.items():
+                    if team_name == nba_name:
+                        mapping[nba_id] = team['team_id']
+                        break
+            
+            logger.info(f"Created team mapping for {len(mapping)} NBA teams")
+            return mapping
+            
+        except Exception as e:
+            logger.error(f"Error getting team mapping: {e}")
+            return {}
+        finally:
+            cursor.close()
+            conn.close()
+    
+    def import_games(self, games: List[Dict]) -> int:
+        """
+        Import games into PostgreSQL database.
+        
+        Args:
+            games: List of enhanced game data
+            
+        Returns:
+            Number of games imported
+        """
+        if not games:
+            return 0
+        
+        # Get team mapping
+        team_mapping = self.get_team_mapping()
+        if not team_mapping:
+            logger.error("No team mapping available")
+            return 0
+        
+        conn = self.get_db_connection()
+        if not conn:
+            return 0
+        
+        try:
+            cursor = conn.cursor()
+            imported_count = 0
+            
+            for game in games:
+                try:
+                    # Map NBA team IDs to our team IDs
+                    home_team_id = team_mapping.get(game['home_team_id'])
+                    away_team_id = team_mapping.get(game['away_team_id'])
+                    
+                    if not home_team_id or not away_team_id:
+                        logger.warning(f"Skipping game {game['game_id']} - team mapping not found")
+                        continue
+                    
+                    # Insert or update game
+                    cursor.execute("""
+                        INSERT INTO nba_games 
+                        (game_id, season, game_date, game_time_est, home_team_id, away_team_id,
+                         home_score, away_score, game_status, game_status_text, season_type,
+                         arena_name, is_nba_cup, winner_team_id, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (game_id) DO UPDATE SET
+                            home_score = EXCLUDED.home_score,
+                            away_score = EXCLUDED.away_score,
+                            game_status = EXCLUDED.game_status,
+                            game_status_text = EXCLUDED.game_status_text,
+                            season_type = EXCLUDED.season_type,
+                            arena_name = EXCLUDED.arena_name,
+                            is_nba_cup = EXCLUDED.is_nba_cup,
+                            winner_team_id = EXCLUDED.winner_team_id,
+                            updated_at = EXCLUDED.updated_at
+                    """, (
+                        game['game_id'],
+                        game['season'],
+                        game['game_date'],
+                        game['game_time_est'],
+                        home_team_id,
+                        away_team_id,
+                        game['home_score'],
+                        game['away_score'],
+                        game['game_status'],
+                        game['game_status_text'],
+                        game['season_type'],
+                        game['arena_name'],
+                        game['is_nba_cup'],
+                        game['winner_team_id'],
+                        datetime.now(),
+                        datetime.now()
+                    ))
+                    
+                    imported_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error importing game {game.get('game_id', 'unknown')}: {e}")
+                    continue
+            
+            conn.commit()
+            logger.info(f"Successfully imported {imported_count} games")
+            return imported_count
+            
+        except Exception as e:
+            logger.error(f"Error importing games: {e}")
+            conn.rollback()
+            return 0
+        finally:
+            cursor.close()
+            conn.close()
+    
+    def get_database_stats(self) -> Dict:
+        """Get database statistics."""
+        conn = self.get_db_connection()
+        if not conn:
+            return {}
+        
+        try:
+            from psycopg2.extras import RealDictCursor
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Total games
+            cursor.execute("SELECT COUNT(*) as count FROM nba_games")
+            total_games = cursor.fetchone()['count']
+            
+            # Games by season
+            cursor.execute("SELECT season, COUNT(*) as count FROM nba_games GROUP BY season ORDER BY season")
+            games_by_season = {row['season']: row['count'] for row in cursor.fetchall()}
+            
+            # Games by season type
+            cursor.execute("SELECT season_type, COUNT(*) as count FROM nba_games GROUP BY season_type ORDER BY season_type")
+            games_by_type = {row['season_type']: row['count'] for row in cursor.fetchall()}
+            
+            # Date range
+            cursor.execute("SELECT MIN(game_date) as min_date, MAX(game_date) as max_date FROM nba_games")
+            date_range = cursor.fetchone()
+            
+            return {
+                'total_games': total_games,
+                'games_by_season': games_by_season,
+                'games_by_type': games_by_type,
+                'date_range': (date_range['min_date'], date_range['max_date'])
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting database stats: {e}")
+            return {}
+        finally:
+            cursor.close()
+            conn.close()
+
+
+def main():
+    """Main function for command-line usage."""
+    parser = argparse.ArgumentParser(description='NBA Full Schedule Importer')
+    parser.add_argument('--season', default='2025-26', help='NBA season (e.g., 2025-26)')
+    parser.add_argument('--stats', action='store_true', help='Show database statistics')
+    
+    args = parser.parse_args()
+    
+    importer = NBAFullScheduleImporter()
+    
+    if args.stats:
+        stats = importer.get_database_stats()
+        print("\n📊 NBA Schedule Database Statistics")
+        print("=" * 40)
+        print(f"Total Games: {stats.get('total_games', 0)}")
+        
+        if stats.get('date_range'):
+            print(f"Date Range: {stats['date_range'][0]} to {stats['date_range'][1]}")
+        
+        print("\nGames by Season:")
+        for season, count in stats.get('games_by_season', {}).items():
+            print(f"  {season}: {count} games")
+        
+        print("\nGames by Season Type:")
+        for season_type, count in stats.get('games_by_type', {}).items():
+            print(f"  {season_type}: {count} games")
+    
+    else:
+        logger.info(f"Downloading full schedule for season {args.season}")
+        games = importer.get_season_schedule(args.season)
+        
+        if games:
+            imported = importer.import_games(games)
+            print(f"✅ Downloaded and imported {imported} games for season {args.season}")
+            
+            # Show stats after import
+            stats = importer.get_database_stats()
+            print(f"\n📊 Database now contains {stats.get('total_games', 0)} total games")
+            
+            print("\nGames by Season Type:")
+            for season_type, count in stats.get('games_by_type', {}).items():
+                print(f"  {season_type}: {count} games")
+        else:
+            print(f"❌ No games found for season {args.season}")
+
+
+if __name__ == "__main__":
+    main()
