@@ -113,7 +113,7 @@ class NBAFullScheduleImporter:
     
     def get_season_schedule(self, season: str) -> List[Dict]:
         """
-        Get complete season schedule for NBA using the proper NBA API endpoint.
+        Get complete season schedule for NBA using LeagueGameFinder.
         
         Args:
             season: NBA season (e.g., '2025-26')
@@ -124,37 +124,36 @@ class NBAFullScheduleImporter:
         logger.info(f"Fetching complete schedule for NBA season {season}")
         
         try:
-            # Import NBA API directly to get full season schedule
-            from nba_api.stats.endpoints import scheduleleaguev2
+            from nba_api.stats.endpoints import LeagueGameFinder
             
-            # Get the full season schedule directly from NBA API
-            def get_full_schedule():
-                schedule_data = scheduleleaguev2.ScheduleLeagueV2(season=season)
-                return schedule_data.get_dict()
+            # Get ALL games using LeagueGameFinder (no date restrictions)
+            # This returns ~30,000 games across all seasons
+            gamefinder = LeagueGameFinder()
+            games_df = gamefinder.get_data_frames()[0]
             
-            # Call with timeout
-            import time
-            start_time = time.time()
-            data = get_full_schedule()
-            logger.info(f"API call took {time.time() - start_time:.2f} seconds")
-            
-            if not data or 'leagueSchedule' not in data or 'gameDates' not in data['leagueSchedule']:
-                logger.warning(f"No schedule data found for season {season}")
+            if games_df.empty:
+                logger.warning(f"No games found from LeagueGameFinder")
                 return []
             
-            # Process all games from all dates
-            all_games = []
-            game_dates = data['leagueSchedule']['gameDates']
+            logger.info(f"LeagueGameFinder returned {len(games_df)} total games")
             
-            for game_date in game_dates:
-                games_for_date = game_date.get('games', [])
-                game_date_str = game_date.get('gameDate', '')
-                
-                for game in games_for_date:
-                    # Pass the date from the parent game_date object
-                    enhanced_game = self._enhance_game_data_from_api(game, season, game_date_str)
-                    if enhanced_game:
-                        all_games.append(enhanced_game)
+            # Filter to the specific season
+            # NBA season IDs: 2024-25 = 22024, 2025-26 = 22025
+            season_id = f"2{season.split('-')[0]}"
+            season_games = games_df[games_df['SEASON_ID'] == season_id]
+            
+            logger.info(f"Found {len(season_games)} games for season {season} (season_id: {season_id})")
+            
+            if season_games.empty:
+                logger.warning(f"No games found for season {season}")
+                return []
+            
+            # Convert DataFrame to list of dictionaries
+            all_games = []
+            for _, row in season_games.iterrows():
+                enhanced_game = self._enhance_game_data_from_row(row, season)
+                if enhanced_game:
+                    all_games.append(enhanced_game)
             
             logger.info(f"Processed {len(all_games)} games for season {season}")
             return all_games
