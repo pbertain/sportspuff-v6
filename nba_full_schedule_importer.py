@@ -113,7 +113,7 @@ class NBAFullScheduleImporter:
     
     def get_season_schedule(self, season: str) -> List[Dict]:
         """
-        Get complete season schedule for NBA using LeagueGameFinder.
+        Get complete season schedule for NBA using the proper NBA API endpoint.
         
         Args:
             season: NBA season (e.g., '2025-26')
@@ -124,27 +124,37 @@ class NBAFullScheduleImporter:
         logger.info(f"Fetching complete schedule for NBA season {season}")
         
         try:
-            from nba_api.stats.endpoints import LeagueGameFinder
+            # Import NBA API directly to get full season schedule
+            from nba_api.stats.endpoints import scheduleleaguev2
             
-            # Try to get games for the entire season
-            # Note: NBA may only have partial schedule available for future seasons
-            # For 2025-26, only October games are currently available
+            # Get the full season schedule directly from NBA API
+            def get_full_schedule():
+                schedule_data = scheduleleaguev2.ScheduleLeagueV2(season=season)
+                return schedule_data.get_dict()
             
-            # Get games using LeagueGameFinder (no date restrictions to get all available games)
-            gamefinder = LeagueGameFinder(season_nullable=season)
+            # Call with timeout
+            import time
+            start_time = time.time()
+            data = get_full_schedule()
+            logger.info(f"API call took {time.time() - start_time:.2f} seconds")
             
-            games_df = gamefinder.get_data_frames()[0]
-            
-            if games_df.empty:
-                logger.warning(f"No games found for season {season}")
+            if not data or 'leagueSchedule' not in data or 'gameDates' not in data['leagueSchedule']:
+                logger.warning(f"No schedule data found for season {season}")
                 return []
             
-            # Convert DataFrame to list of dictionaries
+            # Process all games from all dates
             all_games = []
-            for _, row in games_df.iterrows():
-                enhanced_game = self._enhance_game_data_from_row(row, season)
-                if enhanced_game:
-                    all_games.append(enhanced_game)
+            game_dates = data['leagueSchedule']['gameDates']
+            
+            for game_date in game_dates:
+                games_for_date = game_date.get('games', [])
+                game_date_str = game_date.get('gameDate', '')
+                
+                for game in games_for_date:
+                    # Pass the date from the parent game_date object
+                    enhanced_game = self._enhance_game_data_from_api(game, season, game_date_str)
+                    if enhanced_game:
+                        all_games.append(enhanced_game)
             
             logger.info(f"Processed {len(all_games)} games for season {season}")
             return all_games
@@ -154,6 +164,103 @@ class NBAFullScheduleImporter:
             import traceback
             traceback.print_exc()
             return []
+    
+    def _enhance_game_data_from_api(self, game: Dict, season: str, game_date_str: str = None) -> Optional[Dict]:
+        """
+        Enhance game data from NBA API scheduleleaguev2 response.
+        
+        Args:
+            game: Raw game data from API
+            season: NBA season
+            game_date_str: Game date string from parent game_date object
+            
+        Returns:
+            Enhanced game data or None if invalid
+        """
+        try:
+            # Extract team information
+            home_team = game.get('homeTeam', {})
+            away_team = game.get('awayTeam', {})
+            
+            if not home_team or not away_team:
+                logger.warning(f"No team data found for game {game.get('gameId', 'unknown')}")
+                return None
+            
+            # Use the provided date string or try to get it from the game
+            if not game_date_str:
+                game_date_str = game.get('gameDate', '')
+                if not game_date_str:
+                    # Try to get date from other fields
+                    game_date_str = game.get('gameDateTimeUTC', '')
+                    if game_date_str:
+                        try:
+                            # Parse ISO format date
+                            from datetime import datetime
+                            date_obj = datetime.fromisoformat(game_date_str.replace('Z', '+00:00'))
+                            game_date_str = date_obj.strftime('%m/%d/%Y')
+                        except:
+                            logger.warning(f"Could not parse game date: {game_date_str}")
+                            return None
+                    else:
+                        logger.warning(f"No game date found for game {game.get('gameId', 'unknown')}")
+                        return None
+            
+            # Convert date format (MM/DD/YYYY to YYYY-MM-DD)
+            try:
+                # Handle different date formats
+                if ' ' in game_date_str:
+                    # Format: "10/02/2025 00:00:00"
+                    game_date_str = game_date_str.split(' ')[0]
+                
+                from datetime import datetime
+                game_date_obj = datetime.strptime(game_date_str, '%m/%d/%Y')
+                game_date = game_date_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                logger.warning(f"Invalid date format: {game_date_str}")
+                return None
+            
+            # Detect season type
+            season_type, season_description = self.detect_season_type(game_date_obj, game)
+            
+            # Extract arena information
+            arena = game.get('arena', {})
+            
+            # Get team mapping
+            team_mapping = self.get_team_mapping()
+            
+            # Map NBA team IDs to our team IDs
+            home_team_id = team_mapping.get(home_team.get('teamId'))
+            away_team_id = team_mapping.get(away_team.get('teamId'))
+            
+            if not home_team_id or not away_team_id:
+                logger.warning(f"Skipping game {game.get('gameId', 'unknown')} - team mapping not found for {home_team.get('teamName', 'unknown')} or {away_team.get('teamName', 'unknown')}")
+                return None
+            
+            enhanced_game = {
+                'game_id': game.get('gameId', f"{season}_{game_date}_{home_team_id}_{away_team_id}"),
+                'season': season,
+                'game_date': game_date,
+                'game_time_est': game.get('gameTimeEst', ''),
+                'home_team_id': home_team_id,
+                'away_team_id': away_team_id,
+                'home_score': home_team.get('score', 0),
+                'away_score': away_team.get('score', 0),
+                'game_status': game.get('gameStatus', 'scheduled'),
+                'game_status_text': game.get('gameStatusText', ''),
+                'season_type': season_type,
+                'current_period': game.get('period', 0),
+                'period_time_remaining': game.get('periodTimeRemaining', ''),
+                'arena_name': arena.get('name', ''),
+                'is_nba_cup': season_type == 'nba_cup',
+                'winner_team_id': None  # Will be set when game is final
+            }
+            
+            return enhanced_game
+            
+        except Exception as e:
+            logger.error(f"Error enhancing game data: {e}")
+            logger.error(f"Game data: {game}")
+            return None
     
     def _enhance_game_data_from_row(self, row, season: str) -> Optional[Dict]:
         """
@@ -311,12 +418,12 @@ class NBAFullScheduleImporter:
             logger.error(f"Game data: {game}")
             return None
     
-    def get_team_mapping(self) -> Dict[str, int]:
+    def get_team_mapping(self) -> Dict[int, int]:
         """
-        Get mapping from NBA team names to our team IDs.
+        Get mapping of NBA team IDs to our team IDs.
         
         Returns:
-            Dictionary mapping NBA team name to our team ID
+            Dictionary mapping NBA team ID to our team ID
         """
         conn = self.get_db_connection()
         if not conn:
@@ -336,13 +443,52 @@ class NBAFullScheduleImporter:
             teams = cursor.fetchall()
             
             # Create mapping from team name to our team ID
-            mapping = {}
+            team_name_mapping = {}
             for team in teams:
-                team_name = team['real_team_name']
-                mapping[team_name] = team['team_id']
+                team_name_mapping[team['real_team_name']] = team['team_id']
             
-            logger.info(f"Created team mapping for {len(mapping)} NBA teams")
-            return mapping
+            # NBA API team ID to team name mapping (from NBA API)
+            nba_team_id_to_name = {
+                1610612737: "Atlanta Hawks",
+                1610612738: "Boston Celtics", 
+                1610612739: "Cleveland Cavaliers",
+                1610612740: "New Orleans Pelicans",
+                1610612741: "Chicago Bulls",
+                1610612742: "Dallas Mavericks",
+                1610612743: "Denver Nuggets",
+                1610612744: "Golden State Warriors",
+                1610612745: "Houston Rockets",
+                1610612746: "Los Angeles Clippers",
+                1610612747: "Los Angeles Lakers",
+                1610612748: "Miami Heat",
+                1610612749: "Milwaukee Bucks",
+                1610612750: "Minnesota Timberwolves",
+                1610612751: "Brooklyn Nets",
+                1610612752: "New York Knicks",
+                1610612753: "Orlando Magic",
+                1610612754: "Indiana Pacers",
+                1610612755: "Philadelphia 76ers",
+                1610612756: "Phoenix Suns",
+                1610612757: "Portland Trail Blazers",
+                1610612758: "Sacramento Kings",
+                1610612759: "San Antonio Spurs",
+                1610612760: "Oklahoma City Thunder",
+                1610612761: "Toronto Raptors",
+                1610612762: "Utah Jazz",
+                1610612763: "Memphis Grizzlies",
+                1610612764: "Washington Wizards",
+                1610612765: "Detroit Pistons",
+                1610612766: "Charlotte Hornets"
+            }
+            
+            # Create final mapping from NBA team ID to our team ID
+            team_mapping = {}
+            for nba_team_id, nba_team_name in nba_team_id_to_name.items():
+                if nba_team_name in team_name_mapping:
+                    team_mapping[nba_team_id] = team_name_mapping[nba_team_name]
+            
+            logger.info(f"Created team mapping for {len(team_mapping)} NBA teams")
+            return team_mapping
             
         except Exception as e:
             logger.error(f"Error getting team mapping: {e}")
