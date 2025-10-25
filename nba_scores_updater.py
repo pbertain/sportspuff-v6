@@ -81,6 +81,10 @@ class NBAScoresUpdater:
             scoreboard = ScoreBoard()
             data = scoreboard.get_json()
             
+            # Parse JSON string response
+            if isinstance(data, str):
+                data = json.loads(data)
+            
             games = []
             
             # Parse the response
