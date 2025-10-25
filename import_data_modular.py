@@ -190,8 +190,9 @@ def import_conferences(conn):
             cursor.execute("""
                 INSERT INTO conferences (conference_id, league_id, conference_name, conference_full_name)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (league_id, conference_name) DO UPDATE SET
-                    conference_id = EXCLUDED.conference_id,
+                ON CONFLICT (conference_id) DO UPDATE SET
+                    league_id = EXCLUDED.league_id,
+                    conference_name = EXCLUDED.conference_name,
                     conference_full_name = EXCLUDED.conference_full_name
             """, (
                 int(row['conference_id']),
@@ -224,16 +225,15 @@ def import_divisions(conn):
         
         for _, row in df.iterrows():
             cursor.execute("""
-                INSERT INTO divisions (division_id, league_id, conference_id, division_name, division_full_name)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (league_id, division_name) DO UPDATE SET
-                    division_id = EXCLUDED.division_id,
-                    conference_id = EXCLUDED.conference_id,
+                INSERT INTO divisions (division_id, league_id, division_name, division_full_name)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (division_id) DO UPDATE SET
+                    league_id = EXCLUDED.league_id,
+                    division_name = EXCLUDED.division_name,
                     division_full_name = EXCLUDED.division_full_name
             """, (
                 int(row['division_id']),
                 int(row['league_id']),
-                safe_numeric(row.get('conference_id')),
                 row['division_name'],
                 row['division_full_name']
             ))
@@ -253,7 +253,7 @@ def import_teams(conn):
     print("Importing teams...")
     
     try:
-        df = pd.read_csv('info-teams.csv', encoding='latin-1')  # Use latin-1 for teams
+        df = pd.read_csv('info-teams.csv', encoding='utf-8-sig')  # Handle BOM
         cursor = conn.cursor()
         
         for _, row in df.iterrows():
