@@ -113,7 +113,7 @@ class NBAFullScheduleImporter:
     
     def get_season_schedule(self, season: str) -> List[Dict]:
         """
-        Get complete season schedule for NBA using ScheduleLeagueV2.
+        Get complete season schedule for NBA using LeagueGameFinder.
         
         Args:
             season: NBA season (e.g., '2025-26')
@@ -124,29 +124,34 @@ class NBAFullScheduleImporter:
         logger.info(f"Fetching complete schedule for NBA season {season}")
         
         try:
-            from nba_api.stats.endpoints import scheduleleaguev2
+            from nba_api.stats.endpoints import LeagueGameFinder
             
-            # Get the full season schedule directly from NBA API
-            schedule_data = scheduleleaguev2.ScheduleLeagueV2(season=season)
-            data = schedule_data.get_dict()
+            # Try to get games for the entire season (October to June)
+            # NBA seasons typically run from October to June
+            start_date = f"{season.split('-')[0]}-10-01"  # October 1st
+            end_date = f"{season.split('-')[1]}-06-30"    # June 30th
             
-            if not data or 'leagueSchedule' not in data or 'gameDates' not in data['leagueSchedule']:
-                logger.warning(f"No schedule data found for season {season}")
+            logger.info(f"Searching for games from {start_date} to {end_date}")
+            
+            # Get games using LeagueGameFinder
+            gamefinder = LeagueGameFinder(
+                season_nullable=season,
+                date_from_nullable=start_date,
+                date_to_nullable=end_date
+            )
+            
+            games_df = gamefinder.get_data_frames()[0]
+            
+            if games_df.empty:
+                logger.warning(f"No games found for season {season}")
                 return []
             
-            # Process all games from all dates
+            # Convert DataFrame to list of dictionaries
             all_games = []
-            game_dates = data['leagueSchedule']['gameDates']
-            
-            for game_date in game_dates:
-                games_for_date = game_date.get('games', [])
-                game_date_str = game_date.get('gameDate', '')
-                
-                for game in games_for_date:
-                    # Pass the date from the parent game_date object
-                    enhanced_game = self._enhance_game_data(game, season, game_date_str)
-                    if enhanced_game:
-                        all_games.append(enhanced_game)
+            for _, row in games_df.iterrows():
+                enhanced_game = self._enhance_game_data_from_row(row, season)
+                if enhanced_game:
+                    all_games.append(enhanced_game)
             
             logger.info(f"Processed {len(all_games)} games for season {season}")
             return all_games
@@ -156,6 +161,72 @@ class NBAFullScheduleImporter:
             import traceback
             traceback.print_exc()
             return []
+    
+    def _enhance_game_data_from_row(self, row, season: str) -> Optional[Dict]:
+        """
+        Enhance game data from LeagueGameFinder DataFrame row.
+        
+        Args:
+            row: DataFrame row from LeagueGameFinder
+            season: NBA season
+            
+        Returns:
+            Enhanced game data or None if invalid
+        """
+        try:
+            # Parse the MATCHUP string to get teams
+            matchup = row.get('MATCHUP', '')
+            if not matchup:
+                return None
+            
+            # MATCHUP format: "ATL @ ORL" or "ORL vs ATL"
+            if ' @ ' in matchup:
+                away_team, home_team = matchup.split(' @ ')
+            elif ' vs ' in matchup:
+                home_team, away_team = matchup.split(' vs ')
+            else:
+                logger.warning(f"Could not parse matchup: {matchup}")
+                return None
+            
+            # Convert date
+            game_date_str = row.get('GAME_DATE', '')
+            if not game_date_str:
+                return None
+            
+            try:
+                game_date_obj = datetime.strptime(game_date_str, '%Y-%m-%d')
+                game_date = game_date_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                logger.warning(f"Invalid date format: {game_date_str}")
+                return None
+            
+            # Detect season type based on date
+            season_type, season_description = self.detect_season_type(game_date_obj, {})
+            
+            enhanced_game = {
+                'game_id': row.get('GAME_ID', f"{season}_{game_date}_{home_team}_{away_team}"),
+                'season': season,
+                'game_date': game_date,
+                'game_time_est': '',  # Not available in LeagueGameFinder
+                'home_team_id': None,  # Will be mapped later
+                'away_team_id': None,  # Will be mapped later
+                'home_team_name': home_team.strip(),
+                'away_team_name': away_team.strip(),
+                'home_score': row.get('PTS', 0) if row.get('WL') == 'W' else 0,
+                'away_score': row.get('PTS', 0) if row.get('WL') == 'L' else 0,
+                'game_status': 'final' if row.get('WL') else 'scheduled',
+                'game_status_text': 'Final' if row.get('WL') else 'Scheduled',
+                'season_type': season_type,
+                'arena_name': '',
+                'is_nba_cup': season_type == 'nba_cup',
+                'winner_team_id': None  # Will be set when game is final
+            }
+            
+            return enhanced_game
+            
+        except Exception as e:
+            logger.error(f"Error enhancing game data from row: {e}")
+            return None
     
     def _enhance_game_data(self, game: Dict, season: str, game_date_str: str = None) -> Optional[Dict]:
         """
@@ -228,12 +299,12 @@ class NBAFullScheduleImporter:
             logger.error(f"Game data: {game}")
             return None
     
-    def get_team_mapping(self) -> Dict[int, int]:
+    def get_team_mapping(self) -> Dict[str, int]:
         """
-        Get mapping from NBA team IDs to our team IDs.
+        Get mapping from NBA team names to our team IDs.
         
         Returns:
-            Dictionary mapping NBA team ID to our team ID
+            Dictionary mapping NBA team name to our team ID
         """
         conn = self.get_db_connection()
         if not conn:
@@ -252,48 +323,11 @@ class NBAFullScheduleImporter:
             
             teams = cursor.fetchall()
             
-            # NBA team ID mapping (from NBA API)
-            nba_team_mapping = {
-                1610612737: 'Atlanta Hawks',           # ATL
-                1610612738: 'Boston Celtics',          # BOS
-                1610612739: 'Cleveland Cavaliers',     # CLE
-                1610612740: 'New Orleans Pelicans',    # NOP
-                1610612741: 'Chicago Bulls',           # CHI
-                1610612742: 'Dallas Mavericks',        # DAL
-                1610612743: 'Denver Nuggets',          # DEN
-                1610612744: 'Golden State Warriors',   # GSW
-                1610612745: 'Houston Rockets',         # HOU
-                1610612746: 'Los Angeles Clippers',   # LAC
-                1610612747: 'Los Angeles Lakers',     # LAL
-                1610612748: 'Miami Heat',              # MIA
-                1610612749: 'Milwaukee Bucks',         # MIL
-                1610612750: 'Minnesota Timberwolves', # MIN
-                1610612751: 'Brooklyn Nets',           # BKN
-                1610612752: 'New York Knicks',         # NYK
-                1610612753: 'Orlando Magic',           # ORL
-                1610612754: 'Indiana Pacers',          # IND
-                1610612755: 'Philadelphia 76ers',      # PHI
-                1610612756: 'Phoenix Suns',            # PHX
-                1610612757: 'Portland Trail Blazers', # POR
-                1610612758: 'Sacramento Kings',        # SAC
-                1610612759: 'San Antonio Spurs',       # SAS
-                1610612760: 'Oklahoma City Thunder',  # OKC
-                1610612761: 'Toronto Raptors',         # TOR
-                1610612762: 'Utah Jazz',               # UTA
-                1610612763: 'Memphis Grizzlies',       # MEM
-                1610612764: 'Washington Wizards',      # WAS
-                1610612765: 'Detroit Pistons',         # DET
-                1610612766: 'Charlotte Hornets'        # CHA
-            }
-            
-            # Create mapping from NBA team ID to our team ID
+            # Create mapping from team name to our team ID
             mapping = {}
             for team in teams:
                 team_name = team['real_team_name']
-                for nba_id, nba_name in nba_team_mapping.items():
-                    if team_name == nba_name:
-                        mapping[nba_id] = team['team_id']
-                        break
+                mapping[team_name] = team['team_id']
             
             logger.info(f"Created team mapping for {len(mapping)} NBA teams")
             return mapping
@@ -334,12 +368,12 @@ class NBAFullScheduleImporter:
             
             for game in games:
                 try:
-                    # Map NBA team IDs to our team IDs
-                    home_team_id = team_mapping.get(game['home_team_id'])
-                    away_team_id = team_mapping.get(game['away_team_id'])
+                    # Map NBA team names to our team IDs
+                    home_team_id = team_mapping.get(game['home_team_name'])
+                    away_team_id = team_mapping.get(game['away_team_name'])
                     
                     if not home_team_id or not away_team_id:
-                        logger.warning(f"Skipping game {game['game_id']} - team mapping not found")
+                        logger.warning(f"Skipping game {game['game_id']} - team mapping not found for {game['home_team_name']} or {game['away_team_name']}")
                         continue
                     
                     # Insert or update game
