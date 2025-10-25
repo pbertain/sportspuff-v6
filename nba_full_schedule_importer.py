@@ -181,6 +181,23 @@ class NBAFullScheduleImporter:
                 logger.warning(f"Could not parse matchup: {matchup}")
                 return None
             
+            # Convert abbreviations to full team names
+            team_abbrev_to_name = {
+                'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'CLE': 'Cleveland Cavaliers',
+                'NOP': 'New Orleans Pelicans', 'CHI': 'Chicago Bulls', 'DAL': 'Dallas Mavericks',
+                'DEN': 'Denver Nuggets', 'GSW': 'Golden State Warriors', 'HOU': 'Houston Rockets',
+                'LAC': 'Los Angeles Clippers', 'LAL': 'Los Angeles Lakers', 'MIA': 'Miami Heat',
+                'MIL': 'Milwaukee Bucks', 'MIN': 'Minnesota Timberwolves', 'BKN': 'Brooklyn Nets',
+                'NYK': 'New York Knicks', 'ORL': 'Orlando Magic', 'IND': 'Indiana Pacers',
+                'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
+                'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs', 'OKC': 'Oklahoma City Thunder',
+                'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'MEM': 'Memphis Grizzlies',
+                'WAS': 'Washington Wizards', 'DET': 'Detroit Pistons', 'CHA': 'Charlotte Hornets'
+            }
+            
+            home_team = team_abbrev_to_name.get(home_team.strip(), home_team.strip())
+            away_team = team_abbrev_to_name.get(away_team.strip(), away_team.strip())
+            
             # Convert date
             game_date_str = row.get('GAME_DATE', '')
             if not game_date_str:
