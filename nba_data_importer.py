@@ -148,35 +148,44 @@ class NBADataImporter:
             List of game dictionaries
         """
         try:
-            # Convert season format (2024-25 -> 2024)
-            season_year = season.split('-')[0]
-            
-            url = f"{self.base_url}/scheduleleaguev2"
-            params = {
-                'Season': season,
-                'SeasonType': 'Regular Season',
-                'LeagueID': '00'
-            }
+            from nba_api.stats.endpoints import LeagueGameFinder
             
             logger.info(f"Fetching NBA schedule for season {season}")
-            response = requests.get(url, headers=self.headers, params=params, timeout=30)
-            response.raise_for_status()
             
-            data = response.json()
-            games = []
+            # Use NBA API to get games
+            game_finder = LeagueGameFinder(season_nullable=season)
+            games_df = game_finder.get_data_frames()[0]
             
-            # Parse the response
-            if 'resultSets' in data and len(data['resultSets']) > 0:
-                result_set = data['resultSets'][0]
-                headers = result_set['headers']
-                rows = result_set['rowSet']
+            # Group games by GAME_ID to get both teams
+            games_by_id = {}
+            for _, row in games_df.iterrows():
+                game_id = str(row['GAME_ID'])
+                matchup = row['MATCHUP']
                 
-                for row in rows:
-                    game = dict(zip(headers, row))
-                    games.append(game)
+                if game_id not in games_by_id:
+                    # First team for this game
+                    games_by_id[game_id] = {
+                        'GAME_ID': game_id,
+                        'GAME_DATE': row['GAME_DATE'],
+                        'HOME_TEAM_ID': None,
+                        'VISITOR_TEAM_ID': None,
+                        'ARENA_NAME': '',  # Not available in this endpoint
+                        'GAME_TIME': '20:00'  # Default time
+                    }
+                
+                # Determine if this team is home or away
+                if ' @ ' in matchup:
+                    # Format: "TEAM @ HOME" - this team is away
+                    games_by_id[game_id]['VISITOR_TEAM_ID'] = row['TEAM_ID']
+                elif ' vs. ' in matchup:
+                    # Format: "TEAM vs. OPPONENT" - this team is home
+                    games_by_id[game_id]['HOME_TEAM_ID'] = row['TEAM_ID']
             
-            logger.info(f"Fetched {len(games)} games for season {season}")
-            return games
+            # Convert back to list
+            final_games = list(games_by_id.values())
+            
+            logger.info(f"Fetched {len(final_games)} games for season {season}")
+            return final_games
             
         except Exception as e:
             logger.error(f"Error fetching season schedule: {e}")

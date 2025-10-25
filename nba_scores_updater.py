@@ -73,34 +73,36 @@ class NBAScoresUpdater:
             List of game dictionaries with live data
         """
         try:
-            if not date:
-                date = datetime.now().strftime('%Y-%m-%d')
+            from nba_api.live.nba.endpoints import ScoreBoard
             
-            url = f"{self.base_url}/scoreboardv2"
-            params = {
-                'GameDate': date,
-                'LeagueID': '00',
-                'DayOffset': '0'
-            }
+            logger.info(f"Fetching live scores for {date or 'today'}")
             
-            logger.info(f"Fetching live scores for {date}")
-            response = requests.get(url, headers=self.headers, params=params, timeout=30)
-            response.raise_for_status()
+            # Use NBA API to get scoreboard
+            scoreboard = ScoreBoard()
+            data = scoreboard.get_json()
             
-            data = response.json()
             games = []
             
             # Parse the response
-            if 'resultSets' in data and len(data['resultSets']) > 0:
-                result_set = data['resultSets'][0]
-                headers = result_set['headers']
-                rows = result_set['rowSet']
+            if 'scoreboard' in data and 'gameDate' in data['scoreboard']:
+                game_date = data['scoreboard']['gameDate']
+                games_data = data['scoreboard'].get('games', [])
                 
-                for row in rows:
-                    game = dict(zip(headers, row))
+                for game_data in games_data:
+                    game = {
+                        'GAME_ID': str(game_data.get('gameId', '')),
+                        'GAME_DATE': game_date,
+                        'HOME_TEAM_ID': game_data.get('homeTeam', {}).get('teamId'),
+                        'VISITOR_TEAM_ID': game_data.get('awayTeam', {}).get('teamId'),
+                        'HOME_TEAM_SCORE': game_data.get('homeTeam', {}).get('score', 0),
+                        'VISITOR_TEAM_SCORE': game_data.get('awayTeam', {}).get('score', 0),
+                        'GAME_STATUS_TEXT': game_data.get('gameStatusText', ''),
+                        'PERIOD': game_data.get('period', 0),
+                        'PERIOD_TIME_REMAINING': game_data.get('gameClock', '')
+                    }
                     games.append(game)
             
-            logger.info(f"Fetched {len(games)} games for {date}")
+            logger.info(f"Fetched {len(games)} games for {date or 'today'}")
             return games
             
         except Exception as e:
