@@ -289,9 +289,8 @@ class NBAFullScheduleImporter:
                 logger.warning(f"Could not parse matchup: {matchup}")
                 return None
             
-            # Convert abbreviations to full team names
+            # Convert abbreviations to full team names (NBA teams only)
             team_abbrev_to_name = {
-                # NBA Teams
                 'ATL': 'Atlanta Hawks', 'BOS': 'Boston Celtics', 'CLE': 'Cleveland Cavaliers',
                 'NOP': 'New Orleans Pelicans', 'CHI': 'Chicago Bulls', 'DAL': 'Dallas Mavericks',
                 'DEN': 'Denver Nuggets', 'GSW': 'Golden State Warriors', 'HOU': 'Houston Rockets',
@@ -301,14 +300,18 @@ class NBAFullScheduleImporter:
                 'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns', 'POR': 'Portland Trail Blazers',
                 'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs', 'OKC': 'Oklahoma City Thunder',
                 'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'MEM': 'Memphis Grizzlies',
-                'WAS': 'Washington Wizards', 'DET': 'Detroit Pistons', 'CHA': 'Charlotte Hornets',
-                # WNBA Teams (that appear in NBA data)
-                'CON': 'Connecticut Sun', 'GSV': 'Golden State Valkyries', 'LAS': 'Las Vegas Aces',
-                'LVA': 'Las Vegas Aces', 'NYL': 'New York Liberty', 'SEA': 'Seattle Storm'
+                'WAS': 'Washington Wizards', 'DET': 'Detroit Pistons', 'CHA': 'Charlotte Hornets'
             }
             
             home_team = team_abbrev_to_name.get(home_team.strip(), home_team.strip())
             away_team = team_abbrev_to_name.get(away_team.strip(), away_team.strip())
+            
+            # Skip games with WNBA teams (filter out WNBA games)
+            wnba_teams = {'Connecticut Sun', 'Golden State Valkyries', 'Las Vegas Aces', 
+                         'New York Liberty', 'Seattle Storm', 'Los Angeles Sparks'}
+            if home_team in wnba_teams or away_team in wnba_teams:
+                logger.debug(f"Skipping WNBA game: {home_team} vs {away_team}")
+                return None
             
             # Convert date
             game_date_str = row.get('GAME_DATE', '')
