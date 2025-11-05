@@ -50,12 +50,8 @@
         <!-- Scores & Schedules Section -->
         <div class="row mt-5">
             <div class="col-12">
-                <div class="text-center mb-5 fade-in-up">
-                    <div class="d-flex align-items-center justify-content-center mb-2">
-                        <img src="{{ 'NBA' | get_league_logo }}" alt="NBA" style="height: 60px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
-                        <span style="font-size: 1.5rem; font-weight: 600;">NBA</span>
-                    </div>
-                    <h2 style="font-size: 2rem; margin: 0;">📅 Schedules & 🏆 Scores</h2>
+                <div class="text-center mb-4 fade-in-up">
+                    <h2 style="font-size: 2rem; margin: 0 0 20px 0;">📅 Schedules & 🏆 Scores</h2>
                 </div>
                 <div id="scores-schedules-container">
                     <div class="text-center">
@@ -254,15 +250,21 @@
                 
                 // Render games in table format with team colors
                 let html = `
+                    <div class="league-header mb-3">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <img src="{{ 'NBA' | get_league_logo }}" alt="NBA" style="height: 60px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
+                            <span style="font-size: 1.5rem; font-weight: 600; color: #F5F0FF;">NBA</span>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0 scores-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 25%;">Visitor</th>
-                                    <th style="width: 10%; text-align: center;">Score</th>
-                                    <th style="width: 25%;">Home</th>
-                                    <th style="width: 15%; text-align: center;">Start Time</th>
-                                    <th style="width: 15%; text-align: center;">Status</th>
+                                    <th style="width: 28%;">Visitor</th>
+                                    <th style="width: 12%; text-align: center;">Score</th>
+                                    <th style="width: 28%;">Home</th>
+                                    <th style="width: 16%; text-align: center;">Start Time</th>
+                                    <th style="width: 16%; text-align: center;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -409,20 +411,24 @@
             padding: 20px;
             box-shadow: 0 8px 25px rgba(106, 90, 205, 0.3);
         }
+        #scores-schedules-container .league-header {
+            margin-bottom: 15px;
+        }
         #scores-schedules-container .scores-table {
-            background: transparent;
+            background: #5A4A9D;
             border-radius: 8px;
             overflow: hidden;
+            width: 100%;
         }
         #scores-schedules-container .scores-table thead th {
-            background-color: rgba(147, 112, 219, 0.3);
+            background-color: rgba(147, 112, 219, 0.4);
             color: #F5F0FF;
             font-weight: 700;
             border-bottom: 2px solid rgba(181, 152, 214, 0.5);
             padding: 14px;
         }
         #scores-schedules-container .scores-table tbody {
-            background-color: transparent;
+            background-color: #5A4A9D;
         }
         #scores-schedules-container .scores-table tbody tr {
             transition: background-color 0.2s;
@@ -434,10 +440,12 @@
             vertical-align: middle;
             border-top: 1px solid rgba(181, 152, 214, 0.3);
             color: #F5F0FF;
+            background-color: #5A4A9D;
         }
         #scores-schedules-container .scores-table tbody td[style*="text-align: center"] {
             color: #F5F0FF;
             font-weight: 600;
+            background-color: #5A4A9D;
         }
     </style>
 </body>
