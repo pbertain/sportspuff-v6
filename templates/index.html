@@ -203,6 +203,12 @@
                     return team ? (team.logo_url || '/static/images/no-logo.png') : '/static/images/no-logo.png';
                 }
                 
+                // Helper function to get team URL
+                function getTeamUrl(teamName, league = 'NBA') {
+                    const teamNameUrl = teamName.replace(/\s+/g, '_');
+                    return `/team/${league}/${teamNameUrl}`;
+                }
+                
                 // Helper function to get text color (light or dark based on background)
                 function getTextColor(bgColor) {
                     if (!bgColor || bgColor === '#6c757d') return '#ffffff';
@@ -333,17 +339,20 @@
                         scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
                     }
                     
+                    const visitorUrl = getTeamUrl(game.visitor_team, 'NBA');
+                    const homeUrl = getTeamUrl(game.home_team, 'NBA');
+                    
                     html += `
                         <tr>
                             <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 16px; font-weight: 600; border-radius: 4px 0 0 4px;">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center flex-grow-1">
+                                    <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; flex-grow: 1;" class="team-link">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
                                         <div>
                                             <div>${game.visitor_team}</div>
                                             ${visitorRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${visitorRecord}</small>` : ''}
                                         </div>
-                                    </div>
+                                    </a>
                                     <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: 8px;">${game.visitor_team_abbrev}</span>
                                 </div>
                             </td>
@@ -352,13 +361,13 @@
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0;">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center flex-grow-1">
+                                    <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; flex-grow: 1;" class="team-link">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
                                         <div>
                                             <div>${game.home_team}</div>
                                             ${homeRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${homeRecord}</small>` : ''}
                                         </div>
-                                    </div>
+                                    </a>
                                     <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: 8px;">${game.home_team_abbrev}</span>
                                 </div>
                             </td>
@@ -446,6 +455,12 @@
             color: #F5F0FF;
             font-weight: 600;
             background-color: #5A4A9D;
+        }
+        #scores-schedules-container .team-link {
+            transition: opacity 0.2s;
+        }
+        #scores-schedules-container .team-link:hover {
+            opacity: 0.8;
         }
     </style>
 </body>
