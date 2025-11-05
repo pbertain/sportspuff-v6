@@ -266,11 +266,11 @@
                         <table class="table table-hover align-middle mb-0 scores-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 28%;">Visitor</th>
-                                    <th style="width: 12%; text-align: center;">Score</th>
-                                    <th style="width: 28%;">Home</th>
-                                    <th style="width: 16%; text-align: center;">Start Time</th>
-                                    <th style="width: 16%; text-align: center;">Status</th>
+                                    <th style="width: 32%;">Visitor</th>
+                                    <th style="width: 10%; text-align: center;">Score</th>
+                                    <th style="width: 32%;">Home</th>
+                                    <th style="width: 13%; text-align: center;">Start Time</th>
+                                    <th style="width: 13%; text-align: center;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -345,31 +345,25 @@
                     html += `
                         <tr>
                             <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 16px; font-weight: 600; border-radius: 4px 0 0 4px;">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; flex-grow: 1;" class="team-link">
-                                        <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
-                                        <div>
-                                            <div>${game.visitor_team}</div>
-                                            ${visitorRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${visitorRecord}</small>` : ''}
-                                        </div>
-                                    </a>
-                                    <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: 8px;">${game.visitor_team_abbrev}</span>
-                                </div>
+                                <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
+                                    <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
+                                    <span class="team-name-desktop">${game.visitor_team}</span>
+                                    <span class="team-name-mobile" style="display: none;">${game.visitor_team_abbrev}</span>
+                                    ${visitorRecord ? `<span class="team-record">(${visitorRecord})</span>` : ''}
+                                    <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: auto; flex-shrink: 0;">${game.visitor_team_abbrev}</span>
+                                </a>
                             </td>
                             <td style="text-align: center; font-weight: 600; font-size: 1.1rem; padding: 16px;">
                                 ${scoreDisplay}
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0;">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; flex-grow: 1;" class="team-link">
-                                        <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
-                                        <div>
-                                            <div>${game.home_team}</div>
-                                            ${homeRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${homeRecord}</small>` : ''}
-                                        </div>
-                                    </a>
-                                    <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: 8px;">${game.home_team_abbrev}</span>
-                                </div>
+                                <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
+                                    <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
+                                    <span class="team-name-desktop">${game.home_team}</span>
+                                    <span class="team-name-mobile" style="display: none;">${game.home_team_abbrev}</span>
+                                    ${homeRecord ? `<span class="team-record">(${homeRecord})</span>` : ''}
+                                    <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: auto; flex-shrink: 0;">${game.home_team_abbrev}</span>
+                                </a>
                             </td>
                             <td style="text-align: center; padding: 16px;">
                                 ${timeDisplay || '-'}
@@ -461,6 +455,36 @@
         }
         #scores-schedules-container .team-link:hover {
             opacity: 0.8;
+        }
+        #scores-schedules-container .team-record {
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+        #scores-schedules-container .team-name-desktop {
+            flex: 1;
+            min-width: 0;
+        }
+        #scores-schedules-container .team-name-mobile {
+            font-weight: 600;
+        }
+        /* Mobile view - hide full team name and abbrev badge, show abbrev as name */
+        @media (max-width: 768px) {
+            #scores-schedules-container .team-name-desktop {
+                display: none !important;
+            }
+            #scores-schedules-container .team-name-mobile {
+                display: inline !important;
+            }
+            #scores-schedules-container .team-abbrev {
+                display: none !important;
+            }
+            #scores-schedules-container .scores-table {
+                font-size: 0.9rem;
+            }
+            #scores-schedules-container .scores-table th,
+            #scores-schedules-container .scores-table td {
+                padding: 12px 8px !important;
+            }
         }
     </style>
 </body>
