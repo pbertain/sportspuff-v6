@@ -50,10 +50,13 @@
         <!-- Scores & Schedules Section -->
         <div class="row mt-5">
             <div class="col-12">
-                <h2 class="text-center mb-5 fade-in-up">
-                    <img src="{{ 'NBA' | get_league_logo }}" alt="NBA" style="height: 40px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
-                    NBA Scores & Schedules
-                </h2>
+                <div class="text-center mb-5 fade-in-up">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <img src="{{ 'NBA' | get_league_logo }}" alt="NBA" style="height: 60px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
+                        <span style="font-size: 1.5rem; font-weight: 600;">NBA</span>
+                    </div>
+                    <h2 style="font-size: 2rem; margin: 0;">📅 Schedules & 🏆 Scores</h2>
+                </div>
                 <div id="scores-schedules-container">
                     <div class="text-center">
                         <div class="spinner-border text-primary" role="status">
@@ -289,15 +292,38 @@
                         });
                     }
                     
-                    // Format status
+                    // Format status and calculate time until start
                     let statusDisplay = '';
                     if (isFinal) {
                         statusDisplay = '<span class="badge bg-success">Final</span>';
-                    } else if (isScheduled) {
-                        statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
+                    } else if (isScheduled && game.game_time) {
+                        const gameDate = new Date(game.game_time);
+                        const now = new Date();
+                        const diffMs = gameDate - now;
+                        
+                        if (diffMs > 0) {
+                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                            
+                            if (diffHours > 0) {
+                                statusDisplay = `${diffHours} hr${diffHours > 1 ? 's' : ''} ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+                            } else {
+                                statusDisplay = `${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+                            }
+                        } else {
+                            statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
+                        }
                     } else if (game.time_remaining) {
                         statusDisplay = `<small>${game.current_period} - ${game.time_remaining}</small>`;
+                    } else {
+                        statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
                     }
+                    
+                    // Get team records
+                    const visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined) 
+                        ? `${game.visitor_wins}-${game.visitor_losses}` : '';
+                    const homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined) 
+                        ? `${game.home_wins}-${game.home_losses}` : '';
                     
                     // Format score
                     let scoreDisplay = '-';
@@ -307,31 +333,37 @@
                     
                     html += `
                         <tr>
-                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 12px; font-weight: 600; border-radius: 4px 0 0 4px;">
+                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 16px; font-weight: 600; border-radius: 4px 0 0 4px;">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center">
+                                    <div class="d-flex align-items-center flex-grow-1">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
-                                        <span>${game.visitor_team}</span>
+                                        <div>
+                                            <div>${game.visitor_team}</div>
+                                            ${visitorRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${visitorRecord}</small>` : ''}
+                                        </div>
                                     </div>
                                     <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: 8px;">${game.visitor_team_abbrev}</span>
                                 </div>
                             </td>
-                            <td style="text-align: center; font-weight: 600; font-size: 1.1rem; padding: 12px;">
+                            <td style="text-align: center; font-weight: 600; font-size: 1.1rem; padding: 16px;">
                                 ${scoreDisplay}
                             </td>
-                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 12px; font-weight: 600; border-radius: 0 4px 4px 0;">
+                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0;">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center">
+                                    <div class="d-flex align-items-center flex-grow-1">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
-                                        <span>${game.home_team}</span>
+                                        <div>
+                                            <div>${game.home_team}</div>
+                                            ${homeRecord ? `<small style="opacity: 0.9; font-size: 0.85rem;">${homeRecord}</small>` : ''}
+                                        </div>
                                     </div>
                                     <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: 8px;">${game.home_team_abbrev}</span>
                                 </div>
                             </td>
-                            <td style="text-align: center; padding: 12px;">
+                            <td style="text-align: center; padding: 16px;">
                                 ${timeDisplay || '-'}
                             </td>
-                            <td style="text-align: center; padding: 12px;">
+                            <td style="text-align: center; padding: 16px;">
                                 ${statusDisplay}
                             </td>
                         </tr>
@@ -371,34 +403,40 @@
         });
     </script>
     <style>
+        #scores-schedules-container {
+            background: linear-gradient(135deg, #6A5ACD 0%, #9370DB 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(106, 90, 205, 0.3);
+        }
         #scores-schedules-container .scores-table {
-            background: #E6E6FA;
+            background: transparent;
             border-radius: 8px;
             overflow: hidden;
         }
         #scores-schedules-container .scores-table thead th {
-            background-color: #9370DB;
-            color: #FFFFFF;
+            background-color: rgba(147, 112, 219, 0.3);
+            color: #F5F0FF;
             font-weight: 700;
-            border-bottom: 2px solid #6A5ACD;
-            padding: 12px;
+            border-bottom: 2px solid rgba(181, 152, 214, 0.5);
+            padding: 14px;
         }
         #scores-schedules-container .scores-table tbody {
-            background-color: #E6E6FA;
+            background-color: transparent;
         }
         #scores-schedules-container .scores-table tbody tr {
             transition: background-color 0.2s;
         }
         #scores-schedules-container .scores-table tbody tr:hover {
-            background-color: #D4C5E8;
+            background-color: rgba(212, 197, 232, 0.2);
         }
         #scores-schedules-container .scores-table tbody td {
             vertical-align: middle;
-            border-top: 1px solid #B098D6;
-            color: #4B0082;
+            border-top: 1px solid rgba(181, 152, 214, 0.3);
+            color: #F5F0FF;
         }
         #scores-schedules-container .scores-table tbody td[style*="text-align: center"] {
-            color: #4B0082;
+            color: #F5F0FF;
             font-weight: 600;
         }
     </style>
