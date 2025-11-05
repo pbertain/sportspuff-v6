@@ -51,13 +51,15 @@
         <div class="row mt-5">
             <div class="col-12">
                 <h2 class="text-center mb-5 fade-in-up">
-                    <i class="fas fa-calendar-alt me-2"></i>Scores & Schedules
+                    <img src="{{ 'NBA' | get_league_logo }}" alt="NBA" style="height: 40px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
+                    NBA Scores & Schedules
                 </h2>
-                <div class="text-center">
-                    <div class="placeholder-box p-5 border border-2 border-dashed rounded">
-                        <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-                        <h4 class="text-muted">Coming Soon</h4>
-                        <p class="text-muted">Live scores and schedules will be available here</p>
+                <div id="scores-schedules-container">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading scores and schedules...</p>
                     </div>
                 </div>
             </div>
@@ -147,14 +149,258 @@
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
         <div class="container">
-            <p>&copy; 2025 Sportspuff. Part of the CloudPuff family.</p>
+            <p>&copy; 2025 SportsPuff. Part of the CloudPuff™ family!</p>
+            <p class="mt-2">
+                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank" style="text-decoration: none; color: white;">
+                    Powered by CloudPuff™
+                </a>
+            </p>
             <div class="mt-3">
-                <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
+                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank">
+                    <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff™" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
+                </a>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
+    <script>
+        // Fetch and display NBA scores and schedules
+        async function loadScoresAndSchedules() {
+            const container = document.getElementById('scores-schedules-container');
+            
+            try {
+                // Fetch schedule and scores (team colors already loaded from database)
+                const [scheduleResponse, scoresResponse] = await Promise.all([
+                    fetch('{{ url_for("proxy_schedule", league="nba", date="today") }}'),
+                    fetch('{{ url_for("proxy_scores", league="nba", date="today") }}')
+                ]);
+                
+                if (!scheduleResponse.ok || !scoresResponse.ok) {
+                    throw new Error(`API error: ${scheduleResponse.status} ${scoresResponse.status}`);
+                }
+                
+                const scheduleData = await scheduleResponse.json();
+                const scoresData = await scoresResponse.json();
+                
+                // Team colors from database (passed from server)
+                const teamColors = {{ nba_team_colors | tojson }};
+                
+                // Check for API errors
+                if (scheduleData.error || scoresData.error) {
+                    throw new Error(scheduleData.error || scoresData.error);
+                }
+                
+                // Helper function to get team color
+                function getTeamColor(teamName) {
+                    const team = teamColors[teamName];
+                    return team ? (team.color_1 || '#6c757d') : '#6c757d';
+                }
+                
+                // Helper function to get team logo
+                function getTeamLogo(teamName) {
+                    const team = teamColors[teamName];
+                    return team ? (team.logo_url || '/static/images/no-logo.png') : '/static/images/no-logo.png';
+                }
+                
+                // Helper function to get text color (light or dark based on background)
+                function getTextColor(bgColor) {
+                    if (!bgColor || bgColor === '#6c757d') return '#ffffff';
+                    const hex = bgColor.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness > 155 ? '#000000' : '#ffffff';
+                }
+                
+                // Create a map of game_id to scores for quick lookup
+                const scoresMap = {};
+                if (scoresData.scores) {
+                    scoresData.scores.forEach(game => {
+                        scoresMap[game.game_id] = game;
+                    });
+                }
+                
+                // Combine scheduled games with scores
+                const games = (scheduleData.games || []).map(game => {
+                    const score = scoresMap[game.game_id];
+                    return {
+                        ...game,
+                        home_score: score?.home_score,
+                        visitor_score: score?.visitor_score,
+                        is_final: score?.is_final,
+                        game_status: score?.game_status || game.game_status,
+                        current_period: score?.current_period,
+                        time_remaining: score?.time_remaining
+                    };
+                });
+                
+                if (games.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No games scheduled for today.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render games in table format with team colors
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 scores-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Visitor</th>
+                                    <th style="width: 10%; text-align: center;">Score</th>
+                                    <th style="width: 25%;">Home</th>
+                                    <th style="width: 15%; text-align: center;">Start Time</th>
+                                    <th style="width: 15%; text-align: center;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                games.forEach(game => {
+                    const hasScore = game.home_score !== undefined && game.visitor_score !== undefined;
+                    const isFinal = game.is_final || game.game_status === 'final';
+                    const isScheduled = game.game_status === 'scheduled';
+                    
+                    // Get team colors and logos
+                    const visitorColor = getTeamColor(game.visitor_team);
+                    const homeColor = getTeamColor(game.home_team);
+                    const visitorTextColor = getTextColor(visitorColor);
+                    const homeTextColor = getTextColor(homeColor);
+                    const visitorLogo = getTeamLogo(game.visitor_team);
+                    const homeLogo = getTeamLogo(game.home_team);
+                    
+                    // Format game time
+                    let timeDisplay = '';
+                    if (game.game_time) {
+                        const gameDate = new Date(game.game_time);
+                        timeDisplay = gameDate.toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                        });
+                    }
+                    
+                    // Format status
+                    let statusDisplay = '';
+                    if (isFinal) {
+                        statusDisplay = '<span class="badge bg-success">Final</span>';
+                    } else if (isScheduled) {
+                        statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
+                    } else if (game.time_remaining) {
+                        statusDisplay = `<small>${game.current_period} - ${game.time_remaining}</small>`;
+                    }
+                    
+                    // Format score
+                    let scoreDisplay = '-';
+                    if (hasScore) {
+                        scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 12px; font-weight: 600; border-radius: 4px 0 0 4px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
+                                        <span>${game.visitor_team}</span>
+                                    </div>
+                                    <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: 8px;">${game.visitor_team_abbrev}</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center; font-weight: 600; font-size: 1.1rem; padding: 12px;">
+                                ${scoreDisplay}
+                            </td>
+                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 12px; font-weight: 600; border-radius: 0 4px 4px 0;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; margin-right: 8px; object-fit: contain;" onerror="this.style.display='none';">
+                                        <span>${game.home_team}</span>
+                                    </div>
+                                    <span class="badge" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: 8px;">${game.home_team_abbrev}</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center; padding: 12px;">
+                                ${timeDisplay || '-'}
+                            </td>
+                            <td style="text-align: center; padding: 12px;">
+                                ${statusDisplay}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading scores and schedules:', error);
+                container.innerHTML = `
+                    <div class="text-center">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Unable to load scores and schedules. Please try again later.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadScoresAndSchedules();
+            
+            // Auto-refresh every 60 seconds if page is visible
+            setInterval(() => {
+                if (!document.hidden) {
+                    loadScoresAndSchedules();
+                }
+            }, 60000);
+        });
+    </script>
+    <style>
+        #scores-schedules-container .scores-table {
+            background: #E6E6FA;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #scores-schedules-container .scores-table thead th {
+            background-color: #9370DB;
+            color: #FFFFFF;
+            font-weight: 700;
+            border-bottom: 2px solid #6A5ACD;
+            padding: 12px;
+        }
+        #scores-schedules-container .scores-table tbody {
+            background-color: #E6E6FA;
+        }
+        #scores-schedules-container .scores-table tbody tr {
+            transition: background-color 0.2s;
+        }
+        #scores-schedules-container .scores-table tbody tr:hover {
+            background-color: #D4C5E8;
+        }
+        #scores-schedules-container .scores-table tbody td {
+            vertical-align: middle;
+            border-top: 1px solid #B098D6;
+            color: #4B0082;
+        }
+        #scores-schedules-container .scores-table tbody td[style*="text-align: center"] {
+            color: #4B0082;
+            font-weight: 600;
+        }
+    </style>
 </body>
 </html>

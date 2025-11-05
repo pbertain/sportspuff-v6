@@ -9,10 +9,37 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import json
+import requests
+from datetime import datetime, timezone
+from functools import wraps
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Simple cache for API responses
+_api_cache = {}
+_cache_ttl = {
+    'schedule': 300,  # 5 minutes for schedules
+    'scores': 15,     # 15 seconds for scores (games update frequently)
+}
+
+def get_cached_response(cache_key, cache_type):
+    """Get cached response if still valid"""
+    if cache_key in _api_cache:
+        cached_data, timestamp = _api_cache[cache_key]
+        ttl = _cache_ttl.get(cache_type, 60)
+        if (datetime.now(timezone.utc) - timestamp).total_seconds() < ttl:
+            return cached_data
+    return None
+
+def set_cached_response(cache_key, data):
+    """Store response in cache"""
+    _api_cache[cache_key] = (data, datetime.now(timezone.utc))
+    # Clean up old cache entries (keep last 100)
+    if len(_api_cache) > 100:
+        oldest_key = min(_api_cache.keys(), key=lambda k: _api_cache[k][1])
+        del _api_cache[oldest_key]
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -59,6 +86,7 @@ def index():
                              linked_count=0,
                              league_stats=[],
                              logo_mapping=LOGO_MAPPING,
+                             nba_team_colors={},
                              db_available=False)
     
     try:
@@ -87,6 +115,47 @@ def index():
         """)
         league_stats = cursor.fetchall()
         
+        # Get team colors and logos for NBA (for scores display)
+        cursor.execute("""
+            SELECT t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3, 
+                   t.logo_filename, l.league_name
+            FROM teams t
+            JOIN leagues l ON t.league_id = l.league_id
+            WHERE LOWER(l.league_name_proper) = 'nba'
+            AND t.team_color_1 IS NOT NULL
+        """)
+        nba_teams = cursor.fetchall()
+        
+        # Create a mapping of team name to colors and logo
+        # Also create variations for common name differences (e.g., "LA Clippers" vs "Los Angeles Clippers")
+        nba_team_colors = {}
+        for team in nba_teams:
+            # Build logo URL - use local static/images/logos if available, otherwise splitsp.lat
+            logo_url = '/static/images/no-logo.png'
+            if team['logo_filename']:
+                league_lower = team['league_name'].lower()
+                # Try local first, fallback to splitsp.lat
+                logo_url = f'/static/images/logos/{league_lower}/{team["logo_filename"]}'
+            
+            team_data = {
+                'color_1': team['team_color_1'],
+                'color_2': team['team_color_2'],
+                'color_3': team['team_color_3'],
+                'logo_url': logo_url
+            }
+            
+            # Map exact name
+            nba_team_colors[team['real_team_name']] = team_data
+            
+            # Map common variations
+            team_name = team['real_team_name']
+            if 'Los Angeles' in team_name:
+                # Map "LA Clippers" to "Los Angeles Clippers"
+                nba_team_colors[team_name.replace('Los Angeles', 'LA')] = team_data
+            elif team_name.startswith('LA '):
+                # Map "Los Angeles Clippers" to "LA Clippers"
+                nba_team_colors[team_name.replace('LA ', 'Los Angeles ')] = team_data
+        
         cursor.close()
         conn.close()
         
@@ -96,6 +165,7 @@ def index():
                              linked_count=linked_count,
                              league_stats=league_stats,
                              logo_mapping=LOGO_MAPPING,
+                             nba_team_colors=nba_team_colors,
                              db_available=True)
     
     except Exception as e:
@@ -106,6 +176,7 @@ def index():
                              linked_count=0,
                              league_stats=[],
                              logo_mapping=LOGO_MAPPING,
+                             nba_team_colors={},
                              db_available=False)
 
 @app.route('/admin')
@@ -157,7 +228,8 @@ def league_page(league_name):
             SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
                    t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
                    s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
-                   c.conference_name, d.division_name
+                   c.conference_name, d.division_name,
+                   l.league_name_proper as team_league
             FROM teams t
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
             LEFT JOIN leagues l ON t.league_id = l.league_id
@@ -187,13 +259,26 @@ def league_page(league_name):
             
             organized_teams[conference][division].append(team)
         
+        # Get league info including champion details
+        league_query = """
+            SELECT l.league_name_proper, l.league_name, l.logo_filename, l.team_count,
+                   l.current_champion_id, c.real_team_name as champion_name, c.logo_filename as champion_logo,
+                   c.team_color_1 as champion_color_1, c.team_color_2 as champion_color_2, c.team_color_3 as champion_color_3
+            FROM leagues l
+            LEFT JOIN teams c ON l.current_champion_id = c.team_id
+            WHERE LOWER(l.league_name_proper) = LOWER(%s)
+        """
+        cursor.execute(league_query, [league_name])
+        league_info = cursor.fetchone()
+        
         cursor.close()
         conn.close()
         
         return render_template('league_page.html', 
                              league_name=league_name,
                              organized_teams=organized_teams,
-                             logo_mapping=LOGO_MAPPING)
+                             logo_mapping=LOGO_MAPPING,
+                             league_info=league_info)
     
     except Exception as e:
         return render_template('error.html', message=str(e))
@@ -248,7 +333,8 @@ def teams():
         # Get teams with pagination
         offset = (page - 1) * per_page
         teams_query = f"""
-            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state
+            SELECT t.*, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
+                   l.league_name_proper as league
             FROM teams t 
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
             LEFT JOIN leagues l ON t.league_id = l.league_id
@@ -267,7 +353,7 @@ def teams():
                 FROM divisions d
                 JOIN leagues l ON d.league_id = l.league_id
                 LEFT JOIN teams t ON d.division_id = t.division_id
-                WHERE l.league_abbreviation = %s
+                WHERE l.league_name_proper = %s
                 GROUP BY d.division_id, d.division_name
                 ORDER BY d.division_name
             """
@@ -275,8 +361,8 @@ def teams():
             divisions = cursor.fetchall()
         
         # Get leagues for filter dropdown
-        cursor.execute("SELECT DISTINCT league FROM teams ORDER BY league")
-        leagues = [row['league'] for row in cursor.fetchall()]
+        cursor.execute("SELECT league_name_proper FROM leagues ORDER BY league_name_proper")
+        leagues = [row['league_name_proper'] for row in cursor.fetchall()]
         
         cursor.close()
         conn.close()
@@ -357,6 +443,52 @@ def stadiums():
         flash(f'Error loading stadiums: {e}', 'error')
         return render_template('error.html', message=str(e))
 
+@app.route('/team/<league_name>/<team_name>')
+def team_detail_by_name(league_name, team_name):
+    """Show team details by league and team name"""
+    conn = get_db_connection()
+    if not conn:
+        return render_template("error.html", message="Database connection failed")
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute("""
+            SELECT t.team_id, t.full_team_name, t.team_name, t.real_team_name, t.league_id,
+                   t.division_id, t.conference_id, t.team_league_id, t.city_name, t.state_name,
+                   t.country, t.stadium_id, t.logo_filename,
+                   t.team_color_1, t.team_color_2, t.team_color_3,
+                   s.stadium_id as s_stadium_id, s.full_stadium_name, s.stadium_name, s.city_name as stadium_city, 
+                   s.state_name as stadium_state, s.capacity, s.surface, s.roof_type, s.year_opened,
+                   s.location_name, s.coordinates, s.country as s_country, s.baseball_distance_to_center_field_ft,
+                   s.baseball_distance_to_center_field_m, s.soccer_field_length_yd, s.soccer_field_width_yd,
+                   s.soccer_field_length_m, s.soccer_field_width_m, s.stadium_type, s.first_sport_year,
+                   l.league_name_proper as team_league,
+                   conf.conference_name, div.division_name
+            FROM teams t
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            LEFT JOIN conferences conf ON t.conference_id = conf.conference_id
+            LEFT JOIN divisions div ON t.division_id = div.division_id
+            WHERE LOWER(l.league_name_proper) = LOWER(%s)
+            AND LOWER(REPLACE(t.real_team_name, ' ', '_')) = LOWER(%s)
+        """, (league_name, team_name))
+
+        team = cursor.fetchone()
+
+        if not team:
+            flash('Team not found', 'error')
+            return redirect(url_for('teams'))
+
+        cursor.close()
+        conn.close()
+
+        return render_template('team_detail_horizontal.html', team=team)
+
+    except Exception as e:
+        flash(f'Error loading team: {e}', 'error')
+        return render_template('error.html', message=str(e))
+
 @app.route('/team/<int:team_id>')
 def team_detail(team_id):
     """Show team details"""
@@ -368,9 +500,22 @@ def team_detail(team_id):
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         cursor.execute("""
-            SELECT t.*, s.*, s.city_name as stadium_city, s.state_name as stadium_state
+            SELECT t.team_id, t.full_team_name, t.team_name, t.real_team_name, t.league_id,
+                   t.division_id, t.conference_id, t.team_league_id, t.city_name, t.state_name,
+                   t.country, t.stadium_id, t.logo_filename,
+                   t.team_color_1, t.team_color_2, t.team_color_3,
+                   s.stadium_id as s_stadium_id, s.full_stadium_name, s.stadium_name, s.city_name as stadium_city, 
+                   s.state_name as stadium_state, s.capacity, s.surface, s.roof_type, s.year_opened,
+                   s.location_name, s.coordinates, s.country as s_country, s.baseball_distance_to_center_field_ft,
+                   s.baseball_distance_to_center_field_m, s.soccer_field_length_yd, s.soccer_field_width_yd,
+                   s.soccer_field_length_m, s.soccer_field_width_m, s.stadium_type, s.first_sport_year,
+                   l.league_name_proper as team_league,
+                   conf.conference_name, div.division_name
             FROM teams t 
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            LEFT JOIN conferences conf ON t.conference_id = conf.conference_id
+            LEFT JOIN divisions div ON t.division_id = div.division_id
             WHERE t.team_id = %s
         """, (team_id,))
         
@@ -383,7 +528,7 @@ def team_detail(team_id):
         cursor.close()
         conn.close()
         
-        return render_template('team_detail.html', team=team)
+        return render_template('team_detail_horizontal.html', team=team)
     
     except Exception as e:
         flash(f'Error loading team: {e}', 'error')
@@ -409,10 +554,15 @@ def stadium_detail(stadium_id):
         
         # Get teams using this stadium
         cursor.execute("""
-            SELECT team_id, real_team_name, league, city_name, state_name
-            FROM teams 
-            WHERE stadium_id = %s
-            ORDER BY league, real_team_name
+            SELECT t.team_id, t.real_team_name, t.city_name, t.state_name,
+                   t.team_color_1, t.team_color_2, t.team_color_3,
+                   s.full_stadium_name,
+                   l.league_name_proper
+            FROM teams t
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            WHERE t.stadium_id = %s
+            ORDER BY l.league_name_proper, t.real_team_name
         """, (stadium_id,))
         
         teams = cursor.fetchall()
@@ -420,7 +570,7 @@ def stadium_detail(stadium_id):
         cursor.close()
         conn.close()
         
-        return render_template('stadium_detail.html', stadium=stadium, teams=teams)
+        return render_template('stadium_detail_horizontal.html', stadium=stadium, teams=teams)
     
     except Exception as e:
         flash(f'Error loading stadium: {e}', 'error')
@@ -437,10 +587,11 @@ def api_teams():
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         cursor.execute("""
-            SELECT t.team_id, t.real_team_name, t.league, t.city_name, t.state_name,
+            SELECT t.team_id, t.real_team_name, l.league_name_proper as league, t.city_name, t.state_name,
                    s.full_stadium_name, s.stadium_id
             FROM teams t 
             LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
             ORDER BY t.real_team_name
         """)
         
@@ -518,16 +669,19 @@ def get_logo(team_id):
 
 @app.template_filter('get_league_logo')
 def get_league_logo(league):
-    """Template filter to get league logo from splitsp.lat"""
+    """Template filter to get league logo - try local first, then splitsp.lat"""
     if league:
         league_lower = league.lower()
+        # Try local first
+        local_logo = f'/static/images/logos/{league_lower}/{league_lower}_logo.png'
+        # For now, use splitsp.lat as fallback
         # Use correct acronym-based URLs
         if league_lower == 'mlb':
             return 'https://www.splitsp.lat/logos/mlb/mlb_logo.png'
         elif league_lower == 'nfl':
             return 'https://www.splitsp.lat/logos/nfl/nfl_logo.png'
         elif league_lower == 'nba':
-            return 'https://www.splitsp.lat/logos/nba/nba_logo.png'
+            return '/static/images/logos/nba/nba_logo.png'
         elif league_lower == 'nhl':
             return 'https://www.splitsp.lat/logos/nhl/nhl_logo.png'
         elif league_lower == 'mls':
@@ -537,6 +691,124 @@ def get_league_logo(league):
         else:
             return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
     return '/static/images/no-logo.png'
+
+@app.route('/api/proxy/schedule/<league>/<date>')
+def proxy_schedule(league, date):
+    """Proxy schedule API requests to avoid CORS issues with caching"""
+    try:
+        # For "today", use actual date for cache key but pass "today" to API
+        # API only accepts "today" as a keyword, not date strings
+        if date.lower() == 'today':
+            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            cache_key = f'schedule:{league}:{actual_date}'
+            api_date = 'today'  # API only accepts "today", not date strings
+        else:
+            cache_key = f'schedule:{league}:{date}'
+            api_date = date
+        
+        # Check cache first - but verify it's for today's date
+        cached_response = get_cached_response(cache_key, 'schedule')
+        if cached_response:
+            # Verify the cached data is for today (check response date field)
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                return jsonify(cached_response)
+            # If cached date doesn't match today, clear it and fetch fresh
+        
+        # Fetch from API
+        url = f'https://api.sportspuff.org/api/v1/schedule/{league}/{api_date}'
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Cache the response
+        set_cached_response(cache_key, data)
+        
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/proxy/scores/<league>/<date>')
+def proxy_scores(league, date):
+    """Proxy scores API requests to avoid CORS issues with caching"""
+    try:
+        # For "today", use actual date for cache key but pass "today" to API
+        # API only accepts "today" as a keyword, not date strings
+        if date.lower() == 'today':
+            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            cache_key = f'scores:{league}:{actual_date}'
+            api_date = 'today'  # API only accepts "today", not date strings
+        else:
+            cache_key = f'scores:{league}:{date}'
+            api_date = date
+        
+        # Check cache first - but verify it's for today's date
+        cached_response = get_cached_response(cache_key, 'scores')
+        if cached_response:
+            # Verify the cached data is for today (check response date field)
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                # For scores, always fetch fresh to ensure we get latest updates
+                # Cache is primarily for API protection, not for serving stale scores
+                # But we'll still use it if the request is very recent (< 15 seconds)
+                pass  # Continue to fetch fresh data
+            # If cached date doesn't match today, clear it and fetch fresh
+        
+        # Always fetch fresh scores to ensure latest updates
+        url = f'https://api.sportspuff.org/api/v1/scores/{league}/{api_date}'
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Cache the response (but with short TTL)
+        set_cached_response(cache_key, data)
+        
+        return jsonify(data)
+    except Exception as e:
+        # If API fails, try to return cached response as fallback
+        if cached_response and cached_response.get('date') == datetime.now(timezone.utc).strftime('%Y-%m-%d'):
+            return jsonify(cached_response)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/team-colors/<league>')
+def get_team_colors(league):
+    """Get team colors for a league, mapping team names to colors"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get teams with colors for the specified league
+        cursor.execute("""
+            SELECT t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3
+            FROM teams t
+            JOIN leagues l ON t.league_id = l.league_id
+            WHERE LOWER(l.league_name_proper) = LOWER(%s)
+            AND t.team_color_1 IS NOT NULL
+        """, (league,))
+        
+        teams = cursor.fetchall()
+        
+        # Create a mapping of team name to colors
+        color_map = {}
+        for team in teams:
+            color_map[team['real_team_name']] = {
+                'color_1': team['team_color_1'],
+                'color_2': team['team_color_2'],
+                'color_3': team['team_color_3']
+            }
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify(color_map)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     import sys
