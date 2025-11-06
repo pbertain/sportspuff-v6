@@ -318,15 +318,14 @@
                             <span style="font-size: 1.5rem; font-weight: 600; color: #2D1B4E;">NBA</span>
                         </div>
                     </div>
-                    <div class="table-responsive">
+                    <div class="table-responsive-scores">
                         <table class="table table-hover align-middle mb-0 scores-table">
                             <thead>
                                 <tr>
                                     <th style="width: 32%;">Visitor</th>
-                                    <th style="width: 10%; text-align: center;">Score</th>
+                                    <th style="width: 12%; text-align: center;">Score</th>
                                     <th style="width: 32%;">Home</th>
-                                    <th style="width: 13%; text-align: center;">Start Time</th>
-                                    <th style="width: 13%; text-align: center;">Status</th>
+                                    <th style="width: 24%; text-align: center;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -345,18 +344,23 @@
                     const visitorLogo = getTeamLogo(game.visitor_team);
                     const homeLogo = getTeamLogo(game.home_team);
                     
-                    // Format game time
-                    let timeDisplay = '';
-                    if (game.game_time) {
-                        const gameDate = new Date(game.game_time);
-                        timeDisplay = gameDate.toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
-                            minute: '2-digit',
-                            timeZoneName: 'short'
-                        });
+                    // Get team color 3 for logo background, or white as fallback
+                    function getTeamLogoBg(teamName) {
+                        const team = teamColors[teamName];
+                        return team ? (team.color_3 || '#FFFFFF') : '#FFFFFF';
+                    }
+                    const visitorLogoBg = getTeamLogoBg(game.visitor_team);
+                    const homeLogoBg = getTeamLogoBg(game.home_team);
+                    
+                    // Determine winner for star overlay
+                    let visitorIsWinner = false;
+                    let homeIsWinner = false;
+                    if (hasScore && isFinal) {
+                        visitorIsWinner = game.visitor_score > game.home_score;
+                        homeIsWinner = game.home_score > game.visitor_score;
                     }
                     
-                    // Format status with quarter and time, or time until start
+                    // Format combined status with time until start OR quarter/time
                     let statusDisplay = '';
                     if (isFinal) {
                         // Check if game went to overtime (period > 4)
@@ -379,22 +383,31 @@
                         }
                         statusDisplay = `${periodDisplay} ${game.time_remaining}`;
                     } else if (isScheduled && game.game_time) {
-                        // Scheduled game - show time until start
+                        // Scheduled game - show start time and time until start
                         const gameDate = new Date(game.game_time);
                         const now = new Date();
                         const diffMs = gameDate - now;
+                        
+                        // Format game time
+                        const gameTimeStr = gameDate.toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                        });
                         
                         if (diffMs > 0) {
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                             const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
                             
+                            let timeUntilStr = '';
                             if (diffHours > 0) {
-                                statusDisplay = `${diffHours} hr${diffHours > 1 ? 's' : ''} ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+                                timeUntilStr = `${diffHours}h${diffMins}m`;
                             } else {
-                                statusDisplay = `${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+                                timeUntilStr = `${diffMins}m`;
                             }
+                            statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                         } else {
-                            statusDisplay = 'Scheduled';
+                            statusDisplay = `${gameTimeStr} - Scheduled`;
                         }
                     } else {
                         statusDisplay = 'Scheduled';
@@ -417,29 +430,32 @@
                     
                     html += `
                         <tr>
-                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 16px; font-weight: 600; border-radius: 4px 0 0 4px;">
+                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 16px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative;">
                                 <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
-                                    <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
-                                    <span class="team-name-desktop">${game.visitor_team}</span>
+                                    <div style="position: relative; flex-shrink: 0;">
+                                        <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
+                                        ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;" />` : ''}
+                                    </div>
+                                    <span class="team-name-desktop" style="flex: 1; min-width: 0;">${game.visitor_team}</span>
                                     <span class="team-name-mobile" style="display: none;">${game.visitor_team_abbrev}</span>
                                     ${visitorRecord ? `<span class="team-record">(${visitorRecord})</span>` : ''}
                                     <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: auto; flex-shrink: 0;">${game.visitor_team_abbrev}</span>
                                 </a>
                             </td>
-                            <td style="text-align: center; font-weight: 600; font-size: 1.1rem; padding: 16px;">
+                            <td style="text-align: center; font-weight: 700; font-size: 1.5rem; padding: 16px; position: relative;">
                                 ${scoreDisplay}
                             </td>
-                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0;">
+                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
-                                    <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
-                                    <span class="team-name-desktop">${game.home_team}</span>
+                                    <div style="position: relative; flex-shrink: 0;">
+                                        <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
+                                        ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;" />` : ''}
+                                    </div>
+                                    <span class="team-name-desktop" style="flex: 1; min-width: 0;">${game.home_team}</span>
                                     <span class="team-name-mobile" style="display: none;">${game.home_team_abbrev}</span>
                                     ${homeRecord ? `<span class="team-record">(${homeRecord})</span>` : ''}
                                     <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: auto; flex-shrink: 0;">${game.home_team_abbrev}</span>
                                 </a>
-                            </td>
-                            <td style="text-align: center; padding: 16px;">
-                                ${timeDisplay || '-'}
                             </td>
                             <td style="text-align: center; padding: 16px;">
                                 ${statusDisplay}
@@ -486,6 +502,12 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 8px 25px rgba(106, 90, 205, 0.3);
+            margin: 0 auto;
+            max-width: 98%;
+        }
+        #scores-schedules-container .table-responsive-scores {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         #scores-schedules-container .league-header {
             margin-bottom: 15px;
@@ -495,6 +517,7 @@
             border-radius: 8px;
             overflow: hidden;
             width: 100%;
+            table-layout: auto;
         }
         #scores-schedules-container .scores-table thead th {
             background-color: rgba(147, 112, 219, 0.4);
@@ -502,6 +525,7 @@
             font-weight: 700;
             border-bottom: 2px solid rgba(181, 152, 214, 0.5);
             padding: 14px;
+            white-space: nowrap;
         }
         #scores-schedules-container .scores-table tbody {
             background-color: #5A4A9D;
@@ -522,6 +546,11 @@
             color: #F5F0FF;
             font-weight: 600;
             background-color: #5A4A9D;
+        }
+        #scores-schedules-container .scores-table tbody td[style*="font-size: 1.5rem"] {
+            color: #FFFFFF;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
         #scores-schedules-container .team-link {
             transition: opacity 0.2s;
