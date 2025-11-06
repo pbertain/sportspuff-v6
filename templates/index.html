@@ -300,11 +300,30 @@
                         });
                     }
                     
-                    // Format status and calculate time until start
+                    // Format status with quarter and time, or time until start
                     let statusDisplay = '';
                     if (isFinal) {
-                        statusDisplay = '<span class="badge bg-success">Final</span>';
+                        // Check if game went to overtime (period > 4)
+                        const period = parseInt(game.current_period) || 4;
+                        if (period > 4) {
+                            const otCount = period - 4;
+                            statusDisplay = otCount === 1 ? 'F/OT' : `F/${otCount}OT`;
+                        } else {
+                            statusDisplay = 'F';
+                        }
+                    } else if (game.current_period && game.time_remaining) {
+                        // Live game - show quarter and time remaining
+                        const period = parseInt(game.current_period);
+                        let periodDisplay = '';
+                        if (period > 4) {
+                            const otCount = period - 4;
+                            periodDisplay = otCount === 1 ? 'OT' : `${otCount}OT`;
+                        } else {
+                            periodDisplay = `Q${period}`;
+                        }
+                        statusDisplay = `${periodDisplay} ${game.time_remaining}`;
                     } else if (isScheduled && game.game_time) {
+                        // Scheduled game - show time until start
                         const gameDate = new Date(game.game_time);
                         const now = new Date();
                         const diffMs = gameDate - now;
@@ -319,12 +338,10 @@
                                 statusDisplay = `${diffMins} min${diffMins !== 1 ? 's' : ''}`;
                             }
                         } else {
-                            statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
+                            statusDisplay = 'Scheduled';
                         }
-                    } else if (game.time_remaining) {
-                        statusDisplay = `<small>${game.current_period} - ${game.time_remaining}</small>`;
                     } else {
-                        statusDisplay = '<span class="badge bg-secondary">Scheduled</span>';
+                        statusDisplay = 'Scheduled';
                     }
                     
                     // Get team records
