@@ -21,7 +21,7 @@ load_dotenv()
 _api_cache = {}
 _cache_ttl = {
     'schedule': 300,  # 5 minutes for schedules
-    'scores': 15,     # 15 seconds for scores (games update frequently)
+    'scores': 5,      # 5 seconds for scores (games update very frequently)
 }
 
 def get_cached_response(cache_key, cache_type):
@@ -731,7 +731,7 @@ def proxy_schedule(league, date):
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
-    """Proxy scores API requests to avoid CORS issues with caching"""
+    """Proxy scores API requests to avoid CORS issues with very short caching"""
     try:
         # For "today", use actual date for cache key but pass "today" to API
         # API only accepts "today" as a keyword, not date strings
@@ -743,33 +743,34 @@ def proxy_scores(league, date):
             cache_key = f'scores:{league}:{date}'
             api_date = date
         
-        # Check cache first - but verify it's for today's date
+        # Check cache only if very recent (< 5 seconds) - otherwise always fetch fresh
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
-            # Verify the cached data is for today (check response date field)
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            # Only use cache if it's from today AND very recent (< 5 seconds)
             if cached_date == today_date:
-                # For scores, always fetch fresh to ensure we get latest updates
-                # Cache is primarily for API protection, not for serving stale scores
-                # But we'll still use it if the request is very recent (< 15 seconds)
-                pass  # Continue to fetch fresh data
-            # If cached date doesn't match today, clear it and fetch fresh
+                # Use cache if very recent (handled by get_cached_response with 5s TTL)
+                # Otherwise continue to fetch fresh
+                pass
         
-        # Always fetch fresh scores to ensure latest updates
+        # Always fetch fresh scores (cache is just for rapid consecutive requests)
         url = f'https://api.sportspuff.org/api/v1/scores/{league}/{api_date}'
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         
-        # Cache the response (but with short TTL)
+        # Cache the response (very short TTL - 5 seconds)
         set_cached_response(cache_key, data)
         
         return jsonify(data)
     except Exception as e:
-        # If API fails, try to return cached response as fallback
-        if cached_response and cached_response.get('date') == datetime.now(timezone.utc).strftime('%Y-%m-%d'):
-            return jsonify(cached_response)
+        # If API fails, try to return cached response as fallback only if very recent
+        if 'cached_response' in locals() and cached_response:
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                return jsonify(cached_response)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/team-colors/<league>')

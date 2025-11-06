@@ -228,18 +228,74 @@
                     });
                 }
                 
-                // Combine scheduled games with scores
-                const games = (scheduleData.games || []).map(game => {
-                    const score = scoresMap[game.game_id];
-                    return {
-                        ...game,
-                        home_score: score?.home_score,
-                        visitor_score: score?.visitor_score,
-                        is_final: score?.is_final,
-                        game_status: score?.game_status || game.game_status,
-                        current_period: score?.current_period,
-                        time_remaining: score?.time_remaining
-                    };
+                // Create a map of all games by game_id (from both schedule and scores)
+                const allGamesMap = {};
+                
+                // Add games from schedule
+                if (scheduleData.games) {
+                    scheduleData.games.forEach(game => {
+                        allGamesMap[game.game_id] = {
+                            ...game,
+                            home_score: scoresMap[game.game_id]?.home_score,
+                            visitor_score: scoresMap[game.game_id]?.visitor_score,
+                            is_final: scoresMap[game.game_id]?.is_final,
+                            game_status: scoresMap[game.game_id]?.game_status || game.game_status,
+                            current_period: scoresMap[game.game_id]?.current_period,
+                            time_remaining: scoresMap[game.game_id]?.time_remaining,
+                            home_wins: game.home_wins,
+                            home_losses: game.home_losses,
+                            visitor_wins: game.visitor_wins,
+                            visitor_losses: game.visitor_losses
+                        };
+                    });
+                }
+                
+                // Add games from scores that might not be in schedule (TBD games)
+                if (scoresData.scores) {
+                    scoresData.scores.forEach(scoreGame => {
+                        if (!allGamesMap[scoreGame.game_id]) {
+                            // Game exists in scores but not in schedule - add it
+                            allGamesMap[scoreGame.game_id] = {
+                                game_id: scoreGame.game_id,
+                                game_date: scoresData.date,
+                                game_time: null,
+                                home_team: scoreGame.home_team,
+                                home_team_abbrev: scoreGame.home_team_abbrev || scoreGame.home_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                visitor_team: scoreGame.visitor_team,
+                                visitor_team_abbrev: scoreGame.visitor_team_abbrev || scoreGame.visitor_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                game_status: scoreGame.game_status,
+                                game_type: 'regular',
+                                home_score: scoreGame.home_score,
+                                visitor_score: scoreGame.visitor_score,
+                                is_final: scoreGame.is_final,
+                                current_period: scoreGame.current_period,
+                                time_remaining: scoreGame.time_remaining,
+                                home_wins: null,
+                                home_losses: null,
+                                visitor_wins: null,
+                                visitor_losses: null
+                            };
+                        } else {
+                            // Update existing game with latest score data
+                            const existing = allGamesMap[scoreGame.game_id];
+                            existing.home_score = scoreGame.home_score;
+                            existing.visitor_score = scoreGame.visitor_score;
+                            existing.is_final = scoreGame.is_final;
+                            existing.game_status = scoreGame.game_status;
+                            existing.current_period = scoreGame.current_period;
+                            existing.time_remaining = scoreGame.time_remaining;
+                        }
+                    });
+                }
+                
+                // Convert map to array and sort by game_time (scheduled games first, then TBD)
+                const games = Object.values(allGamesMap).sort((a, b) => {
+                    if (a.game_time && b.game_time) {
+                        return new Date(a.game_time) - new Date(b.game_time);
+                    }
+                    if (a.game_time) return -1;
+                    if (b.game_time) return 1;
+                    return 0;
                 });
                 
                 if (games.length === 0) {
