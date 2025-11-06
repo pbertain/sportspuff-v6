@@ -322,10 +322,10 @@
                         <table class="table table-hover align-middle mb-0 scores-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 32%;">Visitor</th>
-                                    <th style="width: 12%; text-align: center;">Score</th>
-                                    <th style="width: 32%;">Home</th>
-                                    <th style="width: 24%; text-align: center;">Status</th>
+                                    <th style="text-align: center; width: 35%;">Visitor</th>
+                                    <th style="text-align: center; width: 16%;">Score</th>
+                                    <th style="text-align: center; width: 35%;">Home</th>
+                                    <th style="text-align: center; width: 14%;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -352,13 +352,35 @@
                     const visitorLogoBg = getTeamLogoBg(game.visitor_team);
                     const homeLogoBg = getTeamLogoBg(game.home_team);
                     
-                    // Determine winner for star overlay
+                    // Determine winner for star overlay and special styling
                     let visitorIsWinner = false;
                     let homeIsWinner = false;
                     if (hasScore && isFinal) {
                         visitorIsWinner = game.visitor_score > game.home_score;
                         homeIsWinner = game.home_score > game.visitor_score;
                     }
+                    
+                    // Helper to get short team name (remove city if present)
+                    function getShortTeamName(teamName) {
+                        // Common patterns: "City Name" or "City Team Name"
+                        // Try to extract just the team name part
+                        const parts = teamName.split(' ');
+                        if (parts.length > 2) {
+                            // Assume first part(s) are city, last part(s) are team name
+                            // For teams like "Los Angeles Lakers" -> "Lakers"
+                            // For teams like "Portland Trail Blazers" -> "Trail Blazers"
+                            const lastTwo = parts.slice(-2).join(' ');
+                            const lastOne = parts[parts.length - 1];
+                            // Return shorter version if it's significantly shorter
+                            if (lastOne.length < teamName.length * 0.6) {
+                                return lastOne;
+                            }
+                            return lastTwo;
+                        }
+                        return teamName;
+                    }
+                    const visitorShortName = getShortTeamName(game.visitor_team);
+                    const homeShortName = getShortTeamName(game.home_team);
                     
                     // Format combined status with time until start OR quarter/time
                     let statusDisplay = '';
@@ -419,10 +441,24 @@
                     const homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined) 
                         ? `${game.home_wins}-${game.home_losses}` : '';
                     
-                    // Format score
+                    // Format score with winner highlighting
                     let scoreDisplay = '-';
+                    let visitorScoreClass = '';
+                    let homeScoreClass = '';
                     if (hasScore) {
-                        scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                        if (isFinal) {
+                            if (visitorIsWinner) {
+                                visitorScoreClass = 'winner-score';
+                                scoreDisplay = `<span class="winner-score">${game.visitor_score}</span> - <span>${game.home_score}</span>`;
+                            } else if (homeIsWinner) {
+                                homeScoreClass = 'winner-score';
+                                scoreDisplay = `<span>${game.visitor_score}</span> - <span class="winner-score">${game.home_score}</span>`;
+                            } else {
+                                scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                            }
+                        } else {
+                            scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                        }
                     }
                     
                     const visitorUrl = getTeamUrl(game.visitor_team, 'NBA');
@@ -434,24 +470,24 @@
                                 <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 32px; height: 32px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
-                                        ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;" />` : ''}
+                                        ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    <span class="team-name-desktop" style="flex: 1; min-width: 0;">${game.visitor_team}</span>
+                                    <span class="team-name-desktop" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${game.visitor_team}">${game.visitor_team}</span>
                                     <span class="team-name-mobile" style="display: none;">${game.visitor_team_abbrev}</span>
                                     ${visitorRecord ? `<span class="team-record">(${visitorRecord})</span>` : ''}
                                     <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${visitorTextColor}; margin-left: auto; flex-shrink: 0;">${game.visitor_team_abbrev}</span>
                                 </a>
                             </td>
-                            <td style="text-align: center; font-weight: 700; font-size: 1.5rem; padding: 16px; position: relative;">
+                            <td style="text-align: center; font-weight: 700; font-size: 1.6rem; padding: 16px; position: relative; white-space: nowrap;">
                                 ${scoreDisplay}
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 16px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 10px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 32px; height: 32px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
-                                        ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;" />` : ''}
+                                        ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    <span class="team-name-desktop" style="flex: 1; min-width: 0;">${game.home_team}</span>
+                                    <span class="team-name-desktop" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${game.home_team}">${game.home_team}</span>
                                     <span class="team-name-mobile" style="display: none;">${game.home_team_abbrev}</span>
                                     ${homeRecord ? `<span class="team-record">(${homeRecord})</span>` : ''}
                                     <span class="badge team-abbrev" style="background-color: rgba(255,255,255,0.3); color: ${homeTextColor}; margin-left: auto; flex-shrink: 0;">${game.home_team_abbrev}</span>
@@ -503,11 +539,13 @@
             padding: 20px;
             box-shadow: 0 8px 25px rgba(106, 90, 205, 0.3);
             margin: 0 auto;
-            max-width: 98%;
+            max-width: 99%;
+            width: 99%;
         }
         #scores-schedules-container .table-responsive-scores {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            width: 100%;
         }
         #scores-schedules-container .league-header {
             margin-bottom: 15px;
@@ -517,7 +555,7 @@
             border-radius: 8px;
             overflow: hidden;
             width: 100%;
-            table-layout: auto;
+            table-layout: fixed;
         }
         #scores-schedules-container .scores-table thead th {
             background-color: rgba(147, 112, 219, 0.4);
@@ -547,10 +585,57 @@
             font-weight: 600;
             background-color: #5A4A9D;
         }
-        #scores-schedules-container .scores-table tbody td[style*="font-size: 1.5rem"] {
+        #scores-schedules-container .scores-table tbody td[style*="font-size: 1.6rem"] {
             color: #FFFFFF;
             font-weight: 700;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        #scores-schedules-container .winner-score {
+            color: #FFD700 !important;
+            font-weight: 900 !important;
+            font-size: 1.8rem !important;
+            text-shadow: 
+                0 0 10px rgba(255, 215, 0, 0.8),
+                0 0 20px rgba(255, 215, 0, 0.6),
+                0 0 30px rgba(255, 215, 0, 0.4),
+                2px 2px 4px rgba(0,0,0,0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 10px rgba(255, 215, 0, 0.8),
+                    0 0 20px rgba(255, 215, 0, 0.6),
+                    0 0 30px rgba(255, 215, 0, 0.4),
+                    2px 2px 4px rgba(0,0,0,0.5);
+            }
+            to {
+                text-shadow: 
+                    0 0 15px rgba(255, 215, 0, 1),
+                    0 0 25px rgba(255, 215, 0, 0.8),
+                    0 0 35px rgba(255, 215, 0, 0.6),
+                    2px 2px 4px rgba(0,0,0,0.5);
+            }
+        }
+        #scores-schedules-container .winner-star-large {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 40px;
+            height: 40px;
+            z-index: 10;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+            animation: starPulse 2s ease-in-out infinite;
+        }
+        @keyframes starPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.9;
+            }
         }
         #scores-schedules-container .team-link {
             transition: opacity 0.2s;
