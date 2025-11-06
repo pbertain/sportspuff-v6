@@ -467,23 +467,82 @@
         #scores-schedules-container .team-name-mobile {
             font-weight: 600;
         }
-        /* Mobile view - hide full team name and abbrev badge, show abbrev as name */
+        /* Mobile view - optimized layout for small screens */
         @media (max-width: 768px) {
+            #scores-schedules-container {
+                padding: 15px 10px;
+            }
+            #scores-schedules-container .league-header {
+                margin-bottom: 12px;
+            }
+            #scores-schedules-container .league-header img {
+                height: 45px !important;
+            }
+            #scores-schedules-container .league-header span {
+                font-size: 1.2rem !important;
+            }
+            #scores-schedules-container .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #scores-schedules-container .scores-table {
+                font-size: 0.85rem;
+                min-width: 600px;
+            }
+            #scores-schedules-container .scores-table th {
+                padding: 10px 6px !important;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+            #scores-schedules-container .scores-table td {
+                padding: 10px 6px !important;
+            }
             #scores-schedules-container .team-name-desktop {
                 display: none !important;
             }
             #scores-schedules-container .team-name-mobile {
                 display: inline !important;
+                font-size: 0.9rem;
             }
             #scores-schedules-container .team-abbrev {
                 display: none !important;
             }
-            #scores-schedules-container .scores-table {
+            #scores-schedules-container .team-link img {
+                width: 28px !important;
+                height: 28px !important;
+            }
+            #scores-schedules-container .team-record {
+                font-size: 0.8rem;
+            }
+            #scores-schedules-container .scores-table tbody td[style*="text-align: center"] {
                 font-size: 0.9rem;
             }
-            #scores-schedules-container .scores-table th,
+        }
+        /* Very small mobile screens */
+        @media (max-width: 480px) {
+            #scores-schedules-container {
+                padding: 12px 8px;
+            }
+            #scores-schedules-container .scores-table {
+                font-size: 0.8rem;
+                min-width: 550px;
+            }
+            #scores-schedules-container .scores-table th {
+                padding: 8px 4px !important;
+                font-size: 0.7rem;
+            }
             #scores-schedules-container .scores-table td {
-                padding: 12px 8px !important;
+                padding: 8px 4px !important;
+            }
+            #scores-schedules-container .team-link img {
+                width: 24px !important;
+                height: 24px !important;
+            }
+            #scores-schedules-container .team-name-mobile {
+                font-size: 0.85rem;
+            }
+            #scores-schedules-container .team-record {
+                font-size: 0.75rem;
             }
         }
     </style>
