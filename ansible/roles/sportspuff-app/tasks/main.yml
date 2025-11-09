@@ -108,27 +108,28 @@
     msg: "Skipping data import - requires PostgreSQL setup"
 
 # Deploy NBA systemd service and timer
-- name: Deploy NBA scores updater systemd service
-  template:
-    src: nba-scores-updater.service.j2
-    dest: /etc/systemd/system/nba-scores-updater.service
-    owner: root
-    group: root
-    mode: '0644'
-  notify: reload systemd
-
-- name: Deploy NBA scores updater systemd timer
-  template:
-    src: nba-scores-updater.timer.j2
-    dest: /etc/systemd/system/nba-scores-updater.timer
-    owner: root
-    group: root
-    mode: '0644'
-  notify: reload systemd
-
-- name: Enable NBA scores updater timer
-  systemd:
-    name: nba-scores-updater.timer
-    enabled: yes
-    daemon_reload: yes
-    state: started
+# TODO: Create nba-scores-updater.service.j2 and nba-scores-updater.timer.j2 templates if needed
+# - name: Deploy NBA scores updater systemd service
+#   template:
+#     src: nba-scores-updater.service.j2
+#     dest: /etc/systemd/system/nba-scores-updater.service
+#     owner: root
+#     group: root
+#     mode: '0644'
+#   notify: reload systemd
+#
+# - name: Deploy NBA scores updater systemd timer
+#   template:
+#     src: nba-scores-updater.timer.j2
+#     dest: /etc/systemd/system/nba-scores-updater.timer
+#     owner: root
+#     group: root
+#     mode: '0644'
+#   notify: reload systemd
+#
+# - name: Enable NBA scores updater timer
+#   systemd:
+#     name: nba-scores-updater.timer
+#     enabled: yes
+#     daemon_reload: yes
+#     state: started
