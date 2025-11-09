@@ -218,18 +218,17 @@
             const leagueUpper = league.toUpperCase();
             
             try {
-                // Build URLs using proxy endpoints (avoids CORS and provides caching)
-                const baseScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
-                const baseScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
+                // Direct API calls to bypass proxy (temporary fix for 500 errors)
+                const API_BASE = 'https://api.sportspuff.org/api/v1';
                 
                 let scheduleData, scoresData;
                 
                 if (league === 'all') {
                     // For "all", fetch both NBA and NHL separately and combine
-                    const nbaScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nbaScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nhlScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nhlScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nbaScheduleUrl = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
+                    const nbaScoresUrl = `${API_BASE}/scores/nba/today?tz=${timezone}`;
+                    const nhlScheduleUrl = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
+                    const nhlScoresUrl = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
                     
                     const [nbaScheduleRes, nbaScoresRes, nhlScheduleRes, nhlScoresRes] = await Promise.all([
                         fetch(nbaScheduleUrl),
@@ -264,9 +263,9 @@
                         ]
                     };
                 } else {
-                    // For single league, use existing logic
-                    const scheduleUrl = baseScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
-                    const scoresUrl = baseScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    // For single league, call API directly
+                    const scheduleUrl = `${API_BASE}/schedule/${league}/today?tz=${timezone}`;
+                    const scoresUrl = `${API_BASE}/scores/${league}/today?tz=${timezone}`;
                     
                     const [scheduleResponse, scoresResponse] = await Promise.all([
                         fetch(scheduleUrl),
