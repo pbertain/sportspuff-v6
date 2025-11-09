@@ -5,6 +5,7 @@ Flask-based CRUD interface for managing teams and stadiums
 """
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
+from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
@@ -48,6 +49,9 @@ def set_cached_response(cache_key, data):
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Enable CORS for API proxy routes
+CORS(app, resources={r"/api/proxy/*": {"origins": "*"}})
 
 # API configuration - use environment variable or default to production
 API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
