@@ -57,7 +57,7 @@
                     <div class="mb-2">
                         <label for="league-select" class="form-label text-white fw-bold">League:</label>
                         <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all">All</option>
+                            <option value="all" selected>All (NBA & NHL)</option>
                             <option value="nba">NBA</option>
                             <option value="nhl">NHL</option>
                         </select>
@@ -222,21 +222,64 @@
                 const baseScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
                 const baseScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
-                // Replace the league in the URL path
-                const scheduleUrl = baseScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
-                const scoresUrl = baseScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                let scheduleData, scoresData;
                 
-                const [scheduleResponse, scoresResponse] = await Promise.all([
-                    fetch(scheduleUrl),
-                    fetch(scoresUrl)
-                ]);
-                
-                if (!scheduleResponse.ok || !scoresResponse.ok) {
-                    throw new Error(`API error: ${scheduleResponse.status} ${scoresResponse.status}`);
+                if (league === 'all') {
+                    // For "all", fetch both NBA and NHL separately and combine
+                    const nbaScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
+                    const nbaScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
+                    const nhlScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nhlScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    
+                    const [nbaScheduleRes, nbaScoresRes, nhlScheduleRes, nhlScoresRes] = await Promise.all([
+                        fetch(nbaScheduleUrl),
+                        fetch(nbaScoresUrl),
+                        fetch(nhlScheduleUrl),
+                        fetch(nhlScoresUrl)
+                    ]);
+                    
+                    if (!nbaScheduleRes.ok || !nbaScoresRes.ok || !nhlScheduleRes.ok || !nhlScoresRes.ok) {
+                        throw new Error(`API error: ${nbaScheduleRes.status} ${nbaScoresRes.status} ${nhlScheduleRes.status} ${nhlScoresRes.status}`);
+                    }
+                    
+                    const nbaSchedule = await nbaScheduleRes.json();
+                    const nbaScores = await nbaScoresRes.json();
+                    const nhlSchedule = await nhlScheduleRes.json();
+                    const nhlScores = await nhlScoresRes.json();
+                    
+                    // Combine NBA and NHL data
+                    scheduleData = {
+                        date: nbaSchedule.date || nhlSchedule.date,
+                        games: [
+                            ...(nbaSchedule.games || []).map(g => ({...g, league: 'nba'})),
+                            ...(nhlSchedule.games || []).map(g => ({...g, league: 'nhl'}))
+                        ]
+                    };
+                    
+                    scoresData = {
+                        date: nbaScores.date || nhlScores.date,
+                        scores: [
+                            ...(nbaScores.scores || []).map(g => ({...g, league: 'nba'})),
+                            ...(nhlScores.scores || []).map(g => ({...g, league: 'nhl'}))
+                        ]
+                    };
+                } else {
+                    // For single league, use existing logic
+                    const scheduleUrl = baseScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    const scoresUrl = baseScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    
+                    const [scheduleResponse, scoresResponse] = await Promise.all([
+                        fetch(scheduleUrl),
+                        fetch(scoresUrl)
+                    ]);
+                    
+                    if (!scheduleResponse.ok || !scoresResponse.ok) {
+                        throw new Error(`API error: ${scheduleResponse.status} ${scoresResponse.status}`);
+                    }
+                    
+                    scheduleData = await scheduleResponse.json();
+                    scoresData = await scoresResponse.json();
                 }
-                
-                const scheduleData = await scheduleResponse.json();
-                const scoresData = await scoresResponse.json();
                 
                 // Debug logging
                 console.log('Schedule data:', scheduleData);
