@@ -51,6 +51,7 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # API configuration - use environment variable or default to production
 API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
+logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
 
 # Load logo mapping
 LOGO_MAPPING = {}
@@ -763,19 +764,39 @@ def proxy_schedule(league, date):
         
         # Fetch from API with timezone parameter
         url = f'{API_BASE_URL}/api/v1/schedule/{league}/{api_date}?tz={tz}'
+        logger.info(f"Fetching schedule from: {url}")
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        
+        # Check if response is successful
+        if response.status_code != 200:
+            error_msg = f'API returned status {response.status_code}'
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', error_msg)
+            except:
+                error_msg = f'API returned status {response.status_code}: {response.text[:200]}'
+            logger.error(f"Error proxying schedule request: {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
+        
         data = response.json()
+        
+        # Check for API errors in response
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"API returned error: {data['error']}")
+            return jsonify(data), 500
         
         # Cache the response
         set_cached_response(cache_key, data)
         
         return jsonify(data)
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout proxying schedule request to {url}")
+        return jsonify({'error': 'API request timed out'}), 500
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying schedule request: {e}")
         return jsonify({'error': f'API request failed: {str(e)}'}), 500
     except Exception as e:
-        logger.error(f"Unexpected error in proxy_schedule: {e}")
+        logger.error(f"Unexpected error in proxy_schedule: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/proxy/scores/<league>/<date>')
@@ -808,14 +829,55 @@ def proxy_scores(league, date):
         
         # Always fetch fresh scores (cache is just for rapid consecutive requests)
         url = f'{API_BASE_URL}/api/v1/scores/{league}/{api_date}?tz={tz}'
+        logger.info(f"Fetching scores from: {url}")
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        
+        # Check if response is successful
+        if response.status_code != 200:
+            error_msg = f'API returned status {response.status_code}'
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', error_msg)
+            except:
+                error_msg = f'API returned status {response.status_code}: {response.text[:200]}'
+            logger.error(f"Error proxying scores request: {error_msg}")
+            # If API fails, try to return cached response as fallback only if very recent
+            if 'cached_response' in locals() and cached_response:
+                cached_date = cached_response.get('date', '')
+                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+                if cached_date == today_date:
+                    logger.info("Returning cached scores as fallback")
+                    return jsonify(cached_response)
+            return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
+        
         data = response.json()
+        
+        # Check for API errors in response
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"API returned error: {data['error']}")
+            # Try cached response as fallback
+            if 'cached_response' in locals() and cached_response:
+                cached_date = cached_response.get('date', '')
+                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+                if cached_date == today_date:
+                    logger.info("Returning cached scores as fallback")
+                    return jsonify(cached_response)
+            return jsonify(data), 500
         
         # Cache the response (very short TTL - 5 seconds)
         set_cached_response(cache_key, data)
         
         return jsonify(data)
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout proxying scores request to {url}")
+        # Try cached response as fallback
+        if 'cached_response' in locals() and cached_response:
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                logger.info("Returning cached scores as fallback after timeout")
+                return jsonify(cached_response)
+        return jsonify({'error': 'API request timed out'}), 500
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying scores request: {e}")
         # If API fails, try to return cached response as fallback only if very recent
@@ -823,10 +885,11 @@ def proxy_scores(league, date):
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
             if cached_date == today_date:
+                logger.info("Returning cached scores as fallback")
                 return jsonify(cached_response)
         return jsonify({'error': f'API request failed: {str(e)}'}), 500
     except Exception as e:
-        logger.error(f"Unexpected error in proxy_scores: {e}")
+        logger.error(f"Unexpected error in proxy_scores: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/team-colors/<league>')
