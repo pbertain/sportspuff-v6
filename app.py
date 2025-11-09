@@ -10,9 +10,14 @@ from psycopg2.extras import RealDictCursor
 import os
 import json
 import requests
+import logging
 from datetime import datetime, timezone
 from functools import wraps
 from dotenv import load_dotenv
+
+# Set up logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # Load environment variables
 load_dotenv()
@@ -43,6 +48,9 @@ def set_cached_response(cache_key, data):
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# API configuration - use environment variable or default to production
+API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
 
 # Load logo mapping
 LOGO_MAPPING = {}
@@ -87,6 +95,7 @@ def index():
                              league_stats=[],
                              logo_mapping=LOGO_MAPPING,
                              nba_team_colors={},
+                             API_BASE_URL=API_BASE_URL,
                              db_available=False)
     
     try:
@@ -115,21 +124,27 @@ def index():
         """)
         league_stats = cursor.fetchall()
         
-        # Get team colors and logos for NBA (for scores display)
+        # Get team colors and logos for all leagues (for scores display)
+        # Use full_team_name for proper capitalization and spacing
         cursor.execute("""
-            SELECT t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3, 
-                   t.logo_filename, l.league_name
+            SELECT t.full_team_name, t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3, 
+                   t.logo_filename, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
-            WHERE LOWER(l.league_name_proper) = 'nba'
+            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba')
             AND t.team_color_1 IS NOT NULL
         """)
-        nba_teams = cursor.fetchall()
+        all_teams = cursor.fetchall()
         
-        # Create a mapping of team name to colors and logo
+        # Create a mapping of league -> team name -> colors and logo
+        # Use full_team_name as primary key (has proper capitalization and spaces)
         # Also create variations for common name differences (e.g., "LA Clippers" vs "Los Angeles Clippers")
-        nba_team_colors = {}
-        for team in nba_teams:
+        team_colors = {}
+        for team in all_teams:
+            league_proper = team['league_name_proper']
+            if league_proper not in team_colors:
+                team_colors[league_proper] = {}
+            
             # Build logo URL - use local static/images/logos if available, otherwise splitsp.lat
             logo_url = '/static/images/no-logo.png'
             if team['logo_filename']:
@@ -144,17 +159,40 @@ def index():
                 'logo_url': logo_url
             }
             
-            # Map exact name
-            nba_team_colors[team['real_team_name']] = team_data
+            # Use full_team_name as primary key (proper capitalization and spacing)
+            full_name = team['full_team_name']
+            real_name = team['real_team_name']
             
-            # Map common variations
-            team_name = team['real_team_name']
-            if 'Los Angeles' in team_name:
+            # Map full_team_name (primary)
+            team_colors[league_proper][full_name] = team_data
+            
+            # Also map real_team_name for backward compatibility
+            if real_name and real_name != full_name:
+                team_colors[league_proper][real_name] = team_data
+            
+            # Map common variations using full_team_name
+            # Los Angeles variations
+            if 'Los Angeles' in full_name:
                 # Map "LA Clippers" to "Los Angeles Clippers"
-                nba_team_colors[team_name.replace('Los Angeles', 'LA')] = team_data
-            elif team_name.startswith('LA '):
+                team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
+            elif full_name.startswith('LA '):
                 # Map "Los Angeles Clippers" to "LA Clippers"
-                nba_team_colors[team_name.replace('LA ', 'Los Angeles ')] = team_data
+                team_colors[league_proper][full_name.replace('LA ', 'Los Angeles ')] = team_data
+            
+            # New York variations
+            if 'New York' in full_name:
+                team_colors[league_proper][full_name.replace('New York', 'NY')] = team_data
+            elif full_name.startswith('NY '):
+                team_colors[league_proper][full_name.replace('NY ', 'New York ')] = team_data
+            
+            # San Francisco variations
+            if 'San Francisco' in full_name:
+                team_colors[league_proper][full_name.replace('San Francisco', 'SF')] = team_data
+            elif full_name.startswith('SF '):
+                team_colors[league_proper][full_name.replace('SF ', 'San Francisco ')] = team_data
+        
+        # Keep nba_team_colors for backward compatibility
+        nba_team_colors = team_colors.get('NBA', {})
         
         cursor.close()
         conn.close()
@@ -166,6 +204,8 @@ def index():
                              league_stats=league_stats,
                              logo_mapping=LOGO_MAPPING,
                              nba_team_colors=nba_team_colors,
+                             team_colors=team_colors,
+                             API_BASE_URL=API_BASE_URL,
                              db_available=True)
     
     except Exception as e:
@@ -177,6 +217,8 @@ def index():
                              league_stats=[],
                              logo_mapping=LOGO_MAPPING,
                              nba_team_colors={},
+                             team_colors={'NBA': {}, 'NHL': {}},
+                             API_BASE_URL=API_BASE_URL,
                              db_available=False)
 
 @app.route('/admin')
@@ -696,14 +738,17 @@ def get_league_logo(league):
 def proxy_schedule(league, date):
     """Proxy schedule API requests to avoid CORS issues with caching"""
     try:
+        # Get timezone from query parameter, default to 'pst'
+        tz = request.args.get('tz', 'pst')
+        
         # For "today", use actual date for cache key but pass "today" to API
         # API only accepts "today" as a keyword, not date strings
         if date.lower() == 'today':
             actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'schedule:{league}:{actual_date}'
+            cache_key = f'schedule:{league}:{actual_date}:{tz}'
             api_date = 'today'  # API only accepts "today", not date strings
         else:
-            cache_key = f'schedule:{league}:{date}'
+            cache_key = f'schedule:{league}:{date}:{tz}'
             api_date = date
         
         # Check cache first - but verify it's for today's date
@@ -716,8 +761,8 @@ def proxy_schedule(league, date):
                 return jsonify(cached_response)
             # If cached date doesn't match today, clear it and fetch fresh
         
-        # Fetch from API
-        url = f'https://api.sportspuff.org/api/v1/schedule/{league}/{api_date}'
+        # Fetch from API with timezone parameter
+        url = f'{API_BASE_URL}/api/v1/schedule/{league}/{api_date}?tz={tz}'
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
@@ -726,21 +771,28 @@ def proxy_schedule(league, date):
         set_cached_response(cache_key, data)
         
         return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying schedule request: {e}")
+        return jsonify({'error': f'API request failed: {str(e)}'}), 500
     except Exception as e:
+        logger.error(f"Unexpected error in proxy_schedule: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
     """Proxy scores API requests to avoid CORS issues with very short caching"""
     try:
+        # Get timezone from query parameter, default to 'pst'
+        tz = request.args.get('tz', 'pst')
+        
         # For "today", use actual date for cache key but pass "today" to API
         # API only accepts "today" as a keyword, not date strings
         if date.lower() == 'today':
             actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'scores:{league}:{actual_date}'
+            cache_key = f'scores:{league}:{actual_date}:{tz}'
             api_date = 'today'  # API only accepts "today", not date strings
         else:
-            cache_key = f'scores:{league}:{date}'
+            cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
         
         # Check cache only if very recent (< 5 seconds) - otherwise always fetch fresh
@@ -755,7 +807,7 @@ def proxy_scores(league, date):
                 pass
         
         # Always fetch fresh scores (cache is just for rapid consecutive requests)
-        url = f'https://api.sportspuff.org/api/v1/scores/{league}/{api_date}'
+        url = f'{API_BASE_URL}/api/v1/scores/{league}/{api_date}?tz={tz}'
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
@@ -764,13 +816,17 @@ def proxy_scores(league, date):
         set_cached_response(cache_key, data)
         
         return jsonify(data)
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying scores request: {e}")
         # If API fails, try to return cached response as fallback only if very recent
         if 'cached_response' in locals() and cached_response:
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
             if cached_date == today_date:
                 return jsonify(cached_response)
+        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error in proxy_scores: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/team-colors/<league>')
