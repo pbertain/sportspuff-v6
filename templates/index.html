@@ -218,34 +218,63 @@
             const leagueUpper = league.toUpperCase();
             
             try {
-                // Use proxy endpoints to avoid CORS issues
-                const baseScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
-                const baseScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
+                // Call API directly - proxy will handle CORS via Flask-CORS
+                // Try proxy first, fallback to direct API call if proxy fails
+                const API_BASE = 'https://api.sportspuff.org/api/v1';
+                const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
+                const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
                 let scheduleData, scoresData;
                 
+                async function fetchWithFallback(proxyUrl, directUrl) {
+                    try {
+                        // Try proxy first
+                        const proxyRes = await fetch(proxyUrl);
+                        if (proxyRes.ok) {
+                            return await proxyRes.json();
+                        }
+                        // If proxy fails, try direct API call
+                        console.warn(`Proxy failed (${proxyRes.status}), trying direct API call`);
+                        const directRes = await fetch(directUrl, {
+                            mode: 'cors',
+                            credentials: 'omit'
+                        });
+                        if (!directRes.ok) {
+                            throw new Error(`API error: ${directRes.status}`);
+                        }
+                        return await directRes.json();
+                    } catch (error) {
+                        // If both fail, try direct API as last resort
+                        console.warn(`Both proxy and direct failed, retrying direct:`, error);
+                        const directRes = await fetch(directUrl, {
+                            mode: 'cors',
+                            credentials: 'omit'
+                        });
+                        if (!directRes.ok) {
+                            throw new Error(`API error: ${directRes.status} - ${error.message}`);
+                        }
+                        return await directRes.json();
+                    }
+                }
+                
                 if (league === 'all') {
                     // For "all", fetch both NBA and NHL separately and combine
-                    const nbaScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nbaScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nhlScheduleUrl = baseScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nhlScoresUrl = baseScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nbaScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
+                    const nbaScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
+                    const nhlScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nhlScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
                     
-                    const [nbaScheduleRes, nbaScoresRes, nhlScheduleRes, nhlScoresRes] = await Promise.all([
-                        fetch(nbaScheduleUrl),
-                        fetch(nbaScoresUrl),
-                        fetch(nhlScheduleUrl),
-                        fetch(nhlScoresUrl)
+                    const nbaScheduleDirect = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
+                    const nbaScoresDirect = `${API_BASE}/scores/nba/today?tz=${timezone}`;
+                    const nhlScheduleDirect = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
+                    const nhlScoresDirect = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
+                    
+                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores] = await Promise.all([
+                        fetchWithFallback(nbaScheduleProxy, nbaScheduleDirect),
+                        fetchWithFallback(nbaScoresProxy, nbaScoresDirect),
+                        fetchWithFallback(nhlScheduleProxy, nhlScheduleDirect),
+                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect)
                     ]);
-                    
-                    if (!nbaScheduleRes.ok || !nbaScoresRes.ok || !nhlScheduleRes.ok || !nhlScoresRes.ok) {
-                        throw new Error(`API error: ${nbaScheduleRes.status} ${nbaScoresRes.status} ${nhlScheduleRes.status} ${nhlScoresRes.status}`);
-                    }
-                    
-                    const nbaSchedule = await nbaScheduleRes.json();
-                    const nbaScores = await nbaScoresRes.json();
-                    const nhlSchedule = await nhlScheduleRes.json();
-                    const nhlScores = await nhlScoresRes.json();
                     
                     // Combine NBA and NHL data
                     scheduleData = {
@@ -264,21 +293,16 @@
                         ]
                     };
                 } else {
-                    // For single league, use proxy endpoints
-                    const scheduleUrl = baseScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
-                    const scoresUrl = baseScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    // For single league
+                    const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    const scheduleDirect = `${API_BASE}/schedule/${league}/today?tz=${timezone}`;
+                    const scoresDirect = `${API_BASE}/scores/${league}/today?tz=${timezone}`;
                     
-                    const [scheduleResponse, scoresResponse] = await Promise.all([
-                        fetch(scheduleUrl),
-                        fetch(scoresUrl)
+                    [scheduleData, scoresData] = await Promise.all([
+                        fetchWithFallback(scheduleProxy, scheduleDirect),
+                        fetchWithFallback(scoresProxy, scoresDirect)
                     ]);
-                    
-                    if (!scheduleResponse.ok || !scoresResponse.ok) {
-                        throw new Error(`API error: ${scheduleResponse.status} ${scoresResponse.status}`);
-                    }
-                    
-                    scheduleData = await scheduleResponse.json();
-                    scoresData = await scoresResponse.json();
                 }
                 
                 // Debug logging
