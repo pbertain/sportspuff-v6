@@ -145,12 +145,12 @@ def index():
             if league_proper not in team_colors:
                 team_colors[league_proper] = {}
             
-            # Build logo URL - use local static/images/logos if available, otherwise splitsp.lat
+            # Build logo URL using splitsp.lat format: {team_name}_logo.png
             logo_url = '/static/images/no-logo.png'
             if team['logo_filename']:
                 league_lower = team['league_name'].lower()
-                # Try local first, fallback to splitsp.lat
-                logo_url = f'/static/images/logos/{league_lower}/{team["logo_filename"]}'
+                # Use splitsp.lat for all logos
+                logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{team["logo_filename"]}'
             
             team_data = {
                 'color_1': team['team_color_1'],
@@ -691,7 +691,7 @@ def get_logo(team_id):
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT l.league_name, t.logo_filename 
+                SELECT l.league_name_proper, t.logo_filename 
                 FROM teams t 
                 LEFT JOIN leagues l ON t.league_id = l.league_id 
                 WHERE t.team_id = %s
@@ -701,7 +701,7 @@ def get_logo(team_id):
             conn.close()
             
             if team and team['logo_filename']:
-                league = team['league_name'].lower()
+                league = team['league_name_proper'].lower()
                 logo_filename = team['logo_filename']
                 return f'https://www.splitsp.lat/logos/{league}/{logo_filename}'
         except:

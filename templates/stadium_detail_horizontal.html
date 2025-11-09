@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ stadium.full_stadium_name }} - Sportspuff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background-color: #E6E6FA;
+            font-family: 'Mikodaks', sans-serif;
+        }
+        .stadium-header {
+            background: linear-gradient(135deg, #6A5ACD, #9370DB);
+            color: #FFFFFF;
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }
+        .stadium-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .info-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .info-card .card-header {
+            background: linear-gradient(135deg, #6A5ACD, #9370DB);
+            color: #FFFFFF;
+            border-radius: 15px 15px 0 0;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #333;
+            min-width: 120px;
+        }
+        .info-value {
+            color: #666;
+            text-align: right;
+            flex: 1;
+        }
+        .back-button {
+            background: #6c757d;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 200px; margin-right: 20px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
+            </a>
+            <div class="navbar-nav ms-auto align-items-end">
+                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                <a class="nav-link" href="{{ url_for('api_stadiums') }}" target="_blank">API</a>
+                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Panel</a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        Leagues
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Stadium Header -->
+    <div class="stadium-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="stadium-title">{{ stadium.full_stadium_name }}</h1>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('stadiums') }}" class="btn back-button">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Stadiums
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stadium Image -->
+    {% if stadium.image_name %}
+    <div class="container mb-4">
+        <div class="row">
+            <div class="col-12 text-center">
+                <img src="{{ stadium.image_name }}" alt="{{ stadium.full_stadium_name }}" class="img-fluid rounded stadium-image-clickable" style="max-height: 400px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s;" onclick="openStadiumImageModal('{{ stadium.image_name }}', '{{ stadium.full_stadium_name }}')" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="stadium-placeholder" style="background: linear-gradient(135deg, #6A5ACD, #9370DB); height: 400px; border-radius: 15px; display: none; align-items: center; justify-content: center; color: white; font-size: 2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div>
+                        <i class="fas fa-building fa-5x mb-3" style="opacity: 0.5;"></i>
+                        <p class="mb-0">Stadium Image Coming Soon</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif stadium.image %}
+    <div class="container mb-4">
+        <div class="row">
+            <div class="col-12 text-center">
+                <img src="{{ stadium.image }}" alt="{{ stadium.full_stadium_name }}" class="img-fluid rounded stadium-image-clickable" style="max-height: 400px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s;" onclick="openStadiumImageModal('{{ stadium.image }}', '{{ stadium.full_stadium_name }}')" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="stadium-placeholder" style="background: linear-gradient(135deg, #6A5ACD, #9370DB); height: 400px; border-radius: 15px; display: none; align-items: center; justify-content: center; color: white; font-size: 2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div>
+                        <i class="fas fa-building fa-5x mb-3" style="opacity: 0.5;"></i>
+                        <p class="mb-0">Stadium Image Coming Soon</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="container mb-4">
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="stadium-placeholder" style="background: linear-gradient(135deg, #6A5ACD, #9370DB); height: 400px; border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div>
+                        <i class="fas fa-building fa-5x mb-3" style="opacity: 0.5;"></i>
+                        <p class="mb-0">Stadium Image Coming Soon</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <!-- Left Column - Stadium Information -->
+            <div class="col-lg-6 col-md-12 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle me-2"></i>Stadium Information
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="info-label">Full Name:</span>
+                            <span class="info-value">{{ stadium.full_stadium_name }}</span>
+                        </div>
+                        {% if stadium.full_alt_name %}
+                        <div class="info-row">
+                            <span class="info-label">Alt Name:</span>
+                            <span class="info-value">{{ stadium.full_alt_name }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="info-row">
+                            <span class="info-label">Location:</span>
+                            <span class="info-value">{{ stadium.location_name or (stadium.city_name + ', ' + stadium.state_name) }}</span>
+                        </div>
+                        {% if stadium.country %}
+                        <div class="info-row">
+                            <span class="info-label">Country:</span>
+                            <span class="info-value">{{ stadium.country.upper() }}</span>
+                        </div>
+                        {% endif %}
+                        {% if stadium.stadium_id %}
+                        <div class="info-row">
+                            <span class="info-label">Stadium ID:</span>
+                            <span class="info-value">{{ stadium.stadium_id }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Capacity & Details -->
+            <div class="col-lg-6 col-md-12 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <i class="fas fa-users me-2"></i>Capacity & Details
+                    </div>
+                    <div class="card-body">
+                        {% if stadium.capacity %}
+                        <div class="info-row">
+                            <span class="info-label">Capacity:</span>
+                            <span class="info-value">
+                                <i class="fas fa-users text-primary me-1"></i>
+                                {{ "{:,}".format(stadium.capacity) }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if stadium.year_opened %}
+                        <div class="info-row">
+                            <span class="info-label">Opened:</span>
+                            <span class="info-value">{{ stadium.year_opened }}</span>
+                        </div>
+                        {% endif %}
+                        {% if stadium.roof_type %}
+                        <div class="info-row">
+                            <span class="info-label">Roof Type:</span>
+                            <span class="info-value">{{ stadium.roof_type }}</span>
+                        </div>
+                        {% endif %}
+                        {% if stadium.surface %}
+                        <div class="info-row">
+                            <span class="info-label">Surface:</span>
+                            <span class="info-value">{{ stadium.surface }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teams Playing Here -->
+        {% if teams %}
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="info-card">
+                    <div class="card-header">
+                        <i class="fas fa-baseball-ball me-2"></i>Teams Playing Here
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for team in teams %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <a href="{{ url_for('team_detail_by_name', league_name=team.league_name_proper, team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: block; border-radius: 8px; overflow: hidden; margin: 5px;">
+                                    <div class="row g-0 align-items-center" style="min-height: 80px;">
+                                        <div class="col-4">
+                                            <div class="team-logo-small">
+                                                <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                            </div>
+                                        </div>
+                                        <div class="col-8">
+                                            <div class="team-details">
+                                                <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }};">{{ team.real_team_name }}</div>
+                                                {% if team.full_stadium_name %}
+                                                <div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.full_stadium_name }}</div>
+                                                <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.city_name.title() }}, {{ team.state_name.upper() }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2025 Sportspuff. Part of the CloudPuff family.</p>
+            <div class="mt-3">
+                <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
+            </div>
+        </div>
+    </footer>
+
+    <!-- Stadium Image Modal -->
+    <div class="modal fade" id="stadiumImageModal" tabindex="-1" aria-labelledby="stadiumImageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content" style="background-color: transparent; border: none;">
+                <div class="modal-header" style="border: none; padding: 0;">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 10px; right: 10px; z-index: 1051; background-color: rgba(0,0,0,0.5); border-radius: 50%; padding: 10px;"></button>
+                </div>
+                <div class="modal-body" style="padding: 0; text-align: center;">
+                    <img id="modalStadiumImage" src="" alt="" class="img-fluid" style="max-width: 100%; max-height: 90vh; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                    <h5 id="modalStadiumTitle" class="text-white mt-3" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8);"></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openStadiumImageModal(imageSrc, stadiumName) {
+            const modal = new bootstrap.Modal(document.getElementById('stadiumImageModal'));
+            document.getElementById('modalStadiumImage').src = imageSrc;
+            document.getElementById('modalStadiumImage').alt = stadiumName;
+            document.getElementById('modalStadiumTitle').textContent = stadiumName;
+            modal.show();
+        }
+
+        // Add hover effect to stadium images
+        document.addEventListener('DOMContentLoaded', function() {
+            const stadiumImages = document.querySelectorAll('.stadium-image-clickable');
+            stadiumImages.forEach(img => {
+                img.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.02)';
+                    this.style.boxShadow = '0 12px 30px rgba(0,0,0,0.2)';
+                });
+                img.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                });
+            });
+        });
+    </script>
+    <style>
+        #stadiumImageModal .modal-content {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        #stadiumImageModal .modal-dialog {
+            margin: 1rem auto;
+        }
+    </style>
+</body>
+</html>
+

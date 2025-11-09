@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.real_team_name }} - Sportspuff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .team-info-card {
+            background: rgba(230, 230, 250, 0.95);
+            border: 1px solid rgba(110, 80, 140, 0.3);
+        }
+        .team-info-card .card-title {
+            color: #4B0082;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .team-info-card .card-text,
+        .team-info-card td {
+            color: #6B46C1;
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+        .team-info-card strong {
+            color: #4B0082;
+            font-weight: 700;
+        }
+        .stadium-card {
+            background: rgba(230, 230, 250, 0.95);
+            border: 1px solid rgba(110, 80, 140, 0.3);
+        }
+        .stadium-card .card-title {
+            color: #4B0082;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .stadium-card .card-text {
+            color: #6B46C1;
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+        .stadium-card strong {
+            color: #4B0082;
+            font-weight: 700;
+        }
+        .team-logo-large {
+            text-align: center;
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .team-logo-large img {
+            max-width: 100%;
+            max-height: 300px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .team-info-card table td {
+            padding: 0.5rem 0.75rem;
+            vertical-align: middle;
+        }
+        .team-info-card code {
+            color: #6B46C1;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+        .team-info-card .text-muted {
+            color: #6B46C1 !important;
+            opacity: 0.8;
+        }
+        .team-info-card h6 {
+            color: #4B0082;
+            font-weight: 700;
+            font-size: 1.15rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 200px; margin-right: 20px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
+            </a>
+            <div class="navbar-nav ms-auto align-items-end">
+                <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
+                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
+                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Panel</a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        Leagues
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('league_page', league_name=team.team_league.replace(' ', '_')) }}">{{ team.team_league }}</a></li>
+                        <li class="breadcrumb-item active">{{ team.real_team_name }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Team Header Card with Logo -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card" style="background: {% if team.team_color_1 %}{{ team.team_color_1 }}{% else %}rgba(110, 80, 140, 0.9){% endif %}; border: 1px solid rgba(255, 255, 255, 0.2);">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3" style="overflow: hidden;">
+                                <div class="team-logo-large">
+                                    <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                </div>
+                            </div>
+                            <div class="col-md-9" style="min-width: 0;">
+                                <h1 class="mb-2" style="color: {% if team.team_color_2 %}{{ team.team_color_2 }}{% else %}#FFFFFF{% endif %};">{{ team.real_team_name }}</h1>
+                                {% if team.full_team_name and team.full_team_name != team.real_team_name %}
+                                <h5 class="mb-3" style="color: {% if team.team_color_2 %}{{ team.team_color_2 }}{% else %}#FFFFFF{% endif %};">{{ team.full_team_name }}</h5>
+                                {% endif %}
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <span class="badge bg-light text-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                        <i class="fas fa-trophy me-1"></i>{{ team.team_league.upper() }}
+                                    </span>
+                                    {% if team.conference_name %}
+                                    <span class="badge bg-light text-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                        <i class="fas fa-users me-1"></i>{{ team.conference_name }}
+                                    </span>
+                                    {% endif %}
+                                    {% if team.division_name %}
+                                    <span class="badge bg-light text-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                        <i class="fas fa-layer-group me-1"></i>{{ team.division_name }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" style="display: flex;">
+            <!-- Left Column: Team Information -->
+            <div class="col-md-8" style="display: block;">
+                <div class="card team-info-card mb-4" style="display: block; visibility: visible; opacity: 1;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Team Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td style="width: 40%;"><strong>Full Name:</strong></td>
+                                        <td>{{ team.full_team_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Location:</strong></td>
+                                        <td>{{ team.city_name.title() }}, {{ team.state_name.upper() }}</td>
+                                    </tr>
+                                    {% if team.country %}
+                                    <tr>
+                                        <td><strong>Country:</strong></td>
+                                        <td>{{ team.country.upper() }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td style="width: 40%;"><strong>League:</strong></td>
+                                        <td><span class="badge" style="background: {% if team.team_color_1 %}{{ team.team_color_1 }}{% else %}#6b46c1{% endif %}; color: {% if team.team_color_2 %}{{ team.team_color_2 }}{% else %}#FFFFFF{% endif %};">{{ team.team_league.upper() }}</span></td>
+                                    </tr>
+                                    {% if team.conference_name %}
+                                    <tr>
+                                        <td><strong>Conference:</strong></td>
+                                        <td>{{ team.conference_name }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if team.division_name %}
+                                    <tr>
+                                        <td><strong>Division:</strong></td>
+                                        <td>{{ team.division_name }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stadium Information -->
+                {% if team.full_stadium_name %}
+                <div class="card stadium-card" style="display: block; visibility: visible; opacity: 1;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-building me-2"></i>Home Stadium</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 style="color: #4B0082; margin-bottom: 1rem; font-weight: 700;">{{ team.full_stadium_name }}</h6>
+                                <p class="card-text">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    <strong>Location:</strong> {% if team.location_name %}{{ team.location_name }}{% else %}{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}{% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if team.capacity %}
+                                <p class="card-text">
+                                    <i class="fas fa-users me-2"></i>
+                                    <strong>Capacity:</strong> {{ "{:,}".format(team.capacity) }}
+                                </p>
+                                {% endif %}
+                                {% if team.surface %}
+                                <p class="card-text">
+                                    <i class="fas fa-grass me-2"></i>
+                                    <strong>Surface:</strong> {{ team.surface }}
+                                </p>
+                                {% endif %}
+                                {% if team.roof_type %}
+                                <p class="card-text">
+                                    <i class="fas fa-home me-2"></i>
+                                    <strong>Roof Type:</strong> {{ team.roof_type }}
+                                </p>
+                                {% endif %}
+                                {% if team.year_opened %}
+                                <p class="card-text">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    <strong>Opened:</strong> {{ team.year_opened }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if team.stadium_id %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('stadium_detail', stadium_id=team.stadium_id) }}" class="btn btn-light">
+                                <i class="fas fa-eye me-1"></i>View Stadium Details
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Additional Details -->
+            <div class="col-md-4" style="display: block;">
+                <div class="card team-info-card mb-4" style="display: block; visibility: visible; opacity: 1;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td style="width: 45%;"><strong>Team ID:</strong></td>
+                                <td>{{ team.team_id }}</td>
+                            </tr>
+                            {% if team.team_league_id %}
+                            <tr>
+                                <td><strong>League Team ID:</strong></td>
+                                <td>{{ team.team_league_id }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if team.stadium_id %}
+                            <tr>
+                                <td><strong>Stadium ID:</strong></td>
+                                <td>{{ team.stadium_id }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card team-info-card" style="display: block; visibility: visible; opacity: 1;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-palette me-2"></i>Team Colors</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if team.team_color_1 %}
+                        <div class="mb-2">
+                            <strong>Primary:</strong>
+                            <div class="d-flex align-items-center mt-1">
+                                <div style="width: 30px; height: 30px; background-color: {{ team.team_color_1 }}; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;"></div>
+                                <code>{{ team.team_color_1 }}</code>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if team.team_color_2 %}
+                        <div class="mb-2">
+                            <strong>Secondary:</strong>
+                            <div class="d-flex align-items-center mt-1">
+                                <div style="width: 30px; height: 30px; background-color: {{ team.team_color_2 }}; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;"></div>
+                                <code>{{ team.team_color_2 }}</code>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if team.team_color_3 %}
+                        <div>
+                            <strong>Tertiary:</strong>
+                            <div class="d-flex align-items-center mt-1">
+                                <div style="width: 30px; height: 30px; background-color: {{ team.team_color_3 }}; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;"></div>
+                                <code>{{ team.team_color_3 }}</code>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if not team.team_color_1 and not team.team_color_2 and not team.team_color_3 %}
+                        <p class="text-muted">No team colors available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="{{ url_for('league_page', league_name=team.team_league.replace(' ', '_')) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to {{ team.team_league }}
+                </a>
+                <a href="{{ url_for('teams') }}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-users me-2"></i>All Teams
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2025 SportsPuff. Part of the CloudPuff™ family!</p>
+            <p class="mt-2">
+                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank" style="text-decoration: none; color: white;">
+                    Powered by CloudPuff™
+                </a>
+            </p>
+            <div class="mt-3">
+                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank">
+                    <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff™" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
+</body>
+</html>
+
