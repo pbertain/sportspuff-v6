@@ -341,6 +341,16 @@
                 }
                 
                 console.log(`Team colors for ${leagueUpper}:`, Object.keys(teamColors).length, 'teams');
+                // Debug: Show sample team names for each league when "all" is selected
+                if (league === 'all') {
+                    console.log('Team colors structure (by league):', Object.keys(allTeamColors));
+                    Object.keys(allTeamColors).forEach(leagueKey => {
+                        if (allTeamColors[leagueKey] && typeof allTeamColors[leagueKey] === 'object') {
+                            const leagueTeams = Object.keys(allTeamColors[leagueKey]);
+                            console.log(`${leagueKey} teams (${leagueTeams.length}):`, leagueTeams.slice(0, 5));
+                        }
+                    });
+                }
                 if (Object.keys(teamColors).length > 0) {
                     console.log('Sample team names in colors:', Object.keys(teamColors).slice(0, 5));
                 } else {
