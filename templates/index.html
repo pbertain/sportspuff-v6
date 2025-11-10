@@ -443,6 +443,12 @@
                     const isScheduled = game.game_status === 'scheduled';
                     
                     // Get team colors and logos
+                    // Debug logging for NFL teams
+                    if (gameLeague === 'NFL') {
+                        console.log(`NFL Game: ${game.visitor_team} @ ${game.home_team}`);
+                        console.log(`Looking for visitor: "${game.visitor_team}" in teamColors:`, Object.keys(teamColors).filter(k => k.toLowerCase().includes(game.visitor_team.toLowerCase().split(' ').pop())).slice(0, 5));
+                        console.log(`Looking for home: "${game.home_team}" in teamColors:`, Object.keys(teamColors).filter(k => k.toLowerCase().includes(game.home_team.toLowerCase().split(' ').pop())).slice(0, 5));
+                    }
                     const visitorColor = getTeamColor(game.visitor_team);
                     const homeColor = getTeamColor(game.home_team);
                     const visitorTextColor = getTextColor(visitorColor);
@@ -860,6 +866,10 @@
                             const gameLeague = (game.league || game.sport || leagueUpper).toUpperCase();
                             if (!game.league) game.league = gameLeague.toLowerCase();
                             if (!game.sport) game.sport = gameLeague.toLowerCase();
+                            
+                            // For "all" view, we need to get team colors specific to this league
+                            // since teamColors is merged from all leagues
+                            // The merged teamColors should already have all teams, so we can use it as-is
                             html += renderGameRow(game, teamColors, gameLeague);
                         });
                         
