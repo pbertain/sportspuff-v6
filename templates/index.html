@@ -57,9 +57,10 @@
                     <div class="mb-2">
                         <label for="league-select" class="form-label text-white fw-bold">League:</label>
                         <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all" selected>All (NBA & NHL)</option>
+                            <option value="all" selected>All (NBA, NHL & NFL)</option>
                             <option value="nba">NBA</option>
                             <option value="nhl">NHL</option>
+                            <option value="nfl">NFL</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -258,38 +259,46 @@
                 }
                 
                 if (league === 'all') {
-                    // For "all", fetch both NBA and NHL separately and combine
+                    // For "all", fetch NBA, NHL, and NFL separately and combine
                     const nbaScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
                     const nbaScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
                     const nhlScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
                     const nhlScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nflScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
+                    const nflScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
                     
                     const nbaScheduleDirect = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
                     const nbaScoresDirect = `${API_BASE}/scores/nba/today?tz=${timezone}`;
                     const nhlScheduleDirect = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
                     const nhlScoresDirect = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
+                    const nflScheduleDirect = `${API_BASE}/schedule/nfl/today?tz=${timezone}`;
+                    const nflScoresDirect = `${API_BASE}/scores/nfl/today?tz=${timezone}`;
                     
-                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores] = await Promise.all([
+                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores, nflSchedule, nflScores] = await Promise.all([
                         fetchWithFallback(nbaScheduleProxy, nbaScheduleDirect),
                         fetchWithFallback(nbaScoresProxy, nbaScoresDirect),
                         fetchWithFallback(nhlScheduleProxy, nhlScheduleDirect),
-                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect)
+                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect),
+                        fetchWithFallback(nflScheduleProxy, nflScheduleDirect),
+                        fetchWithFallback(nflScoresProxy, nflScoresDirect)
                     ]);
                     
-                    // Combine NBA and NHL data
+                    // Combine NBA, NHL, and NFL data
                     scheduleData = {
-                        date: nbaSchedule.date || nhlSchedule.date,
+                        date: nbaSchedule.date || nhlSchedule.date || nflSchedule.date,
                         games: [
                             ...(nbaSchedule.games || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlSchedule.games || []).map(g => ({...g, league: 'nhl'}))
+                            ...(nhlSchedule.games || []).map(g => ({...g, league: 'nhl'})),
+                            ...(nflSchedule.games || []).map(g => ({...g, league: 'nfl'}))
                         ]
                     };
                     
                     scoresData = {
-                        date: nbaScores.date || nhlScores.date,
+                        date: nbaScores.date || nhlScores.date || nflScores.date,
                         scores: [
                             ...(nbaScores.scores || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlScores.scores || []).map(g => ({...g, league: 'nhl'}))
+                            ...(nhlScores.scores || []).map(g => ({...g, league: 'nhl'})),
+                            ...(nflScores.scores || []).map(g => ({...g, league: 'nfl'}))
                         ]
                     };
                 } else {
@@ -832,7 +841,10 @@
                     });
                 } else {
                     // Render single league
-                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : '{{ "NHL" | get_league_logo }}';
+                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
+                                      leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
+                                      leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
+                                      '{{ "NBA" | get_league_logo }}';
                     html = `
                         <div class="league-header mb-3">
                             <div class="d-flex align-items-center justify-content-center">
