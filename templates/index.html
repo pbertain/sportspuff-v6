@@ -625,26 +625,6 @@
                 if (scheduleData.games) {
                     scheduleData.games.forEach(game => {
                         const scoreData = scoresMap[game.game_id];
-                        // Determine OTL values - prefer scores data, fallback to schedule data
-                        const homeOTL = (scoreData?.home_otl !== undefined && scoreData?.home_otl !== null) 
-                            ? scoreData.home_otl 
-                            : ((game.home_otl !== undefined && game.home_otl !== null) ? game.home_otl : 0);
-                        const visitorOTL = (scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null) 
-                            ? scoreData.visitor_otl 
-                            : ((game.visitor_otl !== undefined && game.visitor_otl !== null) ? game.visitor_otl : 0);
-                        
-                        // Debug for NHL games
-                        if (game.league === 'nhl' || game.league === 'NHL' || (game.visitor_team && game.visitor_team.includes('Blackhawks'))) {
-                            console.log(`Merging NHL game ${game.game_id}:`, {
-                                schedule_home_otl: game.home_otl,
-                                schedule_visitor_otl: game.visitor_otl,
-                                scores_home_otl: scoreData?.home_otl,
-                                scores_visitor_otl: scoreData?.visitor_otl,
-                                final_home_otl: homeOTL,
-                                final_visitor_otl: visitorOTL
-                            });
-                        }
-                        
                         allGamesMap[game.game_id] = {
                             ...game,
                             home_score: scoreData?.home_score,
@@ -659,11 +639,19 @@
                             home_losses: scoreData?.home_losses !== undefined ? scoreData.home_losses : game.home_losses,
                             visitor_wins: scoreData?.visitor_wins !== undefined ? scoreData.visitor_wins : game.visitor_wins,
                             visitor_losses: scoreData?.visitor_losses !== undefined ? scoreData.visitor_losses : game.visitor_losses,
-                            home_otl: homeOTL,
-                            visitor_otl: visitorOTL,
+                            home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
+                                ? scoreData.home_otl 
+                                : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
+                            visitor_otl: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
+                                ? scoreData.visitor_otl 
+                                : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
                             // Also keep old field names for backward compatibility
-                            home_overtime_losses: homeOTL,
-                            visitor_overtime_losses: visitorOTL,
+                            home_overtime_losses: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
+                                ? scoreData.home_otl 
+                                : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
+                            visitor_overtime_losses: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
+                                ? scoreData.visitor_otl 
+                                : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
                             home_team_abbrev: game.home_team_abbrev || game.home_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || '',
                             visitor_team_abbrev: game.visitor_team_abbrev || game.visitor_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || ''
                         };
