@@ -634,8 +634,12 @@
                 if (scheduleData.games) {
                     scheduleData.games.forEach(game => {
                         const scoreData = scoresMap[game.game_id];
+                        // Preserve league from game (set when combining data from multiple leagues)
+                        const gameLeague = game.league || game.sport || (league !== 'all' ? league : null);
                         allGamesMap[game.game_id] = {
                             ...game,
+                            league: gameLeague, // Explicitly preserve league
+                            sport: gameLeague, // Also set sport for compatibility
                             home_score: scoreData?.home_score,
                             visitor_score: scoreData?.visitor_score,
                             is_final: scoreData?.is_final,
@@ -672,8 +676,12 @@
                     scoresData.scores.forEach(scoreGame => {
                         if (!allGamesMap[scoreGame.game_id]) {
                             // Game exists in scores but not in schedule - add it
+                            // Determine league from scoreGame data
+                            const scoreLeague = scoreGame.league || scoreGame.sport || (league !== 'all' ? league : null);
                             allGamesMap[scoreGame.game_id] = {
                                 game_id: scoreGame.game_id,
+                                league: scoreLeague, // Preserve league
+                                sport: scoreLeague, // Also set sport
                                 game_date: scoresData.date,
                                 game_time: null,
                                 home_team: scoreGame.home_team,
@@ -700,6 +708,11 @@
                         } else {
                             // Update existing game with latest score data
                             const existing = allGamesMap[scoreGame.game_id];
+                            // Preserve league if not already set
+                            if (!existing.league && scoreGame.league) {
+                                existing.league = scoreGame.league;
+                                existing.sport = scoreGame.league;
+                            }
                             existing.home_score = scoreGame.home_score;
                             existing.visitor_score = scoreGame.visitor_score;
                             existing.is_final = scoreGame.is_final;
@@ -774,9 +787,23 @@
                     } else {
                         // Flat list - try to determine league from game data
                         games.forEach(game => {
-                            const gameLeague = (game.league || game.sport || 'Unknown').toUpperCase();
+                            // Try multiple ways to determine league
+                            let gameLeague = game.league || game.sport;
+                            // If still not found, try to infer from team names or other data
+                            if (!gameLeague) {
+                                // Check if we can infer from context (we set league when combining)
+                                gameLeague = 'Unknown';
+                            }
+                            gameLeague = gameLeague.toUpperCase();
                             if (!gamesByLeague[gameLeague]) {
                                 gamesByLeague[gameLeague] = [];
+                            }
+                            // Ensure league is set on the game object
+                            if (!game.league) {
+                                game.league = gameLeague.toLowerCase();
+                            }
+                            if (!game.sport) {
+                                game.sport = gameLeague.toLowerCase();
                             }
                             gamesByLeague[gameLeague].push(game);
                         });
@@ -829,7 +856,11 @@
                         
                         // Render games for this league
                         leagueGames.forEach(game => {
-                            html += renderGameRow(game, teamColors, leagueUpper);
+                            // Ensure game has league set
+                            const gameLeague = (game.league || game.sport || leagueUpper).toUpperCase();
+                            if (!game.league) game.league = gameLeague.toLowerCase();
+                            if (!game.sport) game.sport = gameLeague.toLowerCase();
+                            html += renderGameRow(game, teamColors, gameLeague);
                         });
                         
                         html += `
