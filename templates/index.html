@@ -686,10 +686,24 @@
                             existing.game_status = scoreGame.game_status;
                             existing.current_period = scoreGame.current_period;
                             existing.time_remaining = scoreGame.time_remaining;
-                            if (scoreGame.home_overtime_losses !== undefined) {
+                            // Update wins/losses from scores if available
+                            if (scoreGame.home_wins !== undefined) {
+                                existing.home_wins = scoreGame.home_wins;
+                            }
+                            if (scoreGame.home_losses !== undefined) {
+                                existing.home_losses = scoreGame.home_losses;
+                            }
+                            if (scoreGame.visitor_wins !== undefined) {
+                                existing.visitor_wins = scoreGame.visitor_wins;
+                            }
+                            if (scoreGame.visitor_losses !== undefined) {
+                                existing.visitor_losses = scoreGame.visitor_losses;
+                            }
+                            // Update OTL from scores - prefer scores data over schedule data
+                            if (scoreGame.home_overtime_losses !== undefined && scoreGame.home_overtime_losses !== null) {
                                 existing.home_overtime_losses = scoreGame.home_overtime_losses;
                             }
-                            if (scoreGame.visitor_overtime_losses !== undefined) {
+                            if (scoreGame.visitor_overtime_losses !== undefined && scoreGame.visitor_overtime_losses !== null) {
                                 existing.visitor_overtime_losses = scoreGame.visitor_overtime_losses;
                             }
                         }
