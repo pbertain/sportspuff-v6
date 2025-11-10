@@ -516,13 +516,13 @@
                     let homeRecord = '';
                     if (gameLeague === 'NHL') {
                         // NHL format: W-L-OTL
-                        // Check multiple possible field names for OTL
-                        const visitorOTL = game.visitor_overtime_losses !== undefined && game.visitor_overtime_losses !== null 
-                            ? game.visitor_overtime_losses 
-                            : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0);
-                        const homeOTL = game.home_overtime_losses !== undefined && game.home_overtime_losses !== null 
-                            ? game.home_overtime_losses 
-                            : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0);
+                        // API uses home_otl/visitor_otl (not home_overtime_losses)
+                        const visitorOTL = game.visitor_otl !== undefined && game.visitor_otl !== null 
+                            ? game.visitor_otl 
+                            : (game.visitor_overtime_losses !== undefined && game.visitor_overtime_losses !== null ? game.visitor_overtime_losses : 0);
+                        const homeOTL = game.home_otl !== undefined && game.home_otl !== null 
+                            ? game.home_otl 
+                            : (game.home_overtime_losses !== undefined && game.home_overtime_losses !== null ? game.home_overtime_losses : 0);
                         
                         // Debug logging for NHL games
                         if (game.visitor_team && game.home_team) {
@@ -634,16 +634,24 @@
                             current_period: scoreData?.current_period,
                             time_remaining: scoreData?.time_remaining,
                             // Use OTL from scores if available, otherwise from schedule
+                            // API uses home_otl/visitor_otl (not home_overtime_losses)
                             home_wins: scoreData?.home_wins !== undefined ? scoreData.home_wins : game.home_wins,
                             home_losses: scoreData?.home_losses !== undefined ? scoreData.home_losses : game.home_losses,
                             visitor_wins: scoreData?.visitor_wins !== undefined ? scoreData.visitor_wins : game.visitor_wins,
                             visitor_losses: scoreData?.visitor_losses !== undefined ? scoreData.visitor_losses : game.visitor_losses,
-                            home_overtime_losses: scoreData?.home_overtime_losses !== undefined && scoreData?.home_overtime_losses !== null 
-                                ? scoreData.home_overtime_losses 
-                                : (game.home_overtime_losses !== undefined && game.home_overtime_losses !== null ? game.home_overtime_losses : 0),
-                            visitor_overtime_losses: scoreData?.visitor_overtime_losses !== undefined && scoreData?.visitor_overtime_losses !== null 
-                                ? scoreData.visitor_overtime_losses 
-                                : (game.visitor_overtime_losses !== undefined && game.visitor_overtime_losses !== null ? game.visitor_overtime_losses : 0),
+                            home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
+                                ? scoreData.home_otl 
+                                : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
+                            visitor_otl: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
+                                ? scoreData.visitor_otl 
+                                : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
+                            // Also keep old field names for backward compatibility
+                            home_overtime_losses: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
+                                ? scoreData.home_otl 
+                                : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
+                            visitor_overtime_losses: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
+                                ? scoreData.visitor_otl 
+                                : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
                             home_team_abbrev: game.home_team_abbrev || game.home_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || '',
                             visitor_team_abbrev: game.visitor_team_abbrev || game.visitor_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || ''
                         };
@@ -674,8 +682,11 @@
                                 home_losses: null,
                                 visitor_wins: null,
                                 visitor_losses: null,
-                                home_overtime_losses: scoreGame.home_overtime_losses || null,
-                                visitor_overtime_losses: scoreGame.visitor_overtime_losses || null
+                                home_otl: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
+                                visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
+                                // Also keep old field names for backward compatibility
+                                home_overtime_losses: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
+                                visitor_overtime_losses: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null
                             };
                         } else {
                             // Update existing game with latest score data
@@ -699,12 +710,14 @@
                             if (scoreGame.visitor_losses !== undefined) {
                                 existing.visitor_losses = scoreGame.visitor_losses;
                             }
-                            // Update OTL from scores - prefer scores data over schedule data
-                            if (scoreGame.home_overtime_losses !== undefined && scoreGame.home_overtime_losses !== null) {
-                                existing.home_overtime_losses = scoreGame.home_overtime_losses;
+                            // Update OTL from scores - API uses home_otl/visitor_otl
+                            if (scoreGame.home_otl !== undefined && scoreGame.home_otl !== null) {
+                                existing.home_otl = scoreGame.home_otl;
+                                existing.home_overtime_losses = scoreGame.home_otl; // Also set for backward compatibility
                             }
-                            if (scoreGame.visitor_overtime_losses !== undefined && scoreGame.visitor_overtime_losses !== null) {
-                                existing.visitor_overtime_losses = scoreGame.visitor_overtime_losses;
+                            if (scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null) {
+                                existing.visitor_otl = scoreGame.visitor_otl;
+                                existing.visitor_overtime_losses = scoreGame.visitor_otl; // Also set for backward compatibility
                             }
                         }
                     });
