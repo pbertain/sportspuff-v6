@@ -361,42 +361,75 @@
                 
                 // Helper function to find team data with fuzzy matching
                 function findTeamData(teamName) {
-                    // Try exact match first
-                    if (teamColors[teamName]) {
-                        return teamColors[teamName];
+                    if (!teamName || !teamColors || Object.keys(teamColors).length === 0) {
+                        return null;
                     }
                     
-                    // Try case-insensitive match
+                    const searchName = teamName.trim();
+                    
+                    // Try exact match first
+                    if (teamColors[searchName]) {
+                        return teamColors[searchName];
+                    }
+                    
+                    // Try case-insensitive exact match
                     for (const key in teamColors) {
-                        if (key.toLowerCase() === teamName.toLowerCase()) {
+                        if (key.toLowerCase() === searchName.toLowerCase()) {
                             return teamColors[key];
                         }
                     }
                     
-                    // Try partial match (last word or last two words)
-                    const nameParts = teamName.split(' ');
-                    if (nameParts.length > 1) {
-                        const lastTwo = nameParts.slice(-2).join(' ');
-                        const lastOne = nameParts[nameParts.length - 1];
+                    // Try matching by last word (team name like "Patriots", "Chiefs")
+                    const nameParts = searchName.split(' ').filter(p => p.length > 0);
+                    if (nameParts.length > 0) {
+                        const lastWord = nameParts[nameParts.length - 1].toLowerCase();
                         
-                        for (const key in teamColors) {
-                            const keyParts = key.split(' ');
-                            if (keyParts.length > 1) {
-                                const keyLastTwo = keyParts.slice(-2).join(' ');
-                                const keyLastOne = keyParts[keyParts.length - 1];
-                                
-                                if (keyLastTwo.toLowerCase() === lastTwo.toLowerCase() ||
-                                    keyLastOne.toLowerCase() === lastOne.toLowerCase()) {
+                        // First try last two words (e.g., "Kansas City Chiefs" -> "City Chiefs")
+                        if (nameParts.length >= 2) {
+                            const lastTwo = nameParts.slice(-2).join(' ').toLowerCase();
+                            for (const key in teamColors) {
+                                const keyLower = key.toLowerCase();
+                                if (keyLower === lastTwo || keyLower.endsWith(' ' + lastTwo)) {
                                     return teamColors[key];
                                 }
                             }
                         }
+                        
+                        // Then try last word only
+                        for (const key in teamColors) {
+                            const keyParts = key.split(' ').filter(p => p.length > 0);
+                            if (keyParts.length > 0 && keyParts[keyParts.length - 1].toLowerCase() === lastWord) {
+                                return teamColors[key];
+                            }
+                        }
+                    }
+                    
+                    // Try removing common prefixes and matching
+                    const prefixesToRemove = ['the ', 'new ', 'san ', 'los ', 'las ', 'de ', 'la '];
+                    let cleanedName = searchName.toLowerCase();
+                    for (const prefix of prefixesToRemove) {
+                        if (cleanedName.startsWith(prefix)) {
+                            cleanedName = cleanedName.substring(prefix.length);
+                            break;
+                        }
+                    }
+                    
+                    for (const key in teamColors) {
+                        let keyCleaned = key.toLowerCase();
+                        for (const prefix of prefixesToRemove) {
+                            if (keyCleaned.startsWith(prefix)) {
+                                keyCleaned = keyCleaned.substring(prefix.length);
+                                break;
+                            }
+                        }
+                        if (keyCleaned === cleanedName || keyCleaned.includes(cleanedName) || cleanedName.includes(keyCleaned)) {
+                            return teamColors[key];
+                        }
                     }
                     
                     // Log when team not found for debugging
-                    if (Object.keys(teamColors).length > 0) {
-                        console.warn(`Team not found: "${teamName}". Available teams:`, Object.keys(teamColors).slice(0, 10));
-                    }
+                    console.warn(`Team not found: "${teamName}". Available teams (first 20):`, Object.keys(teamColors).slice(0, 20));
+                    console.warn(`Searching for: "${searchName}", cleaned: "${cleanedName}"`);
                     
                     return null;
                 }
@@ -445,9 +478,20 @@
                     // Get team colors and logos
                     // Debug logging for NFL teams
                     if (gameLeague === 'NFL') {
-                        console.log(`NFL Game: ${game.visitor_team} @ ${game.home_team}`);
-                        console.log(`Looking for visitor: "${game.visitor_team}" in teamColors:`, Object.keys(teamColors).filter(k => k.toLowerCase().includes(game.visitor_team.toLowerCase().split(' ').pop())).slice(0, 5));
-                        console.log(`Looking for home: "${game.home_team}" in teamColors:`, Object.keys(teamColors).filter(k => k.toLowerCase().includes(game.home_team.toLowerCase().split(' ').pop())).slice(0, 5));
+                        console.log(`\n=== NFL Game Debug ===`);
+                        console.log(`Game: ${game.visitor_team} @ ${game.home_team}`);
+                        console.log(`Total teams in teamColors:`, Object.keys(teamColors).length);
+                        console.log(`NFL teams available:`, Object.keys(teamColors).filter(k => {
+                            const team = teamColors[k];
+                            return team && (team.logo_url && team.logo_url.includes('/nfl/'));
+                        }).slice(0, 10));
+                        console.log(`Looking for visitor: "${game.visitor_team}"`);
+                        const visitorTeam = findTeamData(game.visitor_team);
+                        console.log(`Visitor team found:`, visitorTeam ? 'YES' : 'NO', visitorTeam);
+                        console.log(`Looking for home: "${game.home_team}"`);
+                        const homeTeam = findTeamData(game.home_team);
+                        console.log(`Home team found:`, homeTeam ? 'YES' : 'NO', homeTeam);
+                        console.log(`=== End NFL Debug ===\n`);
                     }
                     const visitorColor = getTeamColor(game.visitor_team);
                     const homeColor = getTeamColor(game.home_team);
