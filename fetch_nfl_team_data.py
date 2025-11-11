@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """
-Fetch NFL team data from API and update database with:
+Fetch NFL team data from RapidAPI and update database with:
 - external_team_id (from teamID)
 - Wins-Losses-Ties record
 - Match teams using teamCity + teamName with real_team_name
+
+Environment Variables:
+- RAPIDAPI_KEY: RapidAPI key (defaults to provided key)
+- RAPIDAPI_HOST: RapidAPI host (defaults to tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com)
+- NFL_API_URL: Optional custom API URL (defaults to getNFLDFS endpoint)
+- DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT: Database connection settings
+
+Note: If the API doesn't provide W-L-T records, they will be set to 0-0-0.
+The script will attempt to fetch records from potential standings/teams endpoints.
 """
 
 import psycopg2
@@ -36,76 +45,144 @@ def get_db_connection():
         logger.error(f"Error connecting to database: {e}")
         return None
 
+def get_team_name_mapping() -> Dict[str, Dict[str, str]]:
+    """
+    Mapping from team abbreviation to teamCity and teamName.
+    This is used when the API only provides abbreviations.
+    """
+    return {
+        'ARI': {'teamCity': 'Arizona', 'teamName': 'Cardinals'},
+        'ATL': {'teamCity': 'Atlanta', 'teamName': 'Falcons'},
+        'BAL': {'teamCity': 'Baltimore', 'teamName': 'Ravens'},
+        'BUF': {'teamCity': 'Buffalo', 'teamName': 'Bills'},
+        'CAR': {'teamCity': 'Carolina', 'teamName': 'Panthers'},
+        'CHI': {'teamCity': 'Chicago', 'teamName': 'Bears'},
+        'CIN': {'teamCity': 'Cincinnati', 'teamName': 'Bengals'},
+        'CLE': {'teamCity': 'Cleveland', 'teamName': 'Browns'},
+        'DAL': {'teamCity': 'Dallas', 'teamName': 'Cowboys'},
+        'DEN': {'teamCity': 'Denver', 'teamName': 'Broncos'},
+        'DET': {'teamCity': 'Detroit', 'teamName': 'Lions'},
+        'GB': {'teamCity': 'Green Bay', 'teamName': 'Packers'},
+        'HOU': {'teamCity': 'Houston', 'teamName': 'Texans'},
+        'IND': {'teamCity': 'Indianapolis', 'teamName': 'Colts'},
+        'JAX': {'teamCity': 'Jacksonville', 'teamName': 'Jaguars'},
+        'KC': {'teamCity': 'Kansas City', 'teamName': 'Chiefs'},
+        'LV': {'teamCity': 'Las Vegas', 'teamName': 'Raiders'},
+        'LAC': {'teamCity': 'Los Angeles', 'teamName': 'Chargers'},
+        'LAR': {'teamCity': 'Los Angeles', 'teamName': 'Rams'},
+        'MIA': {'teamCity': 'Miami', 'teamName': 'Dolphins'},
+        'MIN': {'teamCity': 'Minnesota', 'teamName': 'Vikings'},
+        'NE': {'teamCity': 'New England', 'teamName': 'Patriots'},
+        'NO': {'teamCity': 'New Orleans', 'teamName': 'Saints'},
+        'NYG': {'teamCity': 'New York', 'teamName': 'Giants'},
+        'NYJ': {'teamCity': 'New York', 'teamName': 'Jets'},
+        'PHI': {'teamCity': 'Philadelphia', 'teamName': 'Eagles'},
+        'PIT': {'teamCity': 'Pittsburgh', 'teamName': 'Steelers'},
+        'SF': {'teamCity': 'San Francisco', 'teamName': '49ers'},
+        'SEA': {'teamCity': 'Seattle', 'teamName': 'Seahawks'},
+        'TB': {'teamCity': 'Tampa Bay', 'teamName': 'Buccaneers'},
+        'TEN': {'teamCity': 'Tennessee', 'teamName': 'Titans'},
+        'WSH': {'teamCity': 'Washington', 'teamName': 'Commanders'},
+    }
+
 def fetch_nfl_teams_from_api() -> Optional[list]:
     """
-    Fetch NFL team data from API
+    Fetch NFL team data from RapidAPI endpoint.
     Returns list of team dictionaries with teamID, teamCity, teamName, wins, loss, tie, etc.
     
-    You can set NFL_API_URL environment variable to point to your API endpoint.
-    If not set, will try ESPN API or use sample data for testing.
+    The API endpoint returns DFS data, so we extract unique teams from it.
+    For team records (W-L-T), we'll need to fetch from a different endpoint or use a mapping.
     """
-    api_url = os.getenv('NFL_API_URL', '')
+    # Get API credentials from environment or use defaults
+    api_key = os.getenv('RAPIDAPI_KEY', 'ec3bb65e01msh76c517960501da3p10714ejsn870026987755')
+    api_host = os.getenv('RAPIDAPI_HOST', 'tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com')
     
-    # If no custom API URL, try to use your existing sportspuff API
-    if not api_url:
-        # Try to get from sportspuff API if available
-        sportspuff_api = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
-        api_url = f"{sportspuff_api}/api/v1/teams/nfl"
+    # Use a recent date to get current team data
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    date_str = today.strftime('%Y%m%d')
+    
+    # Try to get teams endpoint first, fallback to DFS endpoint
+    api_url = os.getenv('NFL_API_URL', f'https://{api_host}/getNFLDFS')
+    
+    headers = {
+        'x-rapidapi-key': api_key,
+        'x-rapidapi-host': api_host
+    }
+    
+    team_name_map = get_team_name_mapping()
     
     try:
         logger.info(f"Fetching NFL teams from: {api_url}")
-        response = requests.get(api_url, timeout=10)
-        response.raise_for_status()
         
-        data = response.json()
-        
-        # Handle different API response formats
-        teams = []
-        
-        # Format 1: Direct list of teams (your format)
-        if isinstance(data, list):
-            teams = data
-        # Format 2: ESPN API format
-        elif 'sports' in data:
-            for sport in data['sports']:
-                if 'leagues' in sport:
-                    for league in sport['leagues']:
-                        if 'teams' in league:
-                            for team_data in league['teams']:
-                                team = team_data.get('team', {})
-                                record = team.get('record', {})
-                                
-                                # Parse record from ESPN format
-                                wins = '0'
-                                loss = '0'
-                                tie = '0'
-                                if record and 'items' in record and record['items']:
-                                    stats = record['items'][0].get('stats', [])
-                                    if len(stats) >= 3:
-                                        wins = str(stats[0].get('value', 0))
-                                        loss = str(stats[1].get('value', 0))
-                                        tie = str(stats[2].get('value', 0))
-                                
-                                teams.append({
-                                    'teamID': str(team.get('id', '')),
-                                    'teamAbv': team.get('abbreviation', ''),
-                                    'teamCity': team.get('location', ''),
-                                    'teamName': team.get('name', ''),
-                                    'wins': wins,
-                                    'loss': loss,
-                                    'tie': tie,
-                                    'conference': team.get('conference', ''),
-                                    'conferenceAbv': team.get('conference', ''),
-                                    'division': team.get('division', ''),
-                                    'nflComLogo1': team.get('logos', [{}])[0].get('href', '') if team.get('logos') else '',
-                                    'espnLogo1': team.get('logos', [{}])[0].get('href', '') if team.get('logos') else ''
-                                })
-        # Format 3: Wrapped in 'teams' key
-        elif 'teams' in data:
-            teams = data['teams']
+        # Try to get teams directly first
+        if '/getNFLTeams' in api_url or '/teams' in api_url:
+            response = requests.get(api_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Handle direct teams response
+            if isinstance(data, list):
+                teams = data
+            elif 'body' in data and isinstance(data['body'], list):
+                teams = data['body']
+            elif 'teams' in data:
+                teams = data['teams']
+            else:
+                teams = []
+        else:
+            # Use DFS endpoint and extract unique teams
+            querystring = {'date': date_str, 'includeTeamDefense': 'true'}
+            response = requests.get(api_url, headers=headers, params=querystring, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract unique teams from DFS data
+            teams_dict = {}  # key: teamID, value: team data
+            
+            # Handle response format: {'statusCode': 200, 'body': {'draftkings': [...]}}
+            if 'body' in data and 'draftkings' in data['body']:
+                dfs_data = data['body']['draftkings']
+            elif 'draftkings' in data:
+                dfs_data = data['draftkings']
+            elif isinstance(data, list):
+                dfs_data = data
+            else:
+                dfs_data = []
+            
+            for entry in dfs_data:
+                team_abbr = entry.get('team', '')
+                team_id = entry.get('teamID', '')
+                
+                if team_id and team_abbr and team_abbr in team_name_map:
+                    if team_id not in teams_dict:
+                        team_info = team_name_map[team_abbr]
+                        teams_dict[team_id] = {
+                            'teamID': str(team_id),
+                            'teamAbv': team_abbr,
+                            'teamCity': team_info['teamCity'],
+                            'teamName': team_info['teamName'],
+                            'wins': '0',  # Will need to fetch from another endpoint
+                            'loss': '0',
+                            'tie': '0'
+                        }
+            
+            teams = list(teams_dict.values())
+            
+            # Try to fetch team records
+            team_ids = [t['teamID'] for t in teams]
+            records = fetch_team_records(api_key, api_host, team_ids)
+            
+            # Update teams with records if available
+            for team in teams:
+                team_id = team['teamID']
+                if team_id in records:
+                    team['wins'] = records[team_id]['wins']
+                    team['loss'] = records[team_id]['loss']
+                    team['tie'] = records[team_id]['tie']
         
         if teams:
-            logger.info(f"Fetched {len(teams)} NFL teams from API")
+            logger.info(f"Fetched {len(teams)} unique NFL teams from API")
             return teams
         else:
             raise ValueError("No teams found in API response")
@@ -125,9 +202,82 @@ def fetch_nfl_teams_from_api() -> Optional[list]:
             'conference': 'National Football Conference',
             'conferenceAbv': 'NFC',
             'division': 'East',
-            'nflComLogo1': 'https://res.cloudinary.com/nflleague/image/private/f_auto/league/puhrqgj71gobgdkdo6uq',
-            'espnLogo1': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/phi.png'
         }]
+
+def fetch_team_records(api_key: str, api_host: str, team_ids: list) -> Dict[str, Dict[str, str]]:
+    """
+    Try to fetch team records (W-L-T) from API.
+    Returns a dictionary mapping teamID to {'wins': ..., 'loss': ..., 'tie': ...}
+    """
+    records = {}
+    
+    # Try different potential endpoints for standings/records
+    potential_endpoints = [
+        f'https://{api_host}/getNFLStandings',
+        f'https://{api_host}/getNFLTeams',
+        f'https://{api_host}/getNFLTeamStats',
+    ]
+    
+    headers = {
+        'x-rapidapi-key': api_key,
+        'x-rapidapi-host': api_host
+    }
+    
+    for endpoint in potential_endpoints:
+        try:
+            logger.info(f"Trying to fetch records from: {endpoint}")
+            response = requests.get(endpoint, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Try to parse different response formats
+            teams_data = []
+            if isinstance(data, list):
+                teams_data = data
+            elif 'body' in data:
+                if isinstance(data['body'], list):
+                    teams_data = data['body']
+                elif 'teams' in data['body']:
+                    teams_data = data['body']['teams']
+            elif 'teams' in data:
+                teams_data = data['teams']
+            
+            for team in teams_data:
+                team_id = str(team.get('teamID', team.get('id', '')))
+                if team_id:
+                    # Try to extract record from various formats
+                    wins = '0'
+                    loss = '0'
+                    tie = '0'
+                    
+                    # Format 1: Direct fields
+                    if 'wins' in team:
+                        wins = str(team.get('wins', 0))
+                    if 'loss' in team or 'losses' in team:
+                        loss = str(team.get('loss', team.get('losses', 0)))
+                    if 'tie' in team or 'ties' in team:
+                        tie = str(team.get('tie', team.get('ties', 0)))
+                    
+                    # Format 2: Record object
+                    record = team.get('record', {})
+                    if record:
+                        if isinstance(record, dict):
+                            wins = str(record.get('wins', record.get('w', 0)))
+                            loss = str(record.get('loss', record.get('losses', record.get('l', 0))))
+                            tie = str(record.get('tie', record.get('ties', record.get('t', 0))))
+                    
+                    records[team_id] = {'wins': wins, 'loss': loss, 'tie': tie}
+            
+            if records:
+                logger.info(f"Successfully fetched records for {len(records)} teams")
+                return records
+                
+        except Exception as e:
+            logger.debug(f"Could not fetch from {endpoint}: {e}")
+            continue
+    
+    logger.warning("Could not fetch team records from API. Records will be set to 0-0-0")
+    return records
 
 def normalize_team_name(city: str, name: str) -> str:
     """Normalize team name for matching: 'City Name'"""
@@ -183,8 +333,6 @@ def update_team_in_db(conn, team_id: int, external_team_id: str, wins: int, loss
     try:
         cursor = conn.cursor()
         
-        # First, check if we need to add columns for ties
-        # For now, we'll store wins/losses/ties in a JSON field or separate columns
         # Check if team_wins, team_losses, team_ties columns exist
         cursor.execute("""
             SELECT column_name 
@@ -194,24 +342,27 @@ def update_team_in_db(conn, team_id: int, external_team_id: str, wins: int, loss
         """)
         existing_columns = [row[0] for row in cursor.fetchall()]
         
-        # Update external_team_id
-        cursor.execute("""
-            UPDATE teams 
-            SET external_team_id = %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE team_id = %s
-        """, (external_team_id, team_id))
-        
-        # If columns exist, update record
+        # Build UPDATE statement based on available columns
         if 'team_wins' in existing_columns:
+            # Update both external_team_id and record in one statement
             cursor.execute("""
                 UPDATE teams 
-                SET team_wins = %s,
+                SET external_team_id = %s,
+                    team_wins = %s,
                     team_losses = %s,
                     team_ties = %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE team_id = %s
-            """, (wins, losses, ties, team_id))
+            """, (external_team_id, wins, losses, ties, team_id))
+        else:
+            # Only update external_team_id if record columns don't exist
+            cursor.execute("""
+                UPDATE teams 
+                SET external_team_id = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE team_id = %s
+            """, (external_team_id, team_id))
+            logger.warning(f"team_wins/team_losses/team_ties columns not found. Only updated external_team_id for team_id {team_id}")
         
         conn.commit()
         cursor.close()

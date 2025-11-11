@@ -133,3 +133,29 @@
 #     enabled: yes
 #     daemon_reload: yes
 #     state: started
+
+# Deploy NFL team data updater systemd service and timer
+- name: Deploy NFL team data updater systemd service
+  template:
+    src: nfl-team-data-updater.service.j2
+    dest: /etc/systemd/system/nfl-team-data-updater.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Deploy NFL team data updater systemd timer
+  template:
+    src: nfl-team-data-updater.timer.j2
+    dest: /etc/systemd/system/nfl-team-data-updater.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable NFL team data updater timer
+  systemd:
+    name: nfl-team-data-updater.timer
+    enabled: yes
+    daemon_reload: yes
+    state: started

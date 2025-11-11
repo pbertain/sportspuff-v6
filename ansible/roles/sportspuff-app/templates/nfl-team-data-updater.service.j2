@@ -1,0 +1,25 @@
+[Unit]
+Description=NFL Team Data Updater - Fetch external_team_id and W-L-T records
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_dir }}
+Environment=PATH={{ app_dir }}/venv/bin
+EnvironmentFile={{ app_dir }}/.env
+ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/fetch_nfl_team_data.py
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ app_dir }}
+
+[Install]
+WantedBy=multi-user.target
+
