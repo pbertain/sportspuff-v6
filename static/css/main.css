@@ -1,5 +1,4 @@
-/* Import MikoDaks font */
-@import url('https://fonts.googleapis.com/css2?family=Mikodaks:wght@400;500;600;700&display=swap');
+/* Using system fonts - Mikodaks not available on Google Fonts */
 
 /* Sportspuff v6 - Modern Arena Color Scheme */
 
@@ -109,12 +108,12 @@ main, .main-content {
 .navbar {
   background: var(--primary-gradient) !important;
   box-shadow: 0 2px 10px rgba(26, 42, 108, 0.3);
-  font-family: 'Mikodaks', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   padding: 1rem 0;
 }
 
 .navbar-brand {
-  font-family: 'Mikodaks', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 700;
   font-size: 5rem;
   color: var(--warm-white) !important;
@@ -123,7 +122,7 @@ main, .main-content {
 }
 
 .navbar-nav .nav-link {
-  font-family: 'Mikodaks', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 600;
   font-size: 1.35rem;
   color: var(--warm-white) !important;
@@ -141,7 +140,7 @@ main, .main-content {
 }
 
 .navbar-nav .dropdown-toggle {
-  font-family: 'Mikodaks', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 600;
   font-size: 1.35rem;
 }
@@ -154,7 +153,7 @@ main, .main-content {
 }
 
 .navbar-nav .dropdown-item {
-  font-family: 'Mikodaks', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 500;
   color: var(--warm-white);
   padding: 0.75rem 1.5rem;

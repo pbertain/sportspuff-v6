@@ -221,7 +221,7 @@
             try {
                 // Call API directly - proxy will handle CORS via Flask-CORS
                 // Try proxy first, fallback to direct API call if proxy fails
-                const API_BASE = 'https://api.sportspuff.org/api/v1';
+                const API_BASE = '{{ API_BASE_URL }}/api/v1';
                 const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
                 const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
@@ -284,23 +284,33 @@
                     ]);
                     
                     // Combine NBA, NHL, and NFL data
+                    // Explicitly set league on each game to ensure it's preserved
+                    const nbaGames = (nbaSchedule.games || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
+                    const nhlGames = (nhlSchedule.games || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
+                    const nflGames = (nflSchedule.games || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
+                    
                     scheduleData = {
                         date: nbaSchedule.date || nhlSchedule.date || nflSchedule.date,
-                        games: [
-                            ...(nbaSchedule.games || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlSchedule.games || []).map(g => ({...g, league: 'nhl'})),
-                            ...(nflSchedule.games || []).map(g => ({...g, league: 'nfl'}))
-                        ]
+                        games: [...nbaGames, ...nhlGames, ...nflGames]
                     };
+                    
+                    const nbaScoresList = (nbaScores.scores || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
+                    const nhlScoresList = (nhlScores.scores || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
+                    const nflScoresList = (nflScores.scores || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
                     
                     scoresData = {
                         date: nbaScores.date || nhlScores.date || nflScores.date,
-                        scores: [
-                            ...(nbaScores.scores || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlScores.scores || []).map(g => ({...g, league: 'nhl'})),
-                            ...(nflScores.scores || []).map(g => ({...g, league: 'nfl'}))
-                        ]
+                        scores: [...nbaScoresList, ...nhlScoresList, ...nflScoresList]
                     };
+                    
+                    // Debug logging for NFL
+                    console.log('NFL Schedule games:', nflGames.length);
+                    console.log('NFL Scores games:', nflScoresList.length);
+                    console.log('Total games by league:', {
+                        nba: nbaGames.length,
+                        nhl: nhlGames.length,
+                        nfl: nflGames.length
+                    });
                 } else {
                     // For single league
                     const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
@@ -312,6 +322,14 @@
                         fetchWithFallback(scheduleProxy, scheduleDirect),
                         fetchWithFallback(scoresProxy, scoresDirect)
                     ]);
+                    
+                    // Ensure league is set on all games for single league mode
+                    if (scheduleData.games) {
+                        scheduleData.games = scheduleData.games.map(g => ({...g, league: league, sport: league}));
+                    }
+                    if (scoresData.scores) {
+                        scoresData.scores = scoresData.scores.map(g => ({...g, league: league, sport: league}));
+                    }
                 }
                 
                 // Debug logging
@@ -460,6 +478,82 @@
                 function getTeamLogoBg(teamName) {
                     const team = findTeamData(teamName);
                     return team ? (team.color_3 || '#FFFFFF') : '#FFFFFF';
+                }
+                
+                // Helper function to get team color 2 (secondary color)
+                function getTeamColor2(teamName) {
+                    const team = findTeamData(teamName);
+                    return team ? (team.color_2 || '#FFFFFF') : '#FFFFFF';
+                }
+                
+                // Helper function to get team color 3 (tertiary color)
+                function getTeamColor3(teamName) {
+                    const team = findTeamData(teamName);
+                    return team ? (team.color_3 || '#000000') : '#000000';
+                }
+                
+                // Helper function to check contrast ratio (WCAG AA minimum is 4.5:1)
+                function getContrastRatio(color1, color2) {
+                    function hexToRgb(hex) {
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                        return result ? {
+                            r: parseInt(result[1], 16),
+                            g: parseInt(result[2], 16),
+                            b: parseInt(result[3], 16)
+                        } : null;
+                    }
+                    
+                    function getLuminance(r, g, b) {
+                        const [rs, gs, bs] = [r, g, b].map(c => {
+                            c = c / 255;
+                            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+                        });
+                        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+                    }
+                    
+                    const rgb1 = hexToRgb(color1);
+                    const rgb2 = hexToRgb(color2);
+                    
+                    if (!rgb1 || !rgb2) return 1;
+                    
+                    const lum1 = getLuminance(rgb1.r, rgb1.g, rgb1.b);
+                    const lum2 = getLuminance(rgb2.r, rgb2.g, rgb2.b);
+                    
+                    const brightest = Math.max(lum1, lum2);
+                    const darkest = Math.min(lum1, lum2);
+                    
+                    return (brightest + 0.05) / (darkest + 0.05);
+                }
+                
+                // Helper function to get optimal text color for abbreviation box
+                function getAbbrevBoxColors(teamName, bgColor, textColor) {
+                    const minContrast = 4.5; // WCAG AA standard
+                    const contrast = getContrastRatio(bgColor, textColor);
+                    
+                    if (contrast >= minContrast) {
+                        return { bg: bgColor, text: textColor };
+                    }
+                    
+                    // If contrast is insufficient, try white or black text
+                    const whiteContrast = getContrastRatio(bgColor, '#FFFFFF');
+                    const blackContrast = getContrastRatio(bgColor, '#000000');
+                    
+                    if (whiteContrast >= minContrast && whiteContrast > blackContrast) {
+                        return { bg: bgColor, text: '#FFFFFF' };
+                    } else if (blackContrast >= minContrast) {
+                        return { bg: bgColor, text: '#000000' };
+                    } else {
+                        // If still insufficient, adjust background to be lighter/darker
+                        // Try a lighter version of the background
+                        const team = findTeamData(teamName);
+                        const primaryColor = team ? (team.color_1 || '#6c757d') : '#6c757d';
+                        const primaryContrast = getContrastRatio(primaryColor, '#FFFFFF');
+                        if (primaryContrast >= minContrast) {
+                            return { bg: primaryColor, text: '#FFFFFF' };
+                        } else {
+                            return { bg: bgColor, text: '#000000' }; // Fallback
+                        }
+                    }
                 }
                 
                 // Helper function to get team URL
@@ -645,6 +739,15 @@
                     const visitorAbbrev = game.visitor_team_abbrev || '';
                     const homeAbbrev = game.home_team_abbrev || '';
                     
+                    // Get abbreviation box colors with contrast checking
+                    const visitorAbbrevBg = getTeamColor2(game.visitor_team);
+                    const visitorAbbrevText = getTeamColor3(game.visitor_team);
+                    const visitorAbbrevColors = getAbbrevBoxColors(game.visitor_team, visitorAbbrevBg, visitorAbbrevText);
+                    
+                    const homeAbbrevBg = getTeamColor2(game.home_team);
+                    const homeAbbrevText = getTeamColor3(game.home_team);
+                    const homeAbbrevColors = getAbbrevBoxColors(game.home_team, homeAbbrevBg, homeAbbrevText);
+                    
                     return `
                         <tr>
                             <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap;">
@@ -653,7 +756,7 @@
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    ${visitorAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: rgba(255, 255, 255, 0.2); border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${visitorAbbrev}</span>` : ''}
+                                    ${visitorAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${visitorAbbrevColors.bg}; color: ${visitorAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${visitorAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.visitor_team}">${visitorShortName}</span>
                                     ${visitorRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${visitorRecord})</span>` : ''}
                                 </a>
@@ -667,7 +770,7 @@
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    ${homeAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: rgba(255, 255, 255, 0.2); border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${homeAbbrev}</span>` : ''}
+                                    ${homeAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${homeAbbrevColors.bg}; color: ${homeAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${homeAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.home_team}">${homeShortName}</span>
                                     ${homeRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${homeRecord})</span>` : ''}
                                 </a>
@@ -695,7 +798,14 @@
                     scheduleData.games.forEach(game => {
                         const scoreData = scoresMap[game.game_id];
                         // Preserve league from game (set when combining data from multiple leagues)
-                        const gameLeague = game.league || game.sport || (league !== 'all' ? league : null);
+                        // Ensure league is always set - it should be set when combining data
+                        let gameLeague = game.league || game.sport;
+                        if (!gameLeague && league !== 'all') {
+                            gameLeague = league;
+                        } else if (!gameLeague) {
+                            // Last resort - this shouldn't happen if data combining worked correctly
+                            gameLeague = 'nba'; // Default fallback
+                        }
                         allGamesMap[game.game_id] = {
                             ...game,
                             league: gameLeague, // Explicitly preserve league
@@ -736,8 +846,16 @@
                     scoresData.scores.forEach(scoreGame => {
                         if (!allGamesMap[scoreGame.game_id]) {
                             // Game exists in scores but not in schedule - add it
-                            // Determine league from scoreGame data
-                            const scoreLeague = scoreGame.league || scoreGame.sport || (league !== 'all' ? league : null);
+                            // Determine league from scoreGame data - try multiple sources
+                            let scoreLeague = scoreGame.league || scoreGame.sport;
+                            // If still not found and we're in "all" mode, try to infer from team names or API source
+                            if (!scoreLeague && league === 'all') {
+                                // Try to infer from which scoresData object this came from
+                                // This is a fallback - the league should be set when combining data
+                                scoreLeague = 'nba'; // Default fallback, but this shouldn't happen
+                            } else if (!scoreLeague) {
+                                scoreLeague = league; // Use the selected league
+                            }
                             allGamesMap[scoreGame.game_id] = {
                                 game_id: scoreGame.game_id,
                                 league: scoreLeague, // Preserve league
@@ -768,8 +886,12 @@
                         } else {
                             // Update existing game with latest score data
                             const existing = allGamesMap[scoreGame.game_id];
-                            // Preserve league if not already set
-                            if (!existing.league && scoreGame.league) {
+                            // Preserve league - don't overwrite if already set, but set if missing
+                            if (!existing.league) {
+                                existing.league = scoreGame.league || scoreGame.sport || (league !== 'all' ? league : 'nba');
+                                existing.sport = existing.league;
+                            } else if (scoreGame.league && !existing.league) {
+                                // If existing doesn't have league but scoreGame does, use it
                                 existing.league = scoreGame.league;
                                 existing.sport = scoreGame.league;
                             }
@@ -851,8 +973,18 @@
                             let gameLeague = game.league || game.sport;
                             // If still not found, try to infer from team names or other data
                             if (!gameLeague) {
-                                // Check if we can infer from context (we set league when combining)
-                                gameLeague = 'Unknown';
+                                // Try to infer from team names or use the selected league
+                                if (league !== 'all') {
+                                    gameLeague = league;
+                                } else {
+                                    // Last resort - try to infer from team data
+                                    const visitorTeam = findTeamData(game.visitor_team);
+                                    if (visitorTeam && visitorTeam.league) {
+                                        gameLeague = visitorTeam.league.toLowerCase();
+                                    } else {
+                                        gameLeague = 'nba'; // Default fallback
+                                    }
+                                }
                             }
                             gameLeague = gameLeague.toUpperCase();
                             if (!gamesByLeague[gameLeague]) {
