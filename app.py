@@ -195,6 +195,81 @@ def index():
                 team_colors[league_proper][full_name.replace('San Francisco', 'SF')] = team_data
             elif full_name.startswith('SF '):
                 team_colors[league_proper][full_name.replace('SF ', 'San Francisco ')] = team_data
+            
+            # NFL-specific mappings: Map abbreviations and common variations
+            if league_proper == 'NFL':
+                # NFL team abbreviation mappings (API often returns abbreviations)
+                nfl_abbrev_map = {
+                    'ARI': 'Arizona Cardinals',
+                    'ATL': 'Atlanta Falcons',
+                    'BAL': 'Baltimore Ravens',
+                    'BUF': 'Buffalo Bills',
+                    'CAR': 'Carolina Panthers',
+                    'CHI': 'Chicago Bears',
+                    'CIN': 'Cincinnati Bengals',
+                    'CLE': 'Cleveland Browns',
+                    'DAL': 'Dallas Cowboys',
+                    'DEN': 'Denver Broncos',
+                    'DET': 'Detroit Lions',
+                    'GB': 'Green Bay Packers',
+                    'HOU': 'Houston Texans',
+                    'IND': 'Indianapolis Colts',
+                    'JAX': 'Jacksonville Jaguars',
+                    'KC': 'Kansas City Chiefs',
+                    'LV': 'Las Vegas Raiders',
+                    'LAC': 'Los Angeles Chargers',
+                    'LAR': 'Los Angeles Rams',
+                    'MIA': 'Miami Dolphins',
+                    'MIN': 'Minnesota Vikings',
+                    'NE': 'New England Patriots',
+                    'NO': 'New Orleans Saints',
+                    'NYG': 'New York Giants',
+                    'NYJ': 'New York Jets',
+                    'PHI': 'Philadelphia Eagles',
+                    'PIT': 'Pittsburgh Steelers',
+                    'SF': 'San Francisco 49ers',
+                    'SEA': 'Seattle Seahawks',
+                    'TB': 'Tampa Bay Buccaneers',
+                    'TEN': 'Tennessee Titans',
+                    'WSH': 'Washington Commanders',
+                    'WAS': 'Washington Commanders'  # Alternative abbreviation
+                }
+                
+                # Map abbreviations to full team name
+                for abbrev, mapped_name in nfl_abbrev_map.items():
+                    if mapped_name == full_name or mapped_name == real_name:
+                        # Map abbreviation to this team
+                        team_colors[league_proper][abbrev] = team_data
+                        # Also map just the team name part (e.g., "Cardinals", "Eagles")
+                        team_name_only = full_name.split()[-1]  # Last word
+                        if team_name_only:
+                            team_colors[league_proper][team_name_only] = team_data
+                            # Also map "City Team" format (e.g., "Arizona Cardinals")
+                            city_part = ' '.join(full_name.split()[:-1])
+                            if city_part:
+                                team_colors[league_proper][f"{city_part} {team_name_only}"] = team_data
+                                # Map common city abbreviations
+                                if city_part == 'New England':
+                                    team_colors[league_proper]['NE Patriots'] = team_data
+                                    team_colors[league_proper]['New England'] = team_data
+                                elif city_part == 'Kansas City':
+                                    team_colors[league_proper]['KC Chiefs'] = team_data
+                                    team_colors[league_proper]['Kansas City'] = team_data
+                                elif city_part == 'Tampa Bay':
+                                    team_colors[league_proper]['TB Buccaneers'] = team_data
+                                    team_colors[league_proper]['Tampa Bay'] = team_data
+                                elif city_part == 'Green Bay':
+                                    team_colors[league_proper]['GB Packers'] = team_data
+                                    team_colors[league_proper]['Green Bay'] = team_data
+                                elif city_part == 'Las Vegas':
+                                    team_colors[league_proper]['LV Raiders'] = team_data
+                                    team_colors[league_proper]['Las Vegas'] = team_data
+                                elif 'Los Angeles' in city_part:
+                                    team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
+                                    if 'Chargers' in full_name:
+                                        team_colors[league_proper]['LAC'] = team_data
+                                    elif 'Rams' in full_name:
+                                        team_colors[league_proper]['LAR'] = team_data
         
         # Keep nba_team_colors for backward compatibility
         nba_team_colors = team_colors.get('NBA', {})

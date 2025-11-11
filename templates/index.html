@@ -455,6 +455,34 @@
                         }
                     }
                     
+                    // NFL-specific: Try matching abbreviations and common variations
+                    // Check if this might be an NFL team by looking for common NFL patterns
+                    const nflAbbrevs = ['ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'DET', 
+                                      'GB', 'HOU', 'IND', 'JAX', 'KC', 'LV', 'LAC', 'LAR', 'MIA', 'MIN', 'NE', 'NO', 
+                                      'NYG', 'NYJ', 'PHI', 'PIT', 'SF', 'SEA', 'TB', 'TEN', 'WSH', 'WAS'];
+                    if (nflAbbrevs.includes(searchName.toUpperCase())) {
+                        // Try to find by abbreviation (should be mapped in backend)
+                        const abbrevKey = searchName.toUpperCase();
+                        if (teamColors[abbrevKey]) {
+                            return teamColors[abbrevKey];
+                        }
+                    }
+                    
+                    // Try matching just the team name part (e.g., "Eagles", "Patriots", "Chiefs")
+                    // This is useful when API returns just the team name without city
+                    const teamNameOnly = searchName.split(' ').pop();
+                    if (teamNameOnly && teamNameOnly.length > 2) {
+                        for (const key in teamColors) {
+                            const keyParts = key.split(' ');
+                            if (keyParts.length > 0) {
+                                const keyTeamName = keyParts[keyParts.length - 1].toLowerCase();
+                                if (keyTeamName === teamNameOnly.toLowerCase()) {
+                                    return teamColors[key];
+                                }
+                            }
+                        }
+                    }
+                    
                     // Log when team not found for debugging
                     console.warn(`Team not found: "${teamName}". Available teams (first 20):`, Object.keys(teamColors).slice(0, 20));
                     console.warn(`Searching for: "${searchName}", cleaned: "${cleanedName}"`);
