@@ -40,10 +40,17 @@ def fetch_nfl_teams_from_api() -> Optional[list]:
     """
     Fetch NFL team data from API
     Returns list of team dictionaries with teamID, teamCity, teamName, wins, loss, tie, etc.
+    
+    You can set NFL_API_URL environment variable to point to your API endpoint.
+    If not set, will try ESPN API or use sample data for testing.
     """
-    # TODO: Replace with actual API endpoint
-    # This is a placeholder - you'll need to provide the actual API URL
-    api_url = os.getenv('NFL_API_URL', 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams')
+    api_url = os.getenv('NFL_API_URL', '')
+    
+    # If no custom API URL, try to use your existing sportspuff API
+    if not api_url:
+        # Try to get from sportspuff API if available
+        sportspuff_api = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
+        api_url = f"{sportspuff_api}/api/v1/teams/nfl"
     
     try:
         logger.info(f"Fetching NFL teams from: {api_url}")
@@ -52,9 +59,14 @@ def fetch_nfl_teams_from_api() -> Optional[list]:
         
         data = response.json()
         
-        # Parse ESPN API response format
+        # Handle different API response formats
         teams = []
-        if 'sports' in data:
+        
+        # Format 1: Direct list of teams (your format)
+        if isinstance(data, list):
+            teams = data
+        # Format 2: ESPN API format
+        elif 'sports' in data:
             for sport in data['sports']:
                 if 'leagues' in sport:
                     for league in sport['leagues']:
@@ -63,32 +75,45 @@ def fetch_nfl_teams_from_api() -> Optional[list]:
                                 team = team_data.get('team', {})
                                 record = team.get('record', {})
                                 
+                                # Parse record from ESPN format
+                                wins = '0'
+                                loss = '0'
+                                tie = '0'
+                                if record and 'items' in record and record['items']:
+                                    stats = record['items'][0].get('stats', [])
+                                    if len(stats) >= 3:
+                                        wins = str(stats[0].get('value', 0))
+                                        loss = str(stats[1].get('value', 0))
+                                        tie = str(stats[2].get('value', 0))
+                                
                                 teams.append({
                                     'teamID': str(team.get('id', '')),
                                     'teamAbv': team.get('abbreviation', ''),
                                     'teamCity': team.get('location', ''),
                                     'teamName': team.get('name', ''),
-                                    'wins': str(record.get('items', [{}])[0].get('stats', [{}])[0].get('value', '0') if record.get('items') else '0'),
-                                    'loss': str(record.get('items', [{}])[0].get('stats', [{}])[1].get('value', '0') if record.get('items') and len(record.get('items', [{}])[0].get('stats', [])) > 1 else '0'),
-                                    'tie': str(record.get('items', [{}])[0].get('stats', [{}])[2].get('value', '0') if record.get('items') and len(record.get('items', [{}])[0].get('stats', [])) > 2 else '0'),
+                                    'wins': wins,
+                                    'loss': loss,
+                                    'tie': tie,
                                     'conference': team.get('conference', ''),
                                     'conferenceAbv': team.get('conference', ''),
                                     'division': team.get('division', ''),
                                     'nflComLogo1': team.get('logos', [{}])[0].get('href', '') if team.get('logos') else '',
                                     'espnLogo1': team.get('logos', [{}])[0].get('href', '') if team.get('logos') else ''
                                 })
+        # Format 3: Wrapped in 'teams' key
+        elif 'teams' in data:
+            teams = data['teams']
         
-        # Alternative: If API returns flat list format
-        if not teams and isinstance(data, list):
-            teams = data
-        
-        logger.info(f"Fetched {len(teams)} NFL teams from API")
-        return teams
+        if teams:
+            logger.info(f"Fetched {len(teams)} NFL teams from API")
+            return teams
+        else:
+            raise ValueError("No teams found in API response")
         
     except Exception as e:
         logger.error(f"Error fetching NFL teams from API: {e}")
-        # For testing, return sample data matching your format
-        logger.warning("Using sample data for testing")
+        logger.warning("Falling back to sample data for testing")
+        # Return sample data matching your format for testing
         return [{
             'teamID': '27',
             'teamAbv': 'PHI',
