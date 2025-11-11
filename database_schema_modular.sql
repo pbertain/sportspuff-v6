@@ -84,6 +84,7 @@ CREATE TABLE teams (
     division_id INTEGER REFERENCES divisions(division_id) ON DELETE SET NULL,
     conference_id INTEGER REFERENCES conferences(conference_id) ON DELETE SET NULL,
     team_league_id INTEGER,
+    external_team_id VARCHAR(100), -- External API team ID (e.g., from ESPN, API-Football, etc.)
     city_name VARCHAR(100),
     state_name VARCHAR(100),
     country VARCHAR(100),
