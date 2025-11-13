@@ -227,7 +227,7 @@
                                 <h6 style="color: #4B0082; margin-bottom: 1rem; font-weight: 700;">{{ team.full_stadium_name }}</h6>
                                 <p class="card-text">
                                     <i class="fas fa-map-marker-alt me-2"></i>
-                                    <strong>Location:</strong> {% if team.location_name %}{{ team.location_name }}{% else %}{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}{% endif %}
+                                    <strong>Location:</strong> {{ team.city_name.title() }}, {{ team.state_name.upper() }}
                                 </p>
                             </div>
                             <div class="col-md-6">
