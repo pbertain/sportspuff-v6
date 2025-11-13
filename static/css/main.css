@@ -382,12 +382,13 @@ main, .main-content {
 .league-card {
   background: linear-gradient(135deg, #4a4a6a 0%, #3a3a5a 100%);
   border-radius: 15px;
-  padding: 0.5rem;
+  padding: 0.4rem;
   text-align: center;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  min-height: 100px;
+  min-height: 70px;
+  max-height: 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -419,15 +420,15 @@ main, .main-content {
 }
 
 .league-logo {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 0.25rem;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   overflow: hidden;
 }
 

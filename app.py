@@ -157,11 +157,15 @@ def index():
                 # Use splitsp.lat for all logos
                 logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{team["logo_filename"]}'
             
+            # Get team abbreviation
+            abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
+            
             team_data = {
                 'color_1': team['team_color_1'],
                 'color_2': team['team_color_2'],
                 'color_3': team['team_color_3'],
-                'logo_url': logo_url
+                'logo_url': logo_url,
+                'abbreviation': abbrev
             }
             
             # Use full_team_name as primary key (proper capitalization and spacing)
@@ -642,7 +646,7 @@ def stadiums():
             ORDER BY s.full_stadium_name
             LIMIT %s OFFSET %s
         """
-        # Note: s.image field contains stadium image path if available
+        # Note: s.image field contains stadium image path if available (may be relative path like 'stadiums/league/stadium_name_img.png')
         cursor.execute(stadiums_query, params + [per_page, offset])
         stadiums = cursor.fetchall()
         

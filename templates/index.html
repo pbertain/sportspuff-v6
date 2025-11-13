@@ -722,9 +722,11 @@
                     const visitorUrl = getTeamUrl(game.visitor_team, gameLeague);
                     const homeUrl = getTeamUrl(game.home_team, gameLeague);
                     
-                    // Get team abbreviations
-                    const visitorAbbrev = game.visitor_team_abbrev || '';
-                    const homeAbbrev = game.home_team_abbrev || '';
+                    // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
+                    const visitorTeamData = findTeamData(game.visitor_team);
+                    const homeTeamData = findTeamData(game.home_team);
+                    const visitorAbbrev = visitorTeamData?.abbreviation || game.visitor_team_abbrev || '';
+                    const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
                     
                     // Get abbreviation box colors with contrast checking
                     const visitorAbbrevBg = getTeamColor2(game.visitor_team);
@@ -822,8 +824,9 @@
                             visitor_overtime_losses: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
                                 ? scoreData.visitor_otl 
                                 : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
-                            home_team_abbrev: game.home_team_abbrev || game.home_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || '',
-                            visitor_team_abbrev: game.visitor_team_abbrev || game.visitor_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || ''
+                            // Abbreviations will be looked up from teamColors when rendering
+                            home_team_abbrev: game.home_team_abbrev || '',
+                            visitor_team_abbrev: game.visitor_team_abbrev || ''
                         };
                     });
                 }
@@ -850,9 +853,10 @@
                                 game_date: scoresData.date,
                                 game_time: null,
                                 home_team: scoreGame.home_team,
-                                home_team_abbrev: scoreGame.home_team_abbrev || scoreGame.home_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                // Abbreviations will be looked up from teamColors when rendering
+                                home_team_abbrev: scoreGame.home_team_abbrev || '',
                                 visitor_team: scoreGame.visitor_team,
-                                visitor_team_abbrev: scoreGame.visitor_team_abbrev || scoreGame.visitor_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                visitor_team_abbrev: scoreGame.visitor_team_abbrev || '',
                                 game_status: scoreGame.game_status,
                                 game_type: 'regular',
                                 home_score: scoreGame.home_score,
