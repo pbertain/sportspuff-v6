@@ -54,39 +54,41 @@
                 {% endfor %}
             </div>
             {% elif league_name == 'NHL' %}
-            <!-- NHL: 2 conferences, 4 divisions total - Eastern over Atlantic/Metropolitan, Western over Central/Pacific -->
-            {% for conference_name, divisions in organized_teams.items() %}
+            <!-- NHL: 2 conferences, 4 divisions total - all 4 divisions in one row -->
             <div class="row mb-4">
                 <div class="col-12">
+                    {% for conference_name, divisions in organized_teams.items() %}
                     <h2 class="conference-title mb-3">{{ conference_name }}</h2>
+                    {% endfor %}
                     <div class="row">
-                        {% for division_name, teams in divisions.items() %}
-                        <div class="col-lg-6 col-md-6 mb-4">
-                            <div class="division-box">
-                                <h3 class="division-title">{{ division_name }}</h3>
-                                <div class="teams-list">
-                                    {% for team in teams %}
-                                    <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: block;">
-                                        <div class="team-logo-small">
-                                            <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
-                                        </div>
-                                        <div class="team-details">
-                                            <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }};">{{ team.real_team_name }}</div>
-                                            {% if team.full_stadium_name %}
-                                            <div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.full_stadium_name }}</div>
-                                            <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </a>
-                                    {% endfor %}
+                        {% for conference_name, divisions in organized_teams.items() %}
+                            {% for division_name, teams in divisions.items() %}
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="division-box">
+                                    <h3 class="division-title">{{ division_name }}</h3>
+                                    <div class="teams-list">
+                                        {% for team in teams %}
+                                        <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: block;">
+                                            <div class="team-logo-small">
+                                                <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" onerror="this.style.display='none';">
+                                            </div>
+                                            <div class="team-details">
+                                                <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }};">{{ team.real_team_name }}</div>
+                                                {% if team.full_stadium_name %}
+                                                <div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.full_stadium_name }}</div>
+                                                <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }};">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </a>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                            {% endfor %}
                         {% endfor %}
                     </div>
                 </div>
             </div>
-            {% endfor %}
             {% elif league_name == 'WNBA' %}
             <!-- WNBA: Both conferences on same row -->
             <div class="row mb-4 conference-section no-divisions">
