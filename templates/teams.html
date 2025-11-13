@@ -8,35 +8,16 @@
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #E6E6FA; /* Lavender background */
-            min-height: 100vh;
-        }
-        .container {
-            background-color: #E6E6FA; /* Lavender background */
-            border-radius: 10px;
-            padding: 2rem;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .card {
-            background-color: #E6E6FA; /* Lavender background */
-            border: none;
-        }
-        .table {
-            background-color: transparent;
-        }
         .table thead th {
             background-color: #6B46C1;
             color: white;
             border-color: #6B46C1;
         }
         .table tbody tr {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.1);
         }
         .table tbody tr:hover {
-            background-color: rgba(230, 230, 250, 0.5);
+            background-color: rgba(255, 255, 255, 0.2);
         }
         .badge {
             font-size: 0.85rem;
@@ -44,13 +25,13 @@
         }
         .team-abbrev {
             font-size: 0.75rem;
-            color: #6B46C1;
+            color: var(--nba-accent);
             font-weight: 600;
             letter-spacing: 0.5px;
         }
         .btn-primary, .btn-outline-primary {
-            background-color: #6B46C1;
-            border-color: #6B46C1;
+            background-color: var(--nba-accent);
+            border-color: var(--nba-accent);
             color: white;
         }
         .btn-primary:hover, .btn-outline-primary:hover {
@@ -58,16 +39,16 @@
             border-color: #553C9A;
         }
         .btn-outline-secondary {
-            border-color: #6B46C1;
-            color: #6B46C1;
+            border-color: var(--nba-accent);
+            color: var(--nba-accent);
         }
         .btn-outline-secondary:hover {
-            background-color: #6B46C1;
+            background-color: var(--nba-accent);
             color: white;
         }
         .form-control:focus, .form-select:focus {
-            border-color: #6B46C1;
-            box-shadow: 0 0 0 0.2rem rgba(107, 70, 193, 0.25);
+            border-color: var(--nba-accent);
+            box-shadow: 0 0 0 0.2rem rgba(112, 40, 228, 0.25);
         }
     </style>
 </head>

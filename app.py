@@ -425,6 +425,9 @@ def get_team_abbreviation(team_name, league):
         'San Francisco 49ers': 'SF', 'Seattle Seahawks': 'SEA', 'Tampa Bay Buccaneers': 'TB',
         'Tennessee Titans': 'TEN', 'Washington Commanders': 'WSH'
     }
+    # Also map common variations
+    nfl_abbrev_map['New York Jets'] = 'NYJ'
+    nfl_abbrev_map['New England Patriots'] = 'NE'
     
     # NBA abbreviations (common 3-letter abbreviations)
     nba_abbrev_map = {

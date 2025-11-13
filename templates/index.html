@@ -652,8 +652,13 @@
                         if (diffMs > 0) {
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                             const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                            const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
-                            statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
+                            // For NFL, if less than 24h15m, show hours and minutes
+                            if (diffMs < (24 * 60 + 15) * 60 * 1000) {
+                                const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
+                                statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
+                            } else {
+                                statusDisplay = `${gameTimeStr} - Scheduled`;
+                            }
                         } else {
                             statusDisplay = `${gameTimeStr} - Scheduled`;
                         }
@@ -661,7 +666,7 @@
                         statusDisplay = 'Scheduled';
                     }
                     
-                    // Get team records - W-L-OTL for NHL, W-L for other leagues
+                    // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
                     let visitorRecord = '';
                     let homeRecord = '';
                     if (gameLeague === 'NHL') {
@@ -674,26 +679,22 @@
                             ? game.home_otl 
                             : (game.home_overtime_losses !== undefined && game.home_overtime_losses !== null ? game.home_overtime_losses : 0);
                         
-                        // Debug logging for NHL games
-                        if (game.visitor_team && game.home_team) {
-                            console.log(`NHL Game ${game.visitor_team} @ ${game.home_team}:`, {
-                                visitor_wins: game.visitor_wins,
-                                visitor_losses: game.visitor_losses,
-                                visitor_overtime_losses: game.visitor_overtime_losses,
-                                visitor_otl: game.visitor_otl,
-                                home_wins: game.home_wins,
-                                home_losses: game.home_losses,
-                                home_overtime_losses: game.home_overtime_losses,
-                                home_otl: game.home_otl,
-                                full_game: game
-                            });
-                        }
-                        
                         if (game.visitor_wins !== undefined && game.visitor_losses !== undefined) {
                             visitorRecord = `${game.visitor_wins}-${game.visitor_losses}-${visitorOTL}`;
                         }
                         if (game.home_wins !== undefined && game.home_losses !== undefined) {
                             homeRecord = `${game.home_wins}-${game.home_losses}-${homeOTL}`;
+                        }
+                    } else if (gameLeague === 'NFL') {
+                        // NFL format: W-L-T
+                        const visitorTies = game.visitor_ties !== undefined && game.visitor_ties !== null ? game.visitor_ties : 0;
+                        const homeTies = game.home_ties !== undefined && game.home_ties !== null ? game.home_ties : 0;
+                        
+                        if (game.visitor_wins !== undefined && game.visitor_losses !== undefined) {
+                            visitorRecord = `${game.visitor_wins}-${game.visitor_losses}-${visitorTies}`;
+                        }
+                        if (game.home_wins !== undefined && game.home_losses !== undefined) {
+                            homeRecord = `${game.home_wins}-${game.home_losses}-${homeTies}`;
                         }
                     } else {
                         // Other leagues: W-L
@@ -809,8 +810,10 @@
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
                             home_wins: scoreData?.home_wins !== undefined ? scoreData.home_wins : game.home_wins,
                             home_losses: scoreData?.home_losses !== undefined ? scoreData.home_losses : game.home_losses,
+                            home_ties: scoreData?.home_ties !== undefined && scoreData?.home_ties !== null ? scoreData.home_ties : (game.home_ties !== undefined && game.home_ties !== null ? game.home_ties : 0),
                             visitor_wins: scoreData?.visitor_wins !== undefined ? scoreData.visitor_wins : game.visitor_wins,
                             visitor_losses: scoreData?.visitor_losses !== undefined ? scoreData.visitor_losses : game.visitor_losses,
+                            visitor_ties: scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null ? scoreData.visitor_ties : (game.visitor_ties !== undefined && game.visitor_ties !== null ? game.visitor_ties : 0),
                             home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
                                 ? scoreData.home_otl 
                                 : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
@@ -864,10 +867,12 @@
                                 is_final: scoreGame.is_final,
                                 current_period: scoreGame.current_period,
                                 time_remaining: scoreGame.time_remaining,
-                                home_wins: null,
-                                home_losses: null,
-                                visitor_wins: null,
-                                visitor_losses: null,
+                                home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : null,
+                                home_losses: scoreGame.home_losses !== undefined && scoreGame.home_losses !== null ? scoreGame.home_losses : null,
+                                home_ties: scoreGame.home_ties !== undefined && scoreGame.home_ties !== null ? scoreGame.home_ties : null,
+                                visitor_wins: scoreGame.visitor_wins !== undefined && scoreGame.visitor_wins !== null ? scoreGame.visitor_wins : null,
+                                visitor_losses: scoreGame.visitor_losses !== undefined && scoreGame.visitor_losses !== null ? scoreGame.visitor_losses : null,
+                                visitor_ties: scoreGame.visitor_ties !== undefined && scoreGame.visitor_ties !== null ? scoreGame.visitor_ties : null,
                                 home_otl: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
                                 visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
                                 // Also keep old field names for backward compatibility
