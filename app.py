@@ -642,6 +642,7 @@ def stadiums():
             ORDER BY s.full_stadium_name
             LIMIT %s OFFSET %s
         """
+        # Note: s.image field contains stadium image path if available
         cursor.execute(stadiums_query, params + [per_page, offset])
         stadiums = cursor.fetchall()
         
