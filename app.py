@@ -405,6 +405,99 @@ def league_page(league_name):
     except Exception as e:
         return render_template('error.html', message=str(e))
 
+def get_team_abbreviation(team_name, league):
+    """Get three-letter abbreviation for a team based on league and team name"""
+    # NFL abbreviations
+    nfl_abbrev_map = {
+        'Arizona Cardinals': 'ARI', 'Atlanta Falcons': 'ATL', 'Baltimore Ravens': 'BAL',
+        'Buffalo Bills': 'BUF', 'Carolina Panthers': 'CAR', 'Chicago Bears': 'CHI',
+        'Cincinnati Bengals': 'CIN', 'Cleveland Browns': 'CLE', 'Dallas Cowboys': 'DAL',
+        'Denver Broncos': 'DEN', 'Detroit Lions': 'DET', 'Green Bay Packers': 'GB',
+        'Houston Texans': 'HOU', 'Indianapolis Colts': 'IND', 'Jacksonville Jaguars': 'JAX',
+        'Kansas City Chiefs': 'KC', 'Las Vegas Raiders': 'LV', 'Los Angeles Chargers': 'LAC',
+        'Los Angeles Rams': 'LAR', 'Miami Dolphins': 'MIA', 'Minnesota Vikings': 'MIN',
+        'New England Patriots': 'NE', 'New Orleans Saints': 'NO', 'New York Giants': 'NYG',
+        'New York Jets': 'NYJ', 'Philadelphia Eagles': 'PHI', 'Pittsburgh Steelers': 'PIT',
+        'San Francisco 49ers': 'SF', 'Seattle Seahawks': 'SEA', 'Tampa Bay Buccaneers': 'TB',
+        'Tennessee Titans': 'TEN', 'Washington Commanders': 'WSH'
+    }
+    
+    # NBA abbreviations (common 3-letter abbreviations)
+    nba_abbrev_map = {
+        'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
+        'Charlotte Hornets': 'CHA', 'Chicago Bulls': 'CHI', 'Cleveland Cavaliers': 'CLE',
+        'Dallas Mavericks': 'DAL', 'Denver Nuggets': 'DEN', 'Detroit Pistons': 'DET',
+        'Golden State Warriors': 'GSW', 'Houston Rockets': 'HOU', 'Indiana Pacers': 'IND',
+        'LA Clippers': 'LAC', 'Los Angeles Clippers': 'LAC', 'Los Angeles Lakers': 'LAL',
+        'Memphis Grizzlies': 'MEM', 'Miami Heat': 'MIA', 'Milwaukee Bucks': 'MIL',
+        'Minnesota Timberwolves': 'MIN', 'New Orleans Pelicans': 'NOP', 'New York Knicks': 'NYK',
+        'Oklahoma City Thunder': 'OKC', 'Orlando Magic': 'ORL', 'Philadelphia 76ers': 'PHI',
+        'Phoenix Suns': 'PHX', 'Portland Trail Blazers': 'POR', 'Sacramento Kings': 'SAC',
+        'San Antonio Spurs': 'SAS', 'Toronto Raptors': 'TOR', 'Utah Jazz': 'UTA',
+        'Washington Wizards': 'WAS'
+    }
+    
+    # NHL abbreviations
+    nhl_abbrev_map = {
+        'Anaheim Ducks': 'ANA', 'Arizona Coyotes': 'ARI', 'Boston Bruins': 'BOS',
+        'Buffalo Sabres': 'BUF', 'Calgary Flames': 'CGY', 'Carolina Hurricanes': 'CAR',
+        'Chicago Blackhawks': 'CHI', 'Colorado Avalanche': 'COL', 'Columbus Blue Jackets': 'CBJ',
+        'Dallas Stars': 'DAL', 'Detroit Red Wings': 'DET', 'Edmonton Oilers': 'EDM',
+        'Florida Panthers': 'FLA', 'Los Angeles Kings': 'LAK', 'Minnesota Wild': 'MIN',
+        'Montreal Canadiens': 'MTL', 'Nashville Predators': 'NSH', 'New Jersey Devils': 'NJD',
+        'New York Islanders': 'NYI', 'New York Rangers': 'NYR', 'Ottawa Senators': 'OTT',
+        'Philadelphia Flyers': 'PHI', 'Pittsburgh Penguins': 'PIT', 'San Jose Sharks': 'SJS',
+        'Seattle Kraken': 'SEA', 'St. Louis Blues': 'STL', 'Tampa Bay Lightning': 'TBL',
+        'Toronto Maple Leafs': 'TOR', 'Vegas Golden Knights': 'VGK', 'Vancouver Canucks': 'VAN',
+        'Washington Capitals': 'WSH', 'Winnipeg Jets': 'WPG'
+    }
+    
+    # MLB abbreviations
+    mlb_abbrev_map = {
+        'Arizona Diamondbacks': 'ARI', 'Atlanta Braves': 'ATL', 'Baltimore Orioles': 'BAL',
+        'Boston Red Sox': 'BOS', 'Chicago Cubs': 'CHC', 'Chicago White Sox': 'CWS',
+        'Cincinnati Reds': 'CIN', 'Cleveland Guardians': 'CLE', 'Colorado Rockies': 'COL',
+        'Detroit Tigers': 'DET', 'Houston Astros': 'HOU', 'Kansas City Royals': 'KC',
+        'Los Angeles Angels': 'LAA', 'Los Angeles Dodgers': 'LAD', 'Miami Marlins': 'MIA',
+        'Milwaukee Brewers': 'MIL', 'Minnesota Twins': 'MIN', 'New York Mets': 'NYM',
+        'New York Yankees': 'NYY', 'Oakland Athletics': 'OAK', 'Philadelphia Phillies': 'PHI',
+        'Pittsburgh Pirates': 'PIT', 'San Diego Padres': 'SD', 'San Francisco Giants': 'SF',
+        'Seattle Mariners': 'SEA', 'St. Louis Cardinals': 'STL', 'Tampa Bay Rays': 'TB',
+        'Texas Rangers': 'TEX', 'Toronto Blue Jays': 'TOR', 'Washington Nationals': 'WSH'
+    }
+    
+    # Select the appropriate map based on league
+    abbrev_map = {}
+    if league.upper() == 'NFL':
+        abbrev_map = nfl_abbrev_map
+    elif league.upper() == 'NBA':
+        abbrev_map = nba_abbrev_map
+    elif league.upper() == 'NHL':
+        abbrev_map = nhl_abbrev_map
+    elif league.upper() == 'MLB':
+        abbrev_map = mlb_abbrev_map
+    
+    # Try exact match first
+    if team_name in abbrev_map:
+        return abbrev_map[team_name]
+    
+    # Try case-insensitive match
+    for key, abbrev in abbrev_map.items():
+        if key.lower() == team_name.lower():
+            return abbrev
+    
+    # Fallback: Generate abbreviation from team name (first letter of each word, max 3)
+    words = team_name.split()
+    if len(words) >= 2:
+        # Take first letter of first two words, or first three letters of first word
+        abbrev = (words[0][0] + words[1][0] + (words[2][0] if len(words) > 2 else words[0][1] if len(words[0]) > 1 else '')).upper()
+        return abbrev[:3]
+    elif len(words) == 1:
+        # Single word: take first 3 letters
+        return words[0][:3].upper()
+    
+    return ''
+
 @app.route('/teams')
 def teams():
     """List all teams with pagination"""
@@ -466,6 +559,10 @@ def teams():
         """
         cursor.execute(teams_query, params + [per_page, offset])
         teams = cursor.fetchall()
+        
+        # Add abbreviations to each team
+        for team in teams:
+            team['abbreviation'] = get_team_abbreviation(team['real_team_name'], team.get('league', ''))
         
         # Get divisions for the selected league
         divisions = []
