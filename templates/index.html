@@ -856,12 +856,49 @@
                             time_remaining: scoreData?.time_remaining,
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
-                            home_wins: scoreData?.home_wins !== undefined ? scoreData.home_wins : game.home_wins,
-                            home_losses: scoreData?.home_losses !== undefined ? scoreData.home_losses : game.home_losses,
-                            home_ties: scoreData?.home_ties !== undefined && scoreData?.home_ties !== null ? scoreData.home_ties : (game.home_ties !== undefined && game.home_ties !== null ? game.home_ties : 0),
-                            visitor_wins: scoreData?.visitor_wins !== undefined ? scoreData.visitor_wins : game.visitor_wins,
-                            visitor_losses: scoreData?.visitor_losses !== undefined ? scoreData.visitor_losses : game.visitor_losses,
-                            visitor_ties: scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null ? scoreData.visitor_ties : (game.visitor_ties !== undefined && game.visitor_ties !== null ? game.visitor_ties : 0),
+                            // For NFL, try to get records from Tank01 API if not in game data
+                            home_wins: (() => {
+                                if (scoreData?.home_wins !== undefined) return scoreData.home_wins;
+                                if (game.home_wins !== undefined) return game.home_wins;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].wins;
+                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].wins;
+                                return undefined;
+                            })(),
+                            home_losses: (() => {
+                                if (scoreData?.home_losses !== undefined) return scoreData.home_losses;
+                                if (game.home_losses !== undefined) return game.home_losses;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].losses;
+                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].losses;
+                                return undefined;
+                            })(),
+                            home_ties: (() => {
+                                if (scoreData?.home_ties !== undefined && scoreData?.home_ties !== null) return scoreData.home_ties;
+                                if (game.home_ties !== undefined && game.home_ties !== null) return game.home_ties;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].ties;
+                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].ties;
+                                return 0;
+                            })(),
+                            visitor_wins: (() => {
+                                if (scoreData?.visitor_wins !== undefined) return scoreData.visitor_wins;
+                                if (game.visitor_wins !== undefined) return game.visitor_wins;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].wins;
+                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].wins;
+                                return undefined;
+                            })(),
+                            visitor_losses: (() => {
+                                if (scoreData?.visitor_losses !== undefined) return scoreData.visitor_losses;
+                                if (game.visitor_losses !== undefined) return game.visitor_losses;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].losses;
+                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].losses;
+                                return undefined;
+                            })(),
+                            visitor_ties: (() => {
+                                if (scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null) return scoreData.visitor_ties;
+                                if (game.visitor_ties !== undefined && game.visitor_ties !== null) return game.visitor_ties;
+                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].ties;
+                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].ties;
+                                return 0;
+                            })(),
                             home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
                                 ? scoreData.home_otl 
                                 : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
@@ -964,6 +1001,27 @@
                             }
                             if (scoreGame.visitor_losses !== undefined) {
                                 existing.visitor_losses = scoreGame.visitor_losses;
+                            }
+                            // For NFL, update records from Tank01 API if missing
+                            if (existing.league === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                if ((!existing.home_wins || existing.home_wins === null) && nflTeamRecords[scoreGame.home_team]) {
+                                    existing.home_wins = nflTeamRecords[scoreGame.home_team].wins;
+                                    existing.home_losses = nflTeamRecords[scoreGame.home_team].losses;
+                                    existing.home_ties = nflTeamRecords[scoreGame.home_team].ties;
+                                } else if ((!existing.home_wins || existing.home_wins === null) && scoreGame.home_team_abbrev && nflTeamRecords[scoreGame.home_team_abbrev]) {
+                                    existing.home_wins = nflTeamRecords[scoreGame.home_team_abbrev].wins;
+                                    existing.home_losses = nflTeamRecords[scoreGame.home_team_abbrev].losses;
+                                    existing.home_ties = nflTeamRecords[scoreGame.home_team_abbrev].ties;
+                                }
+                                if ((!existing.visitor_wins || existing.visitor_wins === null) && nflTeamRecords[scoreGame.visitor_team]) {
+                                    existing.visitor_wins = nflTeamRecords[scoreGame.visitor_team].wins;
+                                    existing.visitor_losses = nflTeamRecords[scoreGame.visitor_team].losses;
+                                    existing.visitor_ties = nflTeamRecords[scoreGame.visitor_team].ties;
+                                } else if ((!existing.visitor_wins || existing.visitor_wins === null) && scoreGame.visitor_team_abbrev && nflTeamRecords[scoreGame.visitor_team_abbrev]) {
+                                    existing.visitor_wins = nflTeamRecords[scoreGame.visitor_team_abbrev].wins;
+                                    existing.visitor_losses = nflTeamRecords[scoreGame.visitor_team_abbrev].losses;
+                                    existing.visitor_ties = nflTeamRecords[scoreGame.visitor_team_abbrev].ties;
+                                }
                             }
                             // Update OTL from scores - API uses home_otl/visitor_otl
                             if (scoreGame.home_otl !== undefined && scoreGame.home_otl !== null) {
