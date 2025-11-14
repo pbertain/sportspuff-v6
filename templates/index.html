@@ -201,52 +201,20 @@
                                 throw new Error(`Invalid JSON response from proxy: ${jsonError.message}`);
                             }
                         }
-                        // If proxy fails, try direct API call
-                        console.warn(`Proxy failed (${proxyRes.status}), trying direct API call`);
-                        const directRes = await fetch(directUrl, {
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        if (!directRes.ok) {
-                            let errorText = '';
-                            try {
-                                errorText = await directRes.text();
-                            } catch (e) {
-                                errorText = `Status ${directRes.status}`;
-                            }
-                            throw new Error(`API error: ${directRes.status} - ${errorText.substring(0, 200)}`);
-                        }
+                        // If proxy fails, don't try direct API call - it will fail due to CORS
+                        // The API server (api-dev.sportspuff.org) doesn't allow requests from dev.sportspuff.org
+                        // The proxy must be fixed on the server side
+                        let errorText = '';
                         try {
-                            return await directRes.json();
-                        } catch (jsonError) {
-                            console.error('JSON parse error from direct API:', jsonError);
-                            throw new Error(`Invalid JSON response from API: ${jsonError.message}`);
+                            errorText = await proxyRes.text();
+                        } catch (e) {
+                            errorText = `Status ${proxyRes.status}`;
                         }
+                        throw new Error(`Proxy failed with status ${proxyRes.status}: ${errorText.substring(0, 200)}`);
                     } catch (error) {
-                        // If both fail, try direct API as last resort
-                        console.warn(`Both proxy and direct failed, retrying direct:`, error);
-                        try {
-                            const directRes = await fetch(directUrl, {
-                                mode: 'cors',
-                                credentials: 'omit'
-                            });
-                            if (!directRes.ok) {
-                                let errorText = '';
-                                try {
-                                    errorText = await directRes.text();
-                                } catch (e) {
-                                    errorText = `Status ${directRes.status}`;
-                                }
-                                throw new Error(`API error: ${directRes.status} - ${errorText.substring(0, 200)}`);
-                            }
-                            try {
-                                return await directRes.json();
-                            } catch (jsonError) {
-                                throw new Error(`Invalid JSON response: ${jsonError.message}`);
-                            }
-                        } catch (retryError) {
-                            throw new Error(`Failed to fetch data: ${error?.message || String(error)} - ${retryError?.message || String(retryError)}`);
-                        }
+                        // Don't try direct API call - it will fail due to CORS
+                        // The proxy must be fixed on the server side
+                        throw new Error(`Failed to fetch via proxy: ${error.message}`);
                     }
                 }
                 
