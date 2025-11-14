@@ -681,8 +681,18 @@
                             if (hasScore && isFinal) {
                                 // Should have been caught by isFinal check above, but just in case
                                 statusDisplay = 'F';
+                            } else if (hasScore) {
+                                // Has score but not marked final - show current period or score
+                                if (game.current_period && game.time_remaining) {
+                                    const period = parseInt(game.current_period);
+                                    const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+                                    let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                                    statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                                } else {
+                                    statusDisplay = 'Live';
+                                }
                             } else {
-                                // Past game time but not final - show as scheduled or check if it's a timezone issue
+                                // Past game time but no score - might be timezone issue, show as scheduled
                                 statusDisplay = `${gameTimeStr} - Scheduled`;
                             }
                         }
