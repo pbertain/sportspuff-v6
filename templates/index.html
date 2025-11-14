@@ -306,24 +306,24 @@
                 let teamColors = {};
                 if (league === 'all') {
                     // Merge all team colors from all leagues
-                    Object.values(allTeamColors).forEach(leagueColors => {
+                    Object.values(validatedTeamColors).forEach(leagueColors => {
                         if (leagueColors && typeof leagueColors === 'object' && !Array.isArray(leagueColors)) {
                             Object.assign(teamColors, leagueColors);
                         }
                     });
                 } else {
-                    teamColors = (allTeamColors[leagueUpper] && typeof allTeamColors[leagueUpper] === 'object' && !Array.isArray(allTeamColors[leagueUpper])) 
-                        ? allTeamColors[leagueUpper] 
+                    teamColors = (validatedTeamColors[leagueUpper] && typeof validatedTeamColors[leagueUpper] === 'object' && !Array.isArray(validatedTeamColors[leagueUpper])) 
+                        ? validatedTeamColors[leagueUpper] 
                         : {};
                 }
                 
                 console.log(`Team colors for ${leagueUpper}:`, Object.keys(teamColors).length, 'teams');
                 // Debug: Show sample team names for each league when "all" is selected
                 if (league === 'all') {
-                    console.log('Team colors structure (by league):', Object.keys(allTeamColors));
-                    Object.keys(allTeamColors).forEach(leagueKey => {
-                        if (allTeamColors[leagueKey] && typeof allTeamColors[leagueKey] === 'object') {
-                            const leagueTeams = Object.keys(allTeamColors[leagueKey]);
+                    console.log('Team colors structure (by league):', Object.keys(validatedTeamColors));
+                    Object.keys(validatedTeamColors).forEach(leagueKey => {
+                        if (validatedTeamColors[leagueKey] && typeof validatedTeamColors[leagueKey] === 'object') {
+                            const leagueTeams = Object.keys(validatedTeamColors[leagueKey]);
                             console.log(`${leagueKey} teams (${leagueTeams.length}):`, leagueTeams.slice(0, 5));
                         }
                     });
@@ -331,7 +331,7 @@
                 if (Object.keys(teamColors).length > 0) {
                     console.log('Sample team names in colors:', Object.keys(teamColors).slice(0, 5));
                 } else {
-                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(allTeamColors));
+                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(validatedTeamColors));
                 }
                 
                 // Check for API errors
@@ -426,7 +426,7 @@
                         if (teamColors && teamColors[abbrevKey]) {
                             return teamColors[abbrevKey];
                         }
-                        // Also check in allTeamColors['NFL'] if available
+                        // Also check in validatedTeamColors['NFL'] if available (use allTeamColors from outer scope)
                         if (allTeamColors && allTeamColors['NFL'] && allTeamColors['NFL'][abbrevKey]) {
                             return allTeamColors['NFL'][abbrevKey];
                         }
@@ -598,6 +598,10 @@
                     const visitorLogoBg = getTeamLogoBg(game.visitor_team);
                     const homeLogoBg = getTeamLogoBg(game.home_team);
                     
+                    // Get team data for full names and abbreviations (needed early)
+                    const visitorTeamData = findTeamData(game.visitor_team);
+                    const homeTeamData = findTeamData(game.home_team);
+                    
                     // Determine winner
                     let visitorIsWinner = false;
                     let homeIsWinner = false;
@@ -734,8 +738,7 @@
                     const homeUrl = getTeamUrl(game.home_team, gameLeague);
                     
                     // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
-                    const visitorTeamData = findTeamData(game.visitor_team);
-                    const homeTeamData = findTeamData(game.home_team);
+                    // (visitorTeamData and homeTeamData are already defined above)
                     const visitorAbbrev = visitorTeamData?.abbreviation || game.visitor_team_abbrev || '';
                     const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
                     
