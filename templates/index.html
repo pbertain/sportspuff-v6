@@ -185,6 +185,7 @@
                 const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
                 let scheduleData, scoresData;
+                let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
@@ -287,6 +288,22 @@
                     });
                 } else {
                     // For single league
+                    // Fetch NFL team records if viewing NFL
+                    if (league === 'nfl') {
+                        try {
+                            const nflRecordsResponse = await fetch('/api/nfl/team-records');
+                            if (nflRecordsResponse.ok) {
+                                const nflRecordsData = await nflRecordsResponse.json();
+                                nflTeamRecords = nflRecordsData.teams || {};
+                                console.log('Fetched NFL team records:', Object.keys(nflTeamRecords).length, 'teams');
+                            } else {
+                                console.warn('Failed to fetch NFL team records:', nflRecordsResponse.status);
+                            }
+                        } catch (error) {
+                            console.warn('Error fetching NFL team records:', error);
+                        }
+                    }
+                    
                     const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
                     const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
                     const scheduleDirect = `${API_BASE}/schedule/${league}/today?tz=${timezone}`;
