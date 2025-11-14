@@ -296,10 +296,11 @@
                 console.log('Scores data:', scoresData);
                 console.log('Available team colors:', allTeamColors ? Object.keys(allTeamColors) : 'undefined');
                 
-                // Validate allTeamColors structure
-                if (!allTeamColors || typeof allTeamColors !== 'object') {
-                    console.error('allTeamColors is not properly initialized:', allTeamColors);
-                    allTeamColors = {};
+                // Validate allTeamColors structure - use local variable
+                let validatedAllTeamColors = allTeamColors;
+                if (!validatedAllTeamColors || typeof validatedAllTeamColors !== 'object') {
+                    console.error('allTeamColors is not properly initialized:', validatedAllTeamColors);
+                    validatedAllTeamColors = {};
                 }
                 
                 // Get team colors - if "all", merge all leagues; otherwise get specific league
