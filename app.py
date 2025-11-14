@@ -160,6 +160,10 @@ def index():
             # Get team abbreviation
             abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
             
+            # Use full_team_name as primary key (proper capitalization and spacing)
+            full_name = team['full_team_name']
+            real_name = team['real_team_name']
+            
             team_data = {
                 'color_1': team['team_color_1'],
                 'color_2': team['team_color_2'],
@@ -169,14 +173,6 @@ def index():
                 'full_team_name': full_name,  # Store full team name for display
                 'real_team_name': real_name   # Store real team name as backup
             }
-            
-            # Use full_team_name as primary key (proper capitalization and spacing)
-            full_name = team['full_team_name']
-            real_name = team['real_team_name']
-            
-            # Update team_data with names (needed for display)
-            team_data['full_team_name'] = full_name
-            team_data['real_team_name'] = real_name
             
             # Map full_team_name (primary)
             team_colors[league_proper][full_name] = team_data
