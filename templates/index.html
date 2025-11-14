@@ -753,7 +753,7 @@
                     
                     return `
                         <tr>
-                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap;">
+                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
@@ -767,7 +767,7 @@
                             <td style="text-align: center; font-weight: 700; font-size: 1.3rem; padding: 10px 8px; position: relative; white-space: nowrap; min-width: 80px;">
                                 ${scoreDisplay}
                             </td>
-                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap;">
+                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
