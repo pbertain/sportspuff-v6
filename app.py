@@ -1067,7 +1067,8 @@ def nfl_team_records():
             return jsonify({'teams': team_records})
         else:
             logger.error(f"Unexpected API response: {data}")
-            return jsonify({'error': 'Unexpected API response'}), 500
+            # Return empty records instead of 500 - frontend can handle this gracefully
+            return jsonify({'teams': {}})
             
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching NFL team records: {e}")
