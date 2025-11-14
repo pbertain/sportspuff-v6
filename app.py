@@ -999,6 +999,78 @@ def proxy_schedule(league, date):
         logger.error(f"Unexpected error in proxy_schedule: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/nfl/team-records')
+def nfl_team_records():
+    """Fetch NFL team records from Tank01 API"""
+    try:
+        rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
+        if not rapidapi_key:
+            logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
+            return jsonify({'error': 'RAPIDAPI_KEY not configured'}), 500
+        
+        url = "https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams"
+        querystring = {
+            "sortBy": "standings",
+            "rosters": "false",
+            "schedules": "false",
+            "topPerformers": "true",
+            "teamStats": "true",
+            "teamStatsSeason": "2024"
+        }
+        headers = {
+            "x-rapidapi-key": rapidapi_key,
+            "x-rapidapi-host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
+        }
+        
+        logger.info("Fetching NFL team records from Tank01 API")
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get('statusCode') == 200 and 'body' in data:
+            teams = data['body']
+            # Create a mapping of team name to record
+            # Team name format: teamCity + " " + teamName (e.g., "New England Patriots")
+            team_records = {}
+            for team in teams:
+                team_city = team.get('teamCity', '')
+                team_name = team.get('teamName', '')
+                full_team_name = f"{team_city} {team_name}".strip()
+                
+                # Get record values (API returns as strings)
+                wins = int(team.get('wins', 0)) if team.get('wins') else 0
+                loss = int(team.get('loss', 0)) if team.get('loss') else 0
+                tie = int(team.get('tie', 0)) if team.get('tie') else 0
+                
+                # Store by full team name
+                team_records[full_team_name] = {
+                    'wins': wins,
+                    'losses': loss,
+                    'ties': tie
+                }
+                
+                # Also store by abbreviation if available
+                team_abv = team.get('teamAbv', '').strip()
+                if team_abv:
+                    team_records[team_abv] = {
+                        'wins': wins,
+                        'losses': loss,
+                        'ties': tie
+                    }
+            
+            logger.info(f"Fetched records for {len(team_records)} NFL teams")
+            return jsonify({'teams': team_records})
+        else:
+            logger.error(f"Unexpected API response: {data}")
+            return jsonify({'error': 'Unexpected API response'}), 500
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching NFL team records: {e}")
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
     """Proxy scores API requests to avoid CORS issues with very short caching"""
