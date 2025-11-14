@@ -903,46 +903,90 @@
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
                             // For NFL, try to get records from Tank01 API if not in game data
+                            // Use visitorTeamData and homeTeamData to get proper team names for matching
                             home_wins: (() => {
                                 if (scoreData?.home_wins !== undefined) return scoreData.home_wins;
                                 if (game.home_wins !== undefined) return game.home_wins;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].wins;
-                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].wins;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    // Try matching by various team name formats
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].wins;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].wins;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].wins;
+                                }
                                 return undefined;
                             })(),
                             home_losses: (() => {
                                 if (scoreData?.home_losses !== undefined) return scoreData.home_losses;
                                 if (game.home_losses !== undefined) return game.home_losses;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].losses;
-                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].losses;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].losses;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].losses;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].losses;
+                                }
                                 return undefined;
                             })(),
                             home_ties: (() => {
                                 if (scoreData?.home_ties !== undefined && scoreData?.home_ties !== null) return scoreData.home_ties;
                                 if (game.home_ties !== undefined && game.home_ties !== null) return game.home_ties;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.home_team]) return nflTeamRecords[game.home_team].ties;
-                                if (gameLeague === 'nfl' && game.home_team_abbrev && nflTeamRecords[game.home_team_abbrev]) return nflTeamRecords[game.home_team_abbrev].ties;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].ties;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].ties;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].ties;
+                                }
                                 return 0;
                             })(),
                             visitor_wins: (() => {
                                 if (scoreData?.visitor_wins !== undefined) return scoreData.visitor_wins;
                                 if (game.visitor_wins !== undefined) return game.visitor_wins;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].wins;
-                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].wins;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].wins;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].wins;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].wins;
+                                }
                                 return undefined;
                             })(),
                             visitor_losses: (() => {
                                 if (scoreData?.visitor_losses !== undefined) return scoreData.visitor_losses;
                                 if (game.visitor_losses !== undefined) return game.visitor_losses;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].losses;
-                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].losses;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].losses;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].losses;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].losses;
+                                }
                                 return undefined;
                             })(),
                             visitor_ties: (() => {
                                 if (scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null) return scoreData.visitor_ties;
                                 if (game.visitor_ties !== undefined && game.visitor_ties !== null) return game.visitor_ties;
-                                if (gameLeague === 'nfl' && nflTeamRecords[game.visitor_team]) return nflTeamRecords[game.visitor_team].ties;
-                                if (gameLeague === 'nfl' && game.visitor_team_abbrev && nflTeamRecords[game.visitor_team_abbrev]) return nflTeamRecords[game.visitor_team_abbrev].ties;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].ties;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].ties;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].ties;
+                                }
                                 return 0;
                             })(),
                             home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
