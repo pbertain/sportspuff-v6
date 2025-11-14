@@ -1233,16 +1233,18 @@
             } catch (error) {
                 console.error('Error loading scores and schedules:', error);
                 console.error('Error details:', {
-                    message: error.message,
-                    stack: error.stack,
+                    message: error?.message || String(error),
+                    stack: error?.stack,
+                    name: error?.name,
                     league: league,
                     timezone: timezone
                 });
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
                 container.innerHTML = `
                     <div class="text-center">
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            Unable to load scores and schedules. Error: ${error.message}
+                            Unable to load scores and schedules. Error: ${errorMessage}
                             <br><small>Please check the console for more details.</small>
                         </div>
                     </div>
