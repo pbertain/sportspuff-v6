@@ -307,24 +307,24 @@
                 let teamColors = {};
                 if (league === 'all') {
                     // Merge all team colors from all leagues
-                    Object.values(validatedTeamColors).forEach(leagueColors => {
+                    Object.values(validatedAllTeamColors).forEach(leagueColors => {
                         if (leagueColors && typeof leagueColors === 'object' && !Array.isArray(leagueColors)) {
                             Object.assign(teamColors, leagueColors);
                         }
                     });
                 } else {
-                    teamColors = (validatedTeamColors[leagueUpper] && typeof validatedTeamColors[leagueUpper] === 'object' && !Array.isArray(validatedTeamColors[leagueUpper])) 
-                        ? validatedTeamColors[leagueUpper] 
+                    teamColors = (validatedAllTeamColors[leagueUpper] && typeof validatedAllTeamColors[leagueUpper] === 'object' && !Array.isArray(validatedAllTeamColors[leagueUpper])) 
+                        ? validatedAllTeamColors[leagueUpper] 
                         : {};
                 }
                 
                 console.log(`Team colors for ${leagueUpper}:`, Object.keys(teamColors).length, 'teams');
                 // Debug: Show sample team names for each league when "all" is selected
                 if (league === 'all') {
-                    console.log('Team colors structure (by league):', Object.keys(validatedTeamColors));
-                    Object.keys(validatedTeamColors).forEach(leagueKey => {
-                        if (validatedTeamColors[leagueKey] && typeof validatedTeamColors[leagueKey] === 'object') {
-                            const leagueTeams = Object.keys(validatedTeamColors[leagueKey]);
+                    console.log('Team colors structure (by league):', Object.keys(validatedAllTeamColors));
+                    Object.keys(validatedAllTeamColors).forEach(leagueKey => {
+                        if (validatedAllTeamColors[leagueKey] && typeof validatedAllTeamColors[leagueKey] === 'object') {
+                            const leagueTeams = Object.keys(validatedAllTeamColors[leagueKey]);
                             console.log(`${leagueKey} teams (${leagueTeams.length}):`, leagueTeams.slice(0, 5));
                         }
                     });
@@ -332,7 +332,7 @@
                 if (Object.keys(teamColors).length > 0) {
                     console.log('Sample team names in colors:', Object.keys(teamColors).slice(0, 5));
                 } else {
-                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(validatedTeamColors));
+                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(validatedAllTeamColors));
                 }
                 
                 // Check for API errors
