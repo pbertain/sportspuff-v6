@@ -192,7 +192,12 @@
                         // Try proxy first
                         const proxyRes = await fetch(proxyUrl);
                         if (proxyRes.ok) {
-                            return await proxyRes.json();
+                            try {
+                                return await proxyRes.json();
+                            } catch (jsonError) {
+                                console.error('JSON parse error from proxy:', jsonError);
+                                throw new Error(`Invalid JSON response from proxy: ${jsonError.message}`);
+                            }
                         }
                         // If proxy fails, try direct API call
                         console.warn(`Proxy failed (${proxyRes.status}), trying direct API call`);
@@ -201,20 +206,45 @@
                             credentials: 'omit'
                         });
                         if (!directRes.ok) {
-                            throw new Error(`API error: ${directRes.status}`);
+                            let errorText = '';
+                            try {
+                                errorText = await directRes.text();
+                            } catch (e) {
+                                errorText = `Status ${directRes.status}`;
+                            }
+                            throw new Error(`API error: ${directRes.status} - ${errorText.substring(0, 200)}`);
                         }
-                        return await directRes.json();
+                        try {
+                            return await directRes.json();
+                        } catch (jsonError) {
+                            console.error('JSON parse error from direct API:', jsonError);
+                            throw new Error(`Invalid JSON response from API: ${jsonError.message}`);
+                        }
                     } catch (error) {
                         // If both fail, try direct API as last resort
                         console.warn(`Both proxy and direct failed, retrying direct:`, error);
-                        const directRes = await fetch(directUrl, {
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        if (!directRes.ok) {
-                            throw new Error(`API error: ${directRes.status} - ${error.message}`);
+                        try {
+                            const directRes = await fetch(directUrl, {
+                                mode: 'cors',
+                                credentials: 'omit'
+                            });
+                            if (!directRes.ok) {
+                                let errorText = '';
+                                try {
+                                    errorText = await directRes.text();
+                                } catch (e) {
+                                    errorText = `Status ${directRes.status}`;
+                                }
+                                throw new Error(`API error: ${directRes.status} - ${errorText.substring(0, 200)}`);
+                            }
+                            try {
+                                return await directRes.json();
+                            } catch (jsonError) {
+                                throw new Error(`Invalid JSON response: ${jsonError.message}`);
+                            }
+                        } catch (retryError) {
+                            throw new Error(`Failed to fetch data: ${error?.message || String(error)} - ${retryError?.message || String(retryError)}`);
                         }
-                        return await directRes.json();
                     }
                 }
                 
