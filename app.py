@@ -963,7 +963,13 @@ def proxy_schedule(league, date):
             # If cached date doesn't match today, clear it and fetch fresh
         
         # Fetch from API with timezone parameter
-        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', API_BASE_URL)
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
+        if not api_base:
+            # Try to get from default API_BASE_URL if defined
+            try:
+                api_base = API_BASE_URL
+            except NameError:
+                api_base = None
         if not api_base:
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
