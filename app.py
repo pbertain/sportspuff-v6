@@ -76,9 +76,13 @@ DB_CONFIG = {
 def get_db_connection():
     """Get database connection"""
     try:
+        logger.info(f"Attempting database connection with config: host={DB_CONFIG['host']}, database={DB_CONFIG['database']}, user={DB_CONFIG['user']}")
         conn = psycopg2.connect(**DB_CONFIG)
+        logger.info("Database connection successful")
         return conn
     except psycopg2.Error as e:
+        # Log the error
+        logger.error(f'Database connection error: {e}', exc_info=True)
         # Only flash if we're in a request context
         try:
             flash(f'Database connection error: {e}', 'error')
