@@ -963,7 +963,11 @@ def proxy_schedule(league, date):
             # If cached date doesn't match today, clear it and fetch fresh
         
         # Fetch from API with timezone parameter
-        url = f'{API_BASE_URL}/api/v1/schedule/{league}/{api_date}?tz={tz}'
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', API_BASE_URL)
+        if not api_base:
+            logger.error("SPORTSPUFF_API_BASE_URL not configured")
+            return jsonify({'error': 'API base URL not configured'}), 500
+        url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching schedule from: {url}")
         response = requests.get(url, timeout=10)
         
@@ -1006,7 +1010,8 @@ def nfl_team_records():
         rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
         if not rapidapi_key:
             logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
-            return jsonify({'error': 'RAPIDAPI_KEY not configured'}), 500
+            # Return empty records instead of 500 - frontend can handle this gracefully
+            return jsonify({'teams': {}})
         
         url = "https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams"
         querystring = {
@@ -1066,10 +1071,12 @@ def nfl_team_records():
             
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching NFL team records: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Return empty records instead of 500 - frontend can handle this gracefully
+        return jsonify({'teams': {}})
     except Exception as e:
         logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        # Return empty records instead of 500 - frontend can handle this gracefully
+        return jsonify({'teams': {}})
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
@@ -1100,7 +1107,11 @@ def proxy_scores(league, date):
                 pass
         
         # Always fetch fresh scores (cache is just for rapid consecutive requests)
-        url = f'{API_BASE_URL}/api/v1/scores/{league}/{api_date}?tz={tz}'
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', API_BASE_URL)
+        if not api_base:
+            logger.error("SPORTSPUFF_API_BASE_URL not configured")
+            return jsonify({'error': 'API base URL not configured'}), 500
+        url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching scores from: {url}")
         response = requests.get(url, timeout=10)
         
