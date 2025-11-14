@@ -133,7 +133,7 @@ def index():
         # Use full_team_name for proper capitalization and spacing
         cursor.execute("""
             SELECT t.full_team_name, t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3, 
-                   t.logo_filename, l.league_name, l.league_name_proper
+                   t.logo_filename, t.team_abbreviation, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
             WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba')
@@ -157,8 +157,10 @@ def index():
                 # Use splitsp.lat for all logos
                 logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{team["logo_filename"]}'
             
-            # Get team abbreviation
-            abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
+            # Get team abbreviation - use from database if available, otherwise generate
+            abbrev = team.get('team_abbreviation')
+            if not abbrev:
+                abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
             
             # Use full_team_name as primary key (proper capitalization and spacing)
             full_name = team['full_team_name']
