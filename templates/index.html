@@ -704,8 +704,9 @@
                     const homeShortName = getShortTeamName(homeFullName);
                     
                     // Format status
+                    // IMPORTANT: Check for scores FIRST - if game has a score, it's not scheduled
                     let statusDisplay = '';
-                    if (isFinal) {
+                    if (hasScore && isFinal) {
                         const period = parseInt(game.current_period) || 4;
                         if (period > 4) {
                             const otCount = period - 4;
@@ -713,48 +714,70 @@
                         } else {
                             statusDisplay = 'F';
                         }
+                    } else if (hasScore) {
+                        // Has score but not final - show current period
+                        if (game.current_period && game.time_remaining) {
+                            const period = parseInt(game.current_period);
+                            // Use P for Period in NHL, Q for Quarter in NBA/NFL
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        } else {
+                            statusDisplay = 'Live';
+                        }
                     } else if (game.current_period && game.time_remaining) {
+                        // Game in progress but no score yet (shouldn't happen, but handle it)
                         const period = parseInt(game.current_period);
-                        // Use P for Period in NHL, Q for Quarter in NBA
                         const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
                         let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
                         statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                     } else if (isScheduled && game.game_time) {
-                        const gameDate = new Date(game.game_time);
-                        const now = new Date();
-                        const diffMs = gameDate - now;
-                        const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-                        if (diffMs > 0) {
-                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                            // For NHL and NFL, always show time until game if it's in the future
-                            // For other leagues, show time if less than 24h15m (1455 minutes)
-                            const totalMinutes = Math.floor(diffMs / (1000 * 60));
-                            if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
-                                const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
-                                statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
-                            } else {
-                                statusDisplay = `${gameTimeStr} - Scheduled`;
+                        // Parse game time - API should return ISO 8601 format
+                        // If the time appears to be in the past but there's no score, it might be a timezone issue
+                        let gameDate;
+                        try {
+                            gameDate = new Date(game.game_time);
+                            // If parsing fails, try to handle it
+                            if (isNaN(gameDate.getTime())) {
+                                console.warn('Invalid game_time:', game.game_time);
+                                statusDisplay = 'Scheduled';
+                                gameDate = null;
                             }
-                        } else {
-                            // Game time is in the past but not final - might be timezone issue
-                            // Check if game is actually finished by checking scores
-                            if (hasScore && isFinal) {
-                                // Should have been caught by isFinal check above, but just in case
-                                statusDisplay = 'F';
-                            } else if (hasScore) {
-                                // Has score but not marked final - show current period or score
-                                if (game.current_period && game.time_remaining) {
-                                    const period = parseInt(game.current_period);
-                                    const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                                    let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
-                                    statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        } catch (e) {
+                            console.warn('Error parsing game_time:', game.game_time, e);
+                            statusDisplay = 'Scheduled';
+                            gameDate = null;
+                        }
+                        
+                        if (gameDate) {
+                            const now = new Date();
+                            const diffMs = gameDate - now;
+                            const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+                            
+                            if (diffMs > 0) {
+                                // Game is in the future
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                // For NHL and NFL, always show time until game if it's in the future
+                                // For other leagues, show time if less than 24h15m (1455 minutes)
+                                const totalMinutes = Math.floor(diffMs / (1000 * 60));
+                                if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
+                                    const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
+                                    statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                                 } else {
-                                    statusDisplay = 'Live';
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
                                 }
                             } else {
-                                // Past game time but no score - might be timezone issue, show as scheduled
-                                statusDisplay = `${gameTimeStr} - Scheduled`;
+                                // Game time is in the past but no score - likely timezone issue or game hasn't started
+                                // For NFL, if it's more than 3 hours in the past, it's definitely a timezone issue
+                                const hoursPast = Math.abs(diffMs) / (1000 * 60 * 60);
+                                if (hoursPast > 3) {
+                                    // Likely timezone issue - show as scheduled with original time
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
+                                } else {
+                                    // Less than 3 hours past - might be starting soon or just started
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
+                                }
                             }
                         }
                     } else {
@@ -911,7 +934,7 @@
                                     // Try matching by various team name formats
                                     const homeTeamName = game.home_team;
                                     const homeTeamAbbrev = game.home_team_abbrev || '';
-                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
                                     
                                     if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].wins;
                                     if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].wins;
@@ -925,7 +948,7 @@
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const homeTeamName = game.home_team;
                                     const homeTeamAbbrev = game.home_team_abbrev || '';
-                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
                                     
                                     if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].losses;
                                     if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].losses;
@@ -939,7 +962,7 @@
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const homeTeamName = game.home_team;
                                     const homeTeamAbbrev = game.home_team_abbrev || '';
-                                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || homeTeamName;
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
                                     
                                     if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].ties;
                                     if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].ties;
@@ -953,7 +976,7 @@
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
-                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
                                     
                                     if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].wins;
                                     if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].wins;
@@ -967,7 +990,7 @@
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
-                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
                                     
                                     if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].losses;
                                     if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].losses;
@@ -981,7 +1004,7 @@
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
-                                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || visitorTeamName;
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
                                     
                                     if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].ties;
                                     if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].ties;
