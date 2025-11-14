@@ -657,8 +657,10 @@
                         if (diffMs > 0) {
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                             const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                            // For NFL, if less than 24h15m, show hours and minutes
-                            if (diffMs < (24 * 60 + 15) * 60 * 1000) {
+                            // Calculate total minutes for comparison (24h15m = 1455 minutes)
+                            const totalMinutes = Math.floor(diffMs / (1000 * 60));
+                            // Show time until game if less than 24h15m (1455 minutes)
+                            if (totalMinutes < 1455) {
                                 const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
                                 statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                             } else {
