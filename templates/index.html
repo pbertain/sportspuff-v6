@@ -1000,17 +1000,17 @@
                                 time_remaining: scoreGame.time_remaining,
                                 // For NFL, try to get records from Tank01 API if not in score data
                                 home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
                                 home_losses: scoreGame.home_losses !== undefined && scoreGame.home_losses !== null ? scoreGame.home_losses : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].losses : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].losses : null),
                                 home_ties: scoreGame.home_ties !== undefined && scoreGame.home_ties !== null ? scoreGame.home_ties : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].ties : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].ties : null),
                                 visitor_wins: scoreGame.visitor_wins !== undefined && scoreGame.visitor_wins !== null ? scoreGame.visitor_wins : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].wins : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].wins : null),
                                 visitor_losses: scoreGame.visitor_losses !== undefined && scoreGame.visitor_losses !== null ? scoreGame.visitor_losses : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].losses : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].losses : null),
                                 visitor_ties: scoreGame.visitor_ties !== undefined && scoreGame.visitor_ties !== null ? scoreGame.visitor_ties : 
-                                    (gameLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].ties : null),
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].ties : null),
                                 home_otl: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
                                 visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
                                 // Also keep old field names for backward compatibility
