@@ -96,6 +96,7 @@ def index():
     """Home page with overview statistics"""
     conn = get_db_connection()
     if not conn:
+        logger.warning("get_db_connection() returned None - database unavailable")
         # Fallback data when database is not available
         return render_template('index.html', 
                              team_count=0,
@@ -107,6 +108,7 @@ def index():
                              API_BASE_URL=API_BASE_URL,
                              db_available=False)
     
+    logger.info("Database connection obtained, executing queries")
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -301,7 +303,13 @@ def index():
                              db_available=True)
     
     except Exception as e:
+        logger.error(f'Error loading dashboard: {e}', exc_info=True)
         flash(f'Error loading dashboard: {e}', 'error')
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
         return render_template('index.html', 
                              team_count=0,
                              stadium_count=0,
