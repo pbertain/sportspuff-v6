@@ -178,9 +178,11 @@
             const leagueUpper = league.toUpperCase();
             
             try {
-                // Call API directly - proxy will handle CORS via Flask-CORS
-                // Try proxy first, fallback to direct API call if proxy fails
+                // Call API via proxy - proxy will handle CORS via Flask-CORS
+                // The proxy makes server-side requests, so CORS doesn't apply
+                // Only try direct API call if proxy completely fails (shouldn't happen)
                 const API_BASE = '{{ API_BASE_URL }}/api/v1';
+                // Build proxy URLs - these will be modified per league/date
                 const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
                 const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
