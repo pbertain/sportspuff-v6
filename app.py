@@ -1011,7 +1011,7 @@ def nfl_team_records():
         if not rapidapi_key:
             logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
             # Return empty records instead of 500 - frontend can handle this gracefully
-            return jsonify({'teams': {}})
+            return jsonify({'teams': {}}), 200
         
         url = "https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams"
         querystring = {
@@ -1064,20 +1064,20 @@ def nfl_team_records():
                     }
             
             logger.info(f"Fetched records for {len(team_records)} NFL teams")
-            return jsonify({'teams': team_records})
+            return jsonify({'teams': team_records}), 200
         else:
             logger.error(f"Unexpected API response: {data}")
             # Return empty records instead of 500 - frontend can handle this gracefully
-            return jsonify({'teams': {}})
+            return jsonify({'teams': {}}), 200
             
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching NFL team records: {e}")
         # Return empty records instead of 500 - frontend can handle this gracefully
-        return jsonify({'teams': {}})
+        return jsonify({'teams': {}}), 200
     except Exception as e:
         logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
         # Return empty records instead of 500 - frontend can handle this gracefully
-        return jsonify({'teams': {}})
+        return jsonify({'teams': {}}), 200
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
@@ -1108,7 +1108,13 @@ def proxy_scores(league, date):
                 pass
         
         # Always fetch fresh scores (cache is just for rapid consecutive requests)
-        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', API_BASE_URL)
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
+        if not api_base:
+            # Try to get from default API_BASE_URL if defined
+            try:
+                api_base = API_BASE_URL
+            except NameError:
+                api_base = None
         if not api_base:
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
