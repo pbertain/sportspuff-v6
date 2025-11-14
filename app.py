@@ -168,7 +168,7 @@ def index():
             if not abbrev:
                 abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
             
-            # Use full_team_name as primary key (proper capitalization and spacing)
+            # Use real_team_name as primary key (has spaces between words)
             full_name = team['full_team_name']
             real_name = team['real_team_name']
             
@@ -178,37 +178,37 @@ def index():
                 'color_3': team['team_color_3'],
                 'logo_url': logo_url,
                 'abbreviation': abbrev,
-                'full_team_name': full_name,  # Store full team name for display
-                'real_team_name': real_name   # Store real team name as backup
+                'full_team_name': full_name,  # Store full team name as backup
+                'real_team_name': real_name   # Store real team name for display (has spaces)
             }
             
-            # Map full_team_name (primary)
-            team_colors[league_proper][full_name] = team_data
+            # Map real_team_name (primary) - this has spaces between words
+            team_colors[league_proper][real_name] = team_data
             
-            # Also map real_team_name for backward compatibility
-            if real_name and real_name != full_name:
-                team_colors[league_proper][real_name] = team_data
+            # Also map full_team_name for backward compatibility
+            if full_name and full_name != real_name:
+                team_colors[league_proper][full_name] = team_data
             
-            # Map common variations using full_team_name
+            # Map common variations using real_team_name (which has spaces)
             # Los Angeles variations
-            if 'Los Angeles' in full_name:
+            if 'Los Angeles' in real_name:
                 # Map "LA Clippers" to "Los Angeles Clippers"
-                team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
-            elif full_name.startswith('LA '):
+                team_colors[league_proper][real_name.replace('Los Angeles', 'LA')] = team_data
+            elif real_name.startswith('LA '):
                 # Map "Los Angeles Clippers" to "LA Clippers"
-                team_colors[league_proper][full_name.replace('LA ', 'Los Angeles ')] = team_data
+                team_colors[league_proper][real_name.replace('LA ', 'Los Angeles ')] = team_data
             
             # New York variations
-            if 'New York' in full_name:
-                team_colors[league_proper][full_name.replace('New York', 'NY')] = team_data
-            elif full_name.startswith('NY '):
-                team_colors[league_proper][full_name.replace('NY ', 'New York ')] = team_data
+            if 'New York' in real_name:
+                team_colors[league_proper][real_name.replace('New York', 'NY')] = team_data
+            elif real_name.startswith('NY '):
+                team_colors[league_proper][real_name.replace('NY ', 'New York ')] = team_data
             
             # San Francisco variations
-            if 'San Francisco' in full_name:
-                team_colors[league_proper][full_name.replace('San Francisco', 'SF')] = team_data
-            elif full_name.startswith('SF '):
-                team_colors[league_proper][full_name.replace('SF ', 'San Francisco ')] = team_data
+            if 'San Francisco' in real_name:
+                team_colors[league_proper][real_name.replace('San Francisco', 'SF')] = team_data
+            elif real_name.startswith('SF '):
+                team_colors[league_proper][real_name.replace('SF ', 'San Francisco ')] = team_data
             
             # NFL-specific mappings: Map abbreviations and common variations
             if league_proper == 'NFL':
@@ -249,17 +249,17 @@ def index():
                     'WAS': 'Washington Commanders'  # Alternative abbreviation
                 }
                 
-                # Map abbreviations to full team name
+                # Map abbreviations to real team name (which has spaces)
                 for abbrev, mapped_name in nfl_abbrev_map.items():
-                    if mapped_name == full_name or mapped_name == real_name:
+                    if mapped_name == real_name or mapped_name == full_name:
                         # Map abbreviation to this team
                         team_colors[league_proper][abbrev] = team_data
                         # Also map just the team name part (e.g., "Cardinals", "Eagles")
-                        team_name_only = full_name.split()[-1]  # Last word
+                        team_name_only = real_name.split()[-1]  # Last word
                         if team_name_only:
                             team_colors[league_proper][team_name_only] = team_data
                             # Also map "City Team" format (e.g., "Arizona Cardinals")
-                            city_part = ' '.join(full_name.split()[:-1])
+                            city_part = ' '.join(real_name.split()[:-1])
                             if city_part:
                                 team_colors[league_proper][f"{city_part} {team_name_only}"] = team_data
                                 # Map common city abbreviations

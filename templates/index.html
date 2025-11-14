@@ -636,8 +636,9 @@
                         return shortName;
                     }
                     // Get full team names from database if available, otherwise use API team name
-                    const visitorFullName = visitorTeamData?.full_team_name || visitorTeamData?.real_team_name || game.visitor_team;
-                    const homeFullName = homeTeamData?.full_team_name || homeTeamData?.real_team_name || game.home_team;
+                    // Use real_team_name first (has spaces between words)
+                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team;
+                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team;
                     const visitorShortName = getShortTeamName(visitorFullName);
                     const homeShortName = getShortTeamName(homeFullName);
                     
@@ -665,17 +666,25 @@
                         if (diffMs > 0) {
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                             const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                            // Calculate total minutes for comparison (24h15m = 1455 minutes)
+                            // For NHL and NFL, always show time until game if it's in the future
+                            // For other leagues, show time if less than 24h15m (1455 minutes)
                             const totalMinutes = Math.floor(diffMs / (1000 * 60));
-                            // Show time until game if less than 24h15m (1455 minutes)
-                            if (totalMinutes < 1455) {
+                            if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
                                 const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
                                 statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                             } else {
                                 statusDisplay = `${gameTimeStr} - Scheduled`;
                             }
                         } else {
-                            statusDisplay = `${gameTimeStr} - Scheduled`;
+                            // Game time is in the past but not final - might be timezone issue
+                            // Check if game is actually finished by checking scores
+                            if (hasScore && isFinal) {
+                                // Should have been caught by isFinal check above, but just in case
+                                statusDisplay = 'F';
+                            } else {
+                                // Past game time but not final - show as scheduled or check if it's a timezone issue
+                                statusDisplay = `${gameTimeStr} - Scheduled`;
+                            }
                         }
                     } else {
                         statusDisplay = 'Scheduled';
