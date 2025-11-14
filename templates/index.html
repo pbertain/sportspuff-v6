@@ -422,8 +422,13 @@
                     if (nflAbbrevs.includes(searchName.toUpperCase())) {
                         // Try to find by abbreviation (should be mapped in backend)
                         const abbrevKey = searchName.toUpperCase();
-                        if (teamColors[abbrevKey]) {
+                        // Check in current league's teamColors
+                        if (teamColors && teamColors[abbrevKey]) {
                             return teamColors[abbrevKey];
+                        }
+                        // Also check in allTeamColors['NFL'] if available
+                        if (allTeamColors && allTeamColors['NFL'] && allTeamColors['NFL'][abbrevKey]) {
+                            return allTeamColors['NFL'][abbrevKey];
                         }
                     }
                     
