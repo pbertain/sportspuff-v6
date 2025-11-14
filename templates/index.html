@@ -235,7 +235,6 @@
                     const nflScoresDirect = `${API_BASE}/scores/nfl/today?tz=${timezone}`;
                     
                     // Fetch NFL team records from Tank01 API
-                    let nflTeamRecords = {};
                     try {
                         const nflRecordsResponse = await fetch('/api/nfl/team-records');
                         if (nflRecordsResponse.ok) {
