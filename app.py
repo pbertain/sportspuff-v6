@@ -1016,12 +1016,33 @@ def proxy_schedule(league, date):
         return jsonify(data)
     except requests.exceptions.Timeout:
         logger.error(f"Timeout proxying schedule request to {url}")
+        # Try to return cached response if available
+        if 'cached_response' in locals() and cached_response:
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                logger.info("Returning cached schedule after timeout")
+                return jsonify(cached_response)
         return jsonify({'error': 'API request timed out'}), 500
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying schedule request: {e}")
+        # Try to return cached response if available
+        if 'cached_response' in locals() and cached_response:
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                logger.info("Returning cached schedule after request exception")
+                return jsonify(cached_response)
         return jsonify({'error': f'API request failed: {str(e)}'}), 500
     except Exception as e:
         logger.error(f"Unexpected error in proxy_schedule: {e}", exc_info=True)
+        # Try to return cached response if available
+        if 'cached_response' in locals() and cached_response:
+            cached_date = cached_response.get('date', '')
+            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            if cached_date == today_date:
+                logger.info("Returning cached schedule after unexpected error")
+                return jsonify(cached_response)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/nfl/team-records')
