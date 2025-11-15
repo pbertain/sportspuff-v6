@@ -24,15 +24,16 @@
         }
         .table tbody tr td {
             background-color: transparent !important;
-            color: #FFFFFF !important; /* White text for better contrast */
+            color: #1e3a8a !important; /* Dark blue - between black and white */
             font-weight: 300; /* Lighter font weight for better readability */
         }
         .table tbody tr {
-            color: #FFFFFF !important; /* White text for better contrast */
+            color: #1e3a8a !important; /* Dark blue - between black and white */
             font-weight: 300; /* Lighter font weight for better readability */
         }
         .table tbody tr td strong {
             font-weight: 400; /* Slightly bolder for emphasis but still light */
+            color: #1e3a8a !important; /* Dark blue */
         }
         .card {
             background-color: transparent !important;
@@ -140,10 +141,10 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ stadium.full_stadium_name }}</strong>
+                                            <strong style="color: #1e3a8a; font-weight: 400;">{{ stadium.full_stadium_name }}</strong>
                                             {% if stadium.surface %}
                                             <br>
-                                            <small style="color: #F0F0F0; font-weight: 300;">
+                                            <small style="color: #1e40af; font-weight: 300;">
                                                 <i class="fas fa-grass me-1"></i>{{ stadium.surface }}
                                                 {% if stadium.roof_type %}
                                                 | <i class="fas fa-home me-1"></i>{{ stadium.roof_type }}
@@ -152,23 +153,23 @@
                                             {% endif %}
                                             {% if stadium.year_opened %}
                                             <br>
-                                            <small style="color: #F0F0F0; font-weight: 300;">
+                                            <small style="color: #1e40af; font-weight: 300;">
                                                 <i class="fas fa-calendar me-1"></i>Opened {{ stadium.year_opened }}
                                             </small>
                                             {% endif %}
                                         </td>
-                                        <td style="color: #FFFFFF; font-weight: 300;">
+                                        <td style="color: #1e3a8a; font-weight: 300;">
                                             {{ stadium.city_name.title() if stadium.city_name else "Unknown" }}, {{ stadium.state_name.upper() if stadium.state_name else "Unknown" }}
                                         </td>
                                         <td>
                                             {% if stadium.capacity %}
-                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ "{:,}".format(stadium.capacity) }}</strong>
+                                            <strong style="color: #1e3a8a; font-weight: 400;">{{ "{:,}".format(stadium.capacity) }}</strong>
                                             {% else %}
-                                            <span style="color: #F0F0F0; font-weight: 300;">N/A</span>
+                                            <span style="color: #1e40af; font-weight: 300;">N/A</span>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ stadium.team_count }}</strong>
+                                            <strong style="color: #1e3a8a; font-weight: 400;">{{ stadium.team_count }}</strong>
                                         </td>
                                         <td>
                                             <a href="{{ url_for('stadium_detail', stadium_id=stadium.stadium_id) }}" class="btn btn-sm btn-outline-primary">
