@@ -877,6 +877,25 @@ def api_stadiums():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stadiums/<path:filename>')
+def serve_stadium_image(filename):
+    """Serve stadium images from the stadiums directory"""
+    import os
+    # Check if file exists in stadiums directory
+    stadiums_dir = os.path.join(os.path.dirname(__file__), 'stadiums')
+    file_path = os.path.join(stadiums_dir, filename)
+    if os.path.exists(file_path):
+        return send_from_directory(stadiums_dir, filename)
+    else:
+        # Try with subdirectories (e.g., stadiums/nba/stadium.jpg)
+        for root, dirs, files in os.walk(stadiums_dir):
+            for file in files:
+                if file == filename or filename in file:
+                    return send_from_directory(root, file)
+        # Return 404 if not found
+        from flask import abort
+        abort(404)
+
 @app.route('/static/logos/<path:filename>')
 def serve_logo(filename):
     """Serve logo files from splitsp.lat"""
