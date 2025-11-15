@@ -1,0 +1,19 @@
+[Unit]
+Description=Sportspuff v6 Cache Warmer
+After=network.target {{ service_name }}.service
+
+[Service]
+Type=oneshot
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_dir }}
+Environment="PATH={{ app_dir }}/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile={{ app_dir }}/.env
+Environment="CACHE_WARMER_BASE_URL=http://localhost:{{ app_port }}"
+ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/warm_cache.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

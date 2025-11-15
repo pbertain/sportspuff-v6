@@ -159,3 +159,29 @@
     enabled: yes
     daemon_reload: yes
     state: started
+
+# Deploy cache warmer systemd service and timer
+- name: Deploy cache warmer systemd service
+  template:
+    src: cache-warmer.service.j2
+    dest: /etc/systemd/system/cache-warmer.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Deploy cache warmer systemd timer
+  template:
+    src: cache-warmer.timer.j2
+    dest: /etc/systemd/system/cache-warmer.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable cache warmer timer
+  systemd:
+    name: cache-warmer.timer
+    enabled: yes
+    daemon_reload: yes
+    state: started
