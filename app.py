@@ -974,14 +974,16 @@ def proxy_schedule(league, date):
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
         url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching schedule from: {url}")
+        logger.info(f"Fetching schedule from: {url} (timeout=60s)")
         try:
-            response = requests.get(url, timeout=30)  # Increased timeout since API can be slow
+            # Use a longer timeout and verify SSL
+            response = requests.get(url, timeout=60, verify=True, allow_redirects=True)
+            logger.info(f"Schedule API response status: {response.status_code}, length: {len(response.content)}")
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching schedule from {url}")
-            return jsonify({'error': 'API request timed out'}), 500
+            logger.error(f"Timeout fetching schedule from {url} after 60s")
+            return jsonify({'error': 'API request timed out after 60 seconds'}), 500
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request exception fetching schedule: {e}")
+            logger.error(f"Request exception fetching schedule: {e}", exc_info=True)
             return jsonify({'error': f'API request failed: {str(e)}'}), 500
         
         # Check if response is successful
@@ -1136,11 +1138,13 @@ def proxy_scores(league, date):
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
         url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching scores from: {url}")
+        logger.info(f"Fetching scores from: {url} (timeout=60s)")
         try:
-            response = requests.get(url, timeout=30)  # Increased timeout since API can be slow
+            # Use a longer timeout and verify SSL
+            response = requests.get(url, timeout=60, verify=True, allow_redirects=True)
+            logger.info(f"Scores API response status: {response.status_code}, length: {len(response.content)}")
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching scores from {url}")
+            logger.error(f"Timeout fetching scores from {url} after 60s")
             # Try cached response as fallback
             if 'cached_response' in locals() and cached_response:
                 cached_date = cached_response.get('date', '')
@@ -1148,9 +1152,9 @@ def proxy_scores(league, date):
                 if cached_date == today_date:
                     logger.info("Returning cached scores as fallback after timeout")
                     return jsonify(cached_response)
-            return jsonify({'error': 'API request timed out'}), 500
+            return jsonify({'error': 'API request timed out after 60 seconds'}), 500
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request exception fetching scores: {e}")
+            logger.error(f"Request exception fetching scores: {e}", exc_info=True)
             # Try cached response as fallback
             if 'cached_response' in locals() and cached_response:
                 cached_date = cached_response.get('date', '')
