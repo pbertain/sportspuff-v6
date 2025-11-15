@@ -3,9 +3,12 @@ Description=Timer for Sportspuff v6 Cache Warmer
 Requires=cache-warmer.service
 
 [Timer]
-# Run every 20 seconds to keep scores cache warm (scores TTL is 30s)
-# OnUnitActiveSec runs the timer 20 seconds after the service completes
-OnUnitActiveSec=20s
+# During game hours (typically 6 PM - 2 AM), run every minute to keep scores fresh
+# This covers most game times across timezones
+OnCalendar=*-*-* 18:00..23:59:00
+OnCalendar=*-*-* 00:00..02:00:00
+# During off-hours, run every 5 minutes (schedules change less frequently)
+OnCalendar=*-*-* 02:00..17:59:00/5
 # Also run on boot (with 30 second delay)
 OnBootSec=30s
 # If missed, run as soon as possible
