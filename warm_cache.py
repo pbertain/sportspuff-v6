@@ -37,14 +37,22 @@ BASE_URL = os.getenv('CACHE_WARMER_BASE_URL', 'http://localhost:34181')
 
 def warm_cache():
     """Warm the cache by calling proxy endpoints"""
-    logger.info("Starting cache warming process")
-    
-    success_count = 0
-    error_count = 0
-    
     # Check current hour to determine if we're in game hours
     current_hour = datetime.now(timezone.utc).hour
     is_game_hours = (current_hour >= 18) or (current_hour < 2)  # 6 PM - 2 AM UTC
+    
+    # During off-hours, only run every 5 minutes to reduce API calls
+    # Check if we should skip this run (only run on :00, :05, :10, :15, etc.)
+    if not is_game_hours:
+        current_minute = datetime.now(timezone.utc).minute
+        if current_minute % 5 != 0:
+            logger.debug(f"Skipping cache warm (off-hours, minute {current_minute} not divisible by 5)")
+            return True  # Exit successfully, just skip this run
+    
+    logger.info(f"Starting cache warming process (game hours: {is_game_hours})")
+    
+    success_count = 0
+    error_count = 0
     
     # During game hours, prioritize scores (they change frequently)
     # During off-hours, prioritize schedules (scores are less likely to change)
