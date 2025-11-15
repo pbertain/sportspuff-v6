@@ -24,6 +24,15 @@
         }
         .table tbody tr td {
             background-color: transparent !important;
+            color: #FFFFFF !important; /* White text for better contrast */
+            font-weight: 300; /* Lighter font weight for better readability */
+        }
+        .table tbody tr {
+            color: #FFFFFF !important; /* White text for better contrast */
+            font-weight: 300; /* Lighter font weight for better readability */
+        }
+        .table tbody tr td strong {
+            font-weight: 400; /* Slightly bolder for emphasis but still light */
         }
         .card {
             background-color: transparent !important;
@@ -108,22 +117,22 @@
                                     {% for stadium in stadiums %}
                                     <tr>
                                         <td>
-                                            {% if stadium.image %}
-                                                {% if stadium.image.startswith('http://') or stadium.image.startswith('https://') %}
-                                                <img src="{{ stadium.image }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
-                                                {% elif stadium.image.startswith('stadiums/') %}
-                                                <img src="/{{ stadium.image }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
-                                                {% else %}
-                                                <img src="/stadiums/{{ stadium.image }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
+                                            {% if stadium.image_name %}
+                                                {% set img_url = stadium.image_name %}
+                                                {% if img_url.startswith('/stadiums//') %}
+                                                    {% set img_url = img_url.replace('/stadiums//', '/static/images/stadiums/', 1) %}
+                                                {% elif img_url.startswith('/stadiums/') %}
+                                                    {% set img_url = img_url.replace('/stadiums/', '/static/images/stadiums/', 1) %}
                                                 {% endif %}
-                                            {% elif stadium.image_name %}
-                                                {% if stadium.image_name.startswith('http://') or stadium.image_name.startswith('https://') %}
-                                                <img src="{{ stadium.image_name }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
-                                                {% elif stadium.image_name.startswith('stadiums/') %}
-                                                <img src="/{{ stadium.image_name }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
-                                                {% else %}
-                                                <img src="/stadiums/{{ stadium.image_name }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
+                                                <img src="{{ img_url }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
+                                            {% elif stadium.image %}
+                                                {% set img_url = stadium.image %}
+                                                {% if img_url.startswith('/stadiums//') %}
+                                                    {% set img_url = img_url.replace('/stadiums//', '/static/images/stadiums/', 1) %}
+                                                {% elif img_url.startswith('/stadiums/') %}
+                                                    {% set img_url = img_url.replace('/stadiums/', '/static/images/stadiums/', 1) %}
                                                 {% endif %}
+                                                <img src="{{ img_url }}" alt="{{ stadium.full_stadium_name }}" class="stadium-image" onerror="this.style.display='none';">
                                             {% else %}
                                             <div class="stadium-image" style="background-color: #E6E6FA; display: flex; align-items: center; justify-content: center; color: #6B46C1;">
                                                 <i class="fas fa-building"></i>
@@ -131,10 +140,10 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <strong>{{ stadium.full_stadium_name }}</strong>
+                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ stadium.full_stadium_name }}</strong>
                                             {% if stadium.surface %}
                                             <br>
-                                            <small class="text-muted">
+                                            <small style="color: #F0F0F0; font-weight: 300;">
                                                 <i class="fas fa-grass me-1"></i>{{ stadium.surface }}
                                                 {% if stadium.roof_type %}
                                                 | <i class="fas fa-home me-1"></i>{{ stadium.roof_type }}
@@ -143,23 +152,23 @@
                                             {% endif %}
                                             {% if stadium.year_opened %}
                                             <br>
-                                            <small class="text-muted">
+                                            <small style="color: #F0F0F0; font-weight: 300;">
                                                 <i class="fas fa-calendar me-1"></i>Opened {{ stadium.year_opened }}
                                             </small>
                                             {% endif %}
                                         </td>
-                                        <td>
+                                        <td style="color: #FFFFFF; font-weight: 300;">
                                             {{ stadium.city_name.title() if stadium.city_name else "Unknown" }}, {{ stadium.state_name.upper() if stadium.state_name else "Unknown" }}
                                         </td>
                                         <td>
                                             {% if stadium.capacity %}
-                                            <strong>{{ "{:,}".format(stadium.capacity) }}</strong>
+                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ "{:,}".format(stadium.capacity) }}</strong>
                                             {% else %}
-                                            <span class="text-muted">N/A</span>
+                                            <span style="color: #F0F0F0; font-weight: 300;">N/A</span>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <strong>{{ stadium.team_count }}</strong>
+                                            <strong style="color: #FFFFFF; font-weight: 400;">{{ stadium.team_count }}</strong>
                                         </td>
                                         <td>
                                             <a href="{{ url_for('stadium_detail', stadium_id=stadium.stadium_id) }}" class="btn btn-sm btn-outline-primary">
