@@ -976,14 +976,19 @@ def proxy_schedule(league, date):
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
         url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching schedule from: {url} (timeout=60s)")
+        logger.info(f"Fetching schedule from: {url} (timeout=20s)")
         try:
-            # Use a longer timeout and verify SSL
-            response = requests.get(url, timeout=60, verify=True, allow_redirects=True)
+            # Use shorter timeout to avoid nginx 502 errors
+            # Nginx typically has 60s timeout, so we use 20s to leave buffer
+            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
             logger.info(f"Schedule API response status: {response.status_code}, length: {len(response.content)}")
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching schedule from {url} after 60s")
-            return jsonify({'error': 'API request timed out after 60 seconds'}), 500
+            logger.error(f"Timeout fetching schedule from {url} after 20s")
+            # Return cached response if available, even if expired
+            if 'cached_response' in locals() and cached_response:
+                logger.warning("Returning expired cached schedule due to timeout")
+                return jsonify(cached_response)
+            return jsonify({'error': 'API request timed out after 20 seconds'}), 500
         except requests.exceptions.RequestException as e:
             logger.error(f"Request exception fetching schedule: {e}", exc_info=True)
             return jsonify({'error': f'API request failed: {str(e)}'}), 500
@@ -1138,18 +1143,18 @@ def proxy_scores(league, date):
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
         
-        # Check cache - use it if available and from today
-        # Cache TTL is 5 seconds, so we'll use it if very recent
+        # Check cache FIRST - return immediately if available
+        # This prevents hitting the slow API and causing nginx timeouts
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            # Only use cache if it's from today AND very recent (< 5 seconds)
+            # Only use cache if it's from today AND within TTL (30 seconds)
             if cached_date == today_date:
                 logger.info(f"Returning cached scores for {league} from {cached_date}")
                 return jsonify(cached_response)
         
-        # Always fetch fresh scores (cache is just for rapid consecutive requests)
+        # Only fetch fresh scores if cache is expired or missing
         api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
         if not api_base:
             # Try to get from default API_BASE_URL if defined
@@ -1161,21 +1166,19 @@ def proxy_scores(league, date):
             logger.error("SPORTSPUFF_API_BASE_URL not configured")
             return jsonify({'error': 'API base URL not configured'}), 500
         url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching scores from: {url} (timeout=60s)")
+        logger.info(f"Fetching scores from: {url} (timeout=20s)")
         try:
-            # Use a longer timeout and verify SSL
-            response = requests.get(url, timeout=60, verify=True, allow_redirects=True)
+            # Use shorter timeout to avoid nginx 502 errors
+            # Nginx typically has 60s timeout, so we use 20s to leave buffer
+            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
             logger.info(f"Scores API response status: {response.status_code}, length: {len(response.content)}")
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching scores from {url} after 60s")
-            # Try cached response as fallback
+            logger.error(f"Timeout fetching scores from {url} after 20s")
+            # Return cached response if available, even if expired
             if 'cached_response' in locals() and cached_response:
-                cached_date = cached_response.get('date', '')
-                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-                if cached_date == today_date:
-                    logger.info("Returning cached scores as fallback after timeout")
-                    return jsonify(cached_response)
-            return jsonify({'error': 'API request timed out after 60 seconds'}), 500
+                logger.warning("Returning expired cached scores due to timeout")
+                return jsonify(cached_response)
+            return jsonify({'error': 'API request timed out after 20 seconds'}), 500
         except requests.exceptions.RequestException as e:
             logger.error(f"Request exception fetching scores: {e}", exc_info=True)
             # Try cached response as fallback
