@@ -953,12 +953,14 @@ def proxy_schedule(league, date):
             api_date = date
         
         # Check cache first - but verify it's for today's date
+        # Use cache more aggressively since API can be slow
         cached_response = get_cached_response(cache_key, 'schedule')
         if cached_response:
             # Verify the cached data is for today (check response date field)
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
             if cached_date == today_date:
+                logger.info(f"Returning cached schedule for {league} from {cached_date}")
                 return jsonify(cached_response)
             # If cached date doesn't match today, clear it and fetch fresh
         
@@ -1115,16 +1117,16 @@ def proxy_scores(league, date):
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
         
-        # Check cache only if very recent (< 5 seconds) - otherwise always fetch fresh
+        # Check cache - use it if available and from today
+        # Cache TTL is 5 seconds, so we'll use it if very recent
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
             # Only use cache if it's from today AND very recent (< 5 seconds)
             if cached_date == today_date:
-                # Use cache if very recent (handled by get_cached_response with 5s TTL)
-                # Otherwise continue to fetch fresh
-                pass
+                logger.info(f"Returning cached scores for {league} from {cached_date}")
+                return jsonify(cached_response)
         
         # Always fetch fresh scores (cache is just for rapid consecutive requests)
         api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
