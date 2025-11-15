@@ -30,12 +30,13 @@ _cache_ttl = {
     'scores': 30,     # 30 seconds for scores (increased to reduce API calls since API can be slow)
 }
 
-def get_cached_response(cache_key, cache_type):
-    """Get cached response if still valid"""
+def get_cached_response(cache_key, cache_type, allow_expired=False):
+    """Get cached response if still valid, or expired if allow_expired=True"""
     if cache_key in _api_cache:
         cached_data, timestamp = _api_cache[cache_key]
         ttl = _cache_ttl.get(cache_type, 60)
-        if (datetime.now(timezone.utc) - timestamp).total_seconds() < ttl:
+        age = (datetime.now(timezone.utc) - timestamp).total_seconds()
+        if age < ttl or allow_expired:
             return cached_data
     return None
 
@@ -985,13 +986,23 @@ def proxy_schedule(league, date):
         except requests.exceptions.Timeout:
             logger.error(f"Timeout fetching schedule from {url} after 20s")
             # Return cached response if available, even if expired
-            if 'cached_response' in locals() and cached_response:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
                 logger.warning("Returning expired cached schedule due to timeout")
-                return jsonify(cached_response)
-            return jsonify({'error': 'API request timed out after 20 seconds'}), 500
+                return jsonify(expired_cache)
+            # Return empty structure instead of error - frontend can handle this
+            logger.warning("No cache available, returning empty schedule")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
         except requests.exceptions.RequestException as e:
             logger.error(f"Request exception fetching schedule: {e}", exc_info=True)
-            return jsonify({'error': f'API request failed: {str(e)}'}), 500
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule due to request exception")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error
+            logger.warning("No cache available, returning empty schedule")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
         
         # Check if response is successful
         if response.status_code != 200:
@@ -1020,35 +1031,44 @@ def proxy_schedule(league, date):
         
         return jsonify(data)
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout proxying schedule request to {url}")
-        # Try to return cached response if available
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached schedule after timeout")
-                return jsonify(cached_response)
-        return jsonify({'error': 'API request timed out'}), 500
+        logger.error(f"Timeout proxying schedule request")
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after outer timeout")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying schedule request: {e}")
-        # Try to return cached response if available
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached schedule after request exception")
-                return jsonify(cached_response)
-        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after outer request exception")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
     except Exception as e:
         logger.error(f"Unexpected error in proxy_schedule: {e}", exc_info=True)
-        # Try to return cached response if available
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached schedule after unexpected error")
-                return jsonify(cached_response)
-        return jsonify({'error': str(e)}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after unexpected error")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
 
 @app.route('/api/nfl/team-records')
 def nfl_team_records():
@@ -1175,20 +1195,23 @@ def proxy_scores(league, date):
         except requests.exceptions.Timeout:
             logger.error(f"Timeout fetching scores from {url} after 20s")
             # Return cached response if available, even if expired
-            if 'cached_response' in locals() and cached_response:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
                 logger.warning("Returning expired cached scores due to timeout")
-                return jsonify(cached_response)
-            return jsonify({'error': 'API request timed out after 20 seconds'}), 500
+                return jsonify(expired_cache)
+            # Return empty structure instead of error - frontend can handle this
+            logger.warning("No cache available, returning empty scores")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
         except requests.exceptions.RequestException as e:
             logger.error(f"Request exception fetching scores: {e}", exc_info=True)
-            # Try cached response as fallback
-            if 'cached_response' in locals() and cached_response:
-                cached_date = cached_response.get('date', '')
-                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-                if cached_date == today_date:
-                    logger.info("Returning cached scores as fallback after request exception")
-                    return jsonify(cached_response)
-            return jsonify({'error': f'API request failed: {str(e)}'}), 500
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores due to request exception")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error
+            logger.warning("No cache available, returning empty scores")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
         
         # Check if response is successful
         if response.status_code != 200:
@@ -1238,28 +1261,44 @@ def proxy_scores(league, date):
         
         return jsonify(data)
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout proxying scores request to {url}")
-        # Try cached response as fallback
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached scores as fallback after timeout")
-                return jsonify(cached_response)
-        return jsonify({'error': 'API request timed out'}), 500
+        logger.error(f"Timeout proxying scores request")
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after outer timeout")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying scores request: {e}")
-        # If API fails, try to return cached response as fallback only if very recent
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached scores as fallback")
-                return jsonify(cached_response)
-        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after outer request exception")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
     except Exception as e:
         logger.error(f"Unexpected error in proxy_scores: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after unexpected error")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
 
 @app.route('/api/team-colors/<league>')
 def get_team_colors(league):
