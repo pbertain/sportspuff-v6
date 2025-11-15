@@ -27,7 +27,7 @@ load_dotenv()
 _api_cache = {}
 _cache_ttl = {
     'schedule': 300,  # 5 minutes for schedules
-    'scores': 5,      # 5 seconds for scores (games update very frequently)
+    'scores': 30,     # 30 seconds for scores (increased to reduce API calls since API can be slow)
 }
 
 def get_cached_response(cache_key, cache_type):
