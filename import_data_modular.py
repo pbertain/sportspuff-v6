@@ -277,12 +277,27 @@ def import_teams(conn):
                 if cursor.fetchone():
                     valid_conference_id = conference_id
             
+            # Handle external_team_id - preserve existing value if CSV doesn't have it
+            external_team_id = None
+            if 'external_team_id' in row:
+                external_team_id = row.get('external_team_id')
+                if pd.isna(external_team_id) or external_team_id == '':
+                    external_team_id = None
+            
+            # If CSV doesn't have external_team_id or it's empty, preserve existing value
+            if external_team_id is None:
+                cursor.execute("SELECT external_team_id FROM teams WHERE team_id = %s", (int(row['team_id']),))
+                existing = cursor.fetchone()
+                if existing and existing[0]:
+                    external_team_id = existing[0]  # Preserve existing value
+            
             cursor.execute("""
                 INSERT INTO teams (
                     team_id, full_team_name, team_name, real_team_name, league_id,
-                    division_id, conference_id, team_league_id, city_name, state_name,
-                    country, stadium_id, logo_filename, team_color_1, team_color_2, team_color_3
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    division_id, conference_id, team_league_id, external_team_id,
+                    city_name, state_name, country, stadium_id, logo_filename,
+                    team_color_1, team_color_2, team_color_3
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (team_id) DO UPDATE SET
                     full_team_name = EXCLUDED.full_team_name,
                     team_name = EXCLUDED.team_name,
@@ -291,6 +306,7 @@ def import_teams(conn):
                     division_id = EXCLUDED.division_id,
                     conference_id = EXCLUDED.conference_id,
                     team_league_id = EXCLUDED.team_league_id,
+                    external_team_id = COALESCE(EXCLUDED.external_team_id, teams.external_team_id),
                     city_name = EXCLUDED.city_name,
                     state_name = EXCLUDED.state_name,
                     country = EXCLUDED.country,
@@ -298,7 +314,8 @@ def import_teams(conn):
                     logo_filename = EXCLUDED.logo_filename,
                     team_color_1 = EXCLUDED.team_color_1,
                     team_color_2 = EXCLUDED.team_color_2,
-                    team_color_3 = EXCLUDED.team_color_3
+                    team_color_3 = EXCLUDED.team_color_3,
+                    updated_at = CURRENT_TIMESTAMP
             """, (
                 int(row['team_id']),
                 row['full_team_name'],
@@ -308,6 +325,7 @@ def import_teams(conn):
                 valid_division_id,
                 valid_conference_id,
                 safe_numeric(row.get('team_league_id')),
+                external_team_id,
                 row.get('city_name'),
                 row.get('state_name'),
                 row.get('country'),

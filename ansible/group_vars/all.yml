@@ -11,6 +11,10 @@ app_name: "sportspuff-v6"
 app_user: "root"
 app_group: "root"
 
+# Secret keys (should be set via ansible-vault or environment)
+secret_key: "{{ vault_secret_key | default('dev-secret-key-change-in-production') }}"
+rapidapi_key: "{{ vault_rapidapi_key | default('') }}"
+
 # Environment-specific settings
 dev:
   app_dir: "/opt/sportspuff-v6-dev"

@@ -5,36 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teams - Sportspuff v6</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .table thead th {
+            background-color: #6B46C1;
+            color: white;
+            border-color: #6B46C1;
+        }
+        .table tbody tr:nth-child(even) {
+            background-color: #B19CD9 !important; /* Medium lavender - darker */
+        }
+        .table tbody tr:nth-child(odd) {
+            background-color: #DDA0DD !important; /* Plum */
+        }
+        .table tbody tr:hover {
+            background-color: #BA55D3 !important; /* Medium orchid - darker on hover */
+        }
+        .table tbody tr td {
+            background-color: transparent !important;
+        }
+        .card {
+            background-color: transparent !important;
+        }
+        .card-body {
+            background-color: transparent !important;
+        }
+        .badge {
+            font-size: 0.85rem;
+            background-color: #6B46C1 !important;
+        }
+        .team-abbrev {
+            font-size: 0.75rem;
+            color: var(--nba-accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .btn-primary, .btn-outline-primary {
+            background-color: var(--nba-accent);
+            border-color: var(--nba-accent);
+            color: white;
+        }
+        .btn-primary:hover, .btn-outline-primary:hover {
+            background-color: #553C9A;
+            border-color: #553C9A;
+        }
+        .btn-outline-secondary {
+            border-color: var(--nba-accent);
+            color: var(--nba-accent);
+        }
+        .btn-outline-secondary:hover {
+            background-color: var(--nba-accent);
+            color: white;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--nba-accent);
+            box-shadow: 0 0 0 0.2rem rgba(112, 40, 228, 0.25);
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 40px; margin-right: 10px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link active" href="{{ url_for('teams') }}">Teams</a>
-                <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
-                <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Leagues
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    {% include 'shared_header.html' %}
 
     <div class="container my-4">
         <div class="row">
@@ -96,7 +127,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead class="table-dark">
+                                <thead>
                                     <tr>
                                         <th>Team</th>
                                         <th>League</th>
@@ -110,11 +141,13 @@
                                     <tr>
                                         <td>
                                             <strong>{{ team.real_team_name }}</strong>
+                                            {% if team.abbreviation %}
                                             <br>
-                                            <small class="text-muted">{{ team.full_team_name }}</small>
+                                            <span class="team-abbrev">{{ team.abbreviation }}</span>
+                                            {% endif %}
                                         </td>
                                         <td>
-                                            <span class="badge bg-primary">{{ team.league.upper() }}</span>
+                                            <span class="badge">{{ team.league.upper() }}</span>
                                         </td>
                                         <td>
                                             {{ team.city_name.title() }}, {{ team.state_name.upper() }}
@@ -183,11 +216,7 @@
         {% endif %}
     </div>
 
-    <footer class="bg-dark text-white text-center py-4 mt-5">
-        <div class="container">
-            <p>&copy; 2024 Sportspuff v6. Built with Flask and PostgreSQL.</p>
-        </div>
-    </footer>
+    {% include 'shared_footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>

@@ -9,34 +9,7 @@
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container">
-                <a class="navbar-brand" href="{{ url_for('index') }}">
-                    <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 200px; margin-right: 20px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                    <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
-                </a>
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="{{ url_for('teams') }}">Teams</a>
-                    <a class="nav-link" href="{{ url_for('stadiums') }}">Stadiums</a>
-                    <a class="nav-link" href="{{ url_for('api_teams') }}" target="_blank">API</a>
-                    <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Panel</a>
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            Leagues
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </nav>
+    {% include 'shared_header.html' %}
 
     <div class="container my-5">
         {% if not db_available %}
@@ -57,9 +30,10 @@
                     <div class="mb-2">
                         <label for="league-select" class="form-label text-white fw-bold">League:</label>
                         <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all" selected>All (NBA & NHL)</option>
+                            <option value="all" selected>All (NBA, NHL & NFL)</option>
                             <option value="nba">NBA</option>
                             <option value="nhl">NHL</option>
+                            <option value="nfl">NFL</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -185,21 +159,7 @@
         </div>
     </div>
 
-    <footer class="bg-dark text-white text-center py-4 mt-5">
-        <div class="container">
-            <p>&copy; 2025 SportsPuff. Part of the CloudPuff™ family!</p>
-            <p class="mt-2">
-                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank" style="text-decoration: none; color: white;">
-                    Powered by CloudPuff™
-                </a>
-            </p>
-            <div class="mt-3">
-                <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank">
-                    <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff™" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
-                </a>
-            </div>
-        </div>
-    </footer>
+    {% include 'shared_footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
@@ -218,82 +178,131 @@
             const leagueUpper = league.toUpperCase();
             
             try {
-                // Call API directly - proxy will handle CORS via Flask-CORS
-                // Try proxy first, fallback to direct API call if proxy fails
-                const API_BASE = 'https://api.sportspuff.org/api/v1';
+                // Call API via proxy - proxy will handle CORS via Flask-CORS
+                // The proxy makes server-side requests, so CORS doesn't apply
+                // Only try direct API call if proxy completely fails (shouldn't happen)
+                const API_BASE = '{{ API_BASE_URL }}/api/v1';
+                // Build proxy URLs - these will be modified per league/date
                 const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
                 const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
                 
                 let scheduleData, scoresData;
+                let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
                         // Try proxy first
                         const proxyRes = await fetch(proxyUrl);
                         if (proxyRes.ok) {
-                            return await proxyRes.json();
+                            try {
+                                return await proxyRes.json();
+                            } catch (jsonError) {
+                                console.error('JSON parse error from proxy:', jsonError);
+                                throw new Error(`Invalid JSON response from proxy: ${jsonError.message}`);
+                            }
                         }
-                        // If proxy fails, try direct API call
-                        console.warn(`Proxy failed (${proxyRes.status}), trying direct API call`);
-                        const directRes = await fetch(directUrl, {
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        if (!directRes.ok) {
-                            throw new Error(`API error: ${directRes.status}`);
+                        // If proxy fails, don't try direct API call - it will fail due to CORS
+                        // The API server (api-dev.sportspuff.org) doesn't allow requests from dev.sportspuff.org
+                        // The proxy must be fixed on the server side
+                        let errorText = '';
+                        try {
+                            errorText = await proxyRes.text();
+                        } catch (e) {
+                            errorText = `Status ${proxyRes.status}`;
                         }
-                        return await directRes.json();
+                        throw new Error(`Proxy failed with status ${proxyRes.status}: ${errorText.substring(0, 200)}`);
                     } catch (error) {
-                        // If both fail, try direct API as last resort
-                        console.warn(`Both proxy and direct failed, retrying direct:`, error);
-                        const directRes = await fetch(directUrl, {
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        if (!directRes.ok) {
-                            throw new Error(`API error: ${directRes.status} - ${error.message}`);
-                        }
-                        return await directRes.json();
+                        // Don't try direct API call - it will fail due to CORS
+                        // The proxy must be fixed on the server side
+                        throw new Error(`Failed to fetch via proxy: ${error.message}`);
                     }
                 }
                 
                 if (league === 'all') {
-                    // For "all", fetch both NBA and NHL separately and combine
+                    // For "all", fetch NBA, NHL, and NFL separately and combine
                     const nbaScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
                     const nbaScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
                     const nhlScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
                     const nhlScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
+                    const nflScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
+                    const nflScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
                     
                     const nbaScheduleDirect = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
                     const nbaScoresDirect = `${API_BASE}/scores/nba/today?tz=${timezone}`;
                     const nhlScheduleDirect = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
                     const nhlScoresDirect = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
+                    const nflScheduleDirect = `${API_BASE}/schedule/nfl/today?tz=${timezone}`;
+                    const nflScoresDirect = `${API_BASE}/scores/nfl/today?tz=${timezone}`;
                     
-                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores] = await Promise.all([
+                    // Fetch NFL team records from Tank01 API
+                    try {
+                        const nflRecordsResponse = await fetch('/api/nfl/team-records');
+                        if (nflRecordsResponse.ok) {
+                            const nflRecordsData = await nflRecordsResponse.json();
+                            nflTeamRecords = nflRecordsData.teams || {};
+                            console.log('Fetched NFL team records:', Object.keys(nflTeamRecords).length, 'teams');
+                        } else {
+                            console.warn('Failed to fetch NFL team records:', nflRecordsResponse.status);
+                        }
+                    } catch (error) {
+                        console.warn('Error fetching NFL team records:', error);
+                    }
+                    
+                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores, nflSchedule, nflScores] = await Promise.all([
                         fetchWithFallback(nbaScheduleProxy, nbaScheduleDirect),
                         fetchWithFallback(nbaScoresProxy, nbaScoresDirect),
                         fetchWithFallback(nhlScheduleProxy, nhlScheduleDirect),
-                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect)
+                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect),
+                        fetchWithFallback(nflScheduleProxy, nflScheduleDirect),
+                        fetchWithFallback(nflScoresProxy, nflScoresDirect)
                     ]);
                     
-                    // Combine NBA and NHL data
+                    // Combine NBA, NHL, and NFL data
+                    // Explicitly set league on each game to ensure it's preserved
+                    const nbaGames = (nbaSchedule.games || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
+                    const nhlGames = (nhlSchedule.games || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
+                    const nflGames = (nflSchedule.games || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
+                    
                     scheduleData = {
-                        date: nbaSchedule.date || nhlSchedule.date,
-                        games: [
-                            ...(nbaSchedule.games || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlSchedule.games || []).map(g => ({...g, league: 'nhl'}))
-                        ]
+                        date: nbaSchedule.date || nhlSchedule.date || nflSchedule.date,
+                        games: [...nbaGames, ...nhlGames, ...nflGames]
                     };
                     
+                    const nbaScoresList = (nbaScores.scores || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
+                    const nhlScoresList = (nhlScores.scores || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
+                    const nflScoresList = (nflScores.scores || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
+                    
                     scoresData = {
-                        date: nbaScores.date || nhlScores.date,
-                        scores: [
-                            ...(nbaScores.scores || []).map(g => ({...g, league: 'nba'})),
-                            ...(nhlScores.scores || []).map(g => ({...g, league: 'nhl'}))
-                        ]
+                        date: nbaScores.date || nhlScores.date || nflScores.date,
+                        scores: [...nbaScoresList, ...nhlScoresList, ...nflScoresList]
                     };
+                    
+                    // Debug logging for NFL
+                    console.log('NFL Schedule games:', nflGames.length);
+                    console.log('NFL Scores games:', nflScoresList.length);
+                    console.log('Total games by league:', {
+                        nba: nbaGames.length,
+                        nhl: nhlGames.length,
+                        nfl: nflGames.length
+                    });
                 } else {
                     // For single league
+                    // Fetch NFL team records if viewing NFL
+                    if (league === 'nfl') {
+                        try {
+                            const nflRecordsResponse = await fetch('/api/nfl/team-records');
+                            if (nflRecordsResponse.ok) {
+                                const nflRecordsData = await nflRecordsResponse.json();
+                                nflTeamRecords = nflRecordsData.teams || {};
+                                console.log('Fetched NFL team records:', Object.keys(nflTeamRecords).length, 'teams');
+                            } else {
+                                console.warn('Failed to fetch NFL team records:', nflRecordsResponse.status);
+                            }
+                        } catch (error) {
+                            console.warn('Error fetching NFL team records:', error);
+                        }
+                    }
+                    
                     const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
                     const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
                     const scheduleDirect = `${API_BASE}/schedule/${league}/today?tz=${timezone}`;
@@ -303,6 +312,14 @@
                         fetchWithFallback(scheduleProxy, scheduleDirect),
                         fetchWithFallback(scoresProxy, scoresDirect)
                     ]);
+                    
+                    // Ensure league is set on all games for single league mode
+                    if (scheduleData.games) {
+                        scheduleData.games = scheduleData.games.map(g => ({...g, league: league, sport: league}));
+                    }
+                    if (scoresData.scores) {
+                        scoresData.scores = scoresData.scores.map(g => ({...g, league: league, sport: league}));
+                    }
                 }
                 
                 // Debug logging
@@ -310,32 +327,43 @@
                 console.log('Scores data:', scoresData);
                 console.log('Available team colors:', allTeamColors ? Object.keys(allTeamColors) : 'undefined');
                 
-                // Validate allTeamColors structure
-                if (!allTeamColors || typeof allTeamColors !== 'object') {
-                    console.error('allTeamColors is not properly initialized:', allTeamColors);
-                    allTeamColors = {};
+                // Validate allTeamColors structure - use local variable
+                let validatedAllTeamColors = allTeamColors;
+                if (!validatedAllTeamColors || typeof validatedAllTeamColors !== 'object') {
+                    console.error('allTeamColors is not properly initialized:', validatedAllTeamColors);
+                    validatedAllTeamColors = {};
                 }
                 
                 // Get team colors - if "all", merge all leagues; otherwise get specific league
                 let teamColors = {};
                 if (league === 'all') {
                     // Merge all team colors from all leagues
-                    Object.values(allTeamColors).forEach(leagueColors => {
+                    Object.values(validatedAllTeamColors).forEach(leagueColors => {
                         if (leagueColors && typeof leagueColors === 'object' && !Array.isArray(leagueColors)) {
                             Object.assign(teamColors, leagueColors);
                         }
                     });
                 } else {
-                    teamColors = (allTeamColors[leagueUpper] && typeof allTeamColors[leagueUpper] === 'object' && !Array.isArray(allTeamColors[leagueUpper])) 
-                        ? allTeamColors[leagueUpper] 
+                    teamColors = (validatedAllTeamColors[leagueUpper] && typeof validatedAllTeamColors[leagueUpper] === 'object' && !Array.isArray(validatedAllTeamColors[leagueUpper])) 
+                        ? validatedAllTeamColors[leagueUpper] 
                         : {};
                 }
                 
                 console.log(`Team colors for ${leagueUpper}:`, Object.keys(teamColors).length, 'teams');
+                // Debug: Show sample team names for each league when "all" is selected
+                if (league === 'all') {
+                    console.log('Team colors structure (by league):', Object.keys(validatedAllTeamColors));
+                    Object.keys(validatedAllTeamColors).forEach(leagueKey => {
+                        if (validatedAllTeamColors[leagueKey] && typeof validatedAllTeamColors[leagueKey] === 'object') {
+                            const leagueTeams = Object.keys(validatedAllTeamColors[leagueKey]);
+                            console.log(`${leagueKey} teams (${leagueTeams.length}):`, leagueTeams.slice(0, 5));
+                        }
+                    });
+                }
                 if (Object.keys(teamColors).length > 0) {
                     console.log('Sample team names in colors:', Object.keys(teamColors).slice(0, 5));
                 } else {
-                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(allTeamColors));
+                    console.warn(`No team colors found for ${leagueUpper}. Available leagues:`, Object.keys(validatedAllTeamColors));
                 }
                 
                 // Check for API errors
@@ -352,32 +380,99 @@
                 
                 // Helper function to find team data with fuzzy matching
                 function findTeamData(teamName) {
-                    // Try exact match first
-                    if (teamColors[teamName]) {
-                        return teamColors[teamName];
+                    if (!teamName || !teamColors || Object.keys(teamColors).length === 0) {
+                        return null;
                     }
                     
-                    // Try case-insensitive match
+                    const searchName = teamName.trim();
+                    
+                    // Try exact match first
+                    if (teamColors[searchName]) {
+                        return teamColors[searchName];
+                    }
+                    
+                    // Try case-insensitive exact match
                     for (const key in teamColors) {
-                        if (key.toLowerCase() === teamName.toLowerCase()) {
+                        if (key.toLowerCase() === searchName.toLowerCase()) {
                             return teamColors[key];
                         }
                     }
                     
-                    // Try partial match (last word or last two words)
-                    const nameParts = teamName.split(' ');
-                    if (nameParts.length > 1) {
-                        const lastTwo = nameParts.slice(-2).join(' ');
-                        const lastOne = nameParts[nameParts.length - 1];
+                    // Try matching by last word (team name like "Patriots", "Chiefs")
+                    const nameParts = searchName.split(' ').filter(p => p.length > 0);
+                    if (nameParts.length > 0) {
+                        const lastWord = nameParts[nameParts.length - 1].toLowerCase();
                         
+                        // First try last two words (e.g., "Kansas City Chiefs" -> "City Chiefs")
+                        if (nameParts.length >= 2) {
+                            const lastTwo = nameParts.slice(-2).join(' ').toLowerCase();
+                            for (const key in teamColors) {
+                                const keyLower = key.toLowerCase();
+                                if (keyLower === lastTwo || keyLower.endsWith(' ' + lastTwo)) {
+                                    return teamColors[key];
+                                }
+                            }
+                        }
+                        
+                        // Then try last word only
+                        for (const key in teamColors) {
+                            const keyParts = key.split(' ').filter(p => p.length > 0);
+                            if (keyParts.length > 0 && keyParts[keyParts.length - 1].toLowerCase() === lastWord) {
+                                return teamColors[key];
+                            }
+                        }
+                    }
+                    
+                    // Try removing common prefixes and matching
+                    const prefixesToRemove = ['the ', 'new ', 'san ', 'los ', 'las ', 'de ', 'la '];
+                    let cleanedName = searchName.toLowerCase();
+                    for (const prefix of prefixesToRemove) {
+                        if (cleanedName.startsWith(prefix)) {
+                            cleanedName = cleanedName.substring(prefix.length);
+                            break;
+                        }
+                    }
+                    
+                    for (const key in teamColors) {
+                        let keyCleaned = key.toLowerCase();
+                        for (const prefix of prefixesToRemove) {
+                            if (keyCleaned.startsWith(prefix)) {
+                                keyCleaned = keyCleaned.substring(prefix.length);
+                                break;
+                            }
+                        }
+                        if (keyCleaned === cleanedName || keyCleaned.includes(cleanedName) || cleanedName.includes(keyCleaned)) {
+                            return teamColors[key];
+                        }
+                    }
+                    
+                    // NFL-specific: Try matching abbreviations and common variations
+                    // Check if this might be an NFL team by looking for common NFL patterns
+                    const nflAbbrevs = ['ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'DET', 
+                                      'GB', 'HOU', 'IND', 'JAX', 'KC', 'LV', 'LAC', 'LAR', 'MIA', 'MIN', 'NE', 'NO', 
+                                      'NYG', 'NYJ', 'PHI', 'PIT', 'SF', 'SEA', 'TB', 'TEN', 'WSH', 'WAS'];
+                    if (nflAbbrevs.includes(searchName.toUpperCase())) {
+                        // Try to find by abbreviation (should be mapped in backend)
+                        const abbrevKey = searchName.toUpperCase();
+                        // Check in current league's teamColors
+                        if (teamColors && teamColors[abbrevKey]) {
+                            return teamColors[abbrevKey];
+                        }
+                        // Also check in validatedTeamColors['NFL'] if available (use allTeamColors from outer scope)
+                        if (allTeamColors && allTeamColors['NFL'] && allTeamColors['NFL'][abbrevKey]) {
+                            return allTeamColors['NFL'][abbrevKey];
+                        }
+                    }
+                    
+                    // Try matching just the team name part (e.g., "Eagles", "Patriots", "Chiefs")
+                    // This is useful when API returns just the team name without city
+                    const teamNameOnly = searchName.split(' ').pop();
+                    if (teamNameOnly && teamNameOnly.length > 2) {
                         for (const key in teamColors) {
                             const keyParts = key.split(' ');
-                            if (keyParts.length > 1) {
-                                const keyLastTwo = keyParts.slice(-2).join(' ');
-                                const keyLastOne = keyParts[keyParts.length - 1];
-                                
-                                if (keyLastTwo.toLowerCase() === lastTwo.toLowerCase() ||
-                                    keyLastOne.toLowerCase() === lastOne.toLowerCase()) {
+                            if (keyParts.length > 0) {
+                                const keyTeamName = keyParts[keyParts.length - 1].toLowerCase();
+                                if (keyTeamName === teamNameOnly.toLowerCase()) {
                                     return teamColors[key];
                                 }
                             }
@@ -385,9 +480,8 @@
                     }
                     
                     // Log when team not found for debugging
-                    if (Object.keys(teamColors).length > 0) {
-                        console.warn(`Team not found: "${teamName}". Available teams:`, Object.keys(teamColors).slice(0, 10));
-                    }
+                    console.warn(`Team not found: "${teamName}". Available teams (first 20):`, Object.keys(teamColors).slice(0, 20));
+                    console.warn(`Searching for: "${searchName}", cleaned: "${cleanedName}"`);
                     
                     return null;
                 }
@@ -408,6 +502,82 @@
                 function getTeamLogoBg(teamName) {
                     const team = findTeamData(teamName);
                     return team ? (team.color_3 || '#FFFFFF') : '#FFFFFF';
+                }
+                
+                // Helper function to get team color 2 (secondary color)
+                function getTeamColor2(teamName) {
+                    const team = findTeamData(teamName);
+                    return team ? (team.color_2 || '#FFFFFF') : '#FFFFFF';
+                }
+                
+                // Helper function to get team color 3 (tertiary color)
+                function getTeamColor3(teamName) {
+                    const team = findTeamData(teamName);
+                    return team ? (team.color_3 || '#000000') : '#000000';
+                }
+                
+                // Helper function to check contrast ratio (WCAG AA minimum is 4.5:1)
+                function getContrastRatio(color1, color2) {
+                    function hexToRgb(hex) {
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                        return result ? {
+                            r: parseInt(result[1], 16),
+                            g: parseInt(result[2], 16),
+                            b: parseInt(result[3], 16)
+                        } : null;
+                    }
+                    
+                    function getLuminance(r, g, b) {
+                        const [rs, gs, bs] = [r, g, b].map(c => {
+                            c = c / 255;
+                            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+                        });
+                        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+                    }
+                    
+                    const rgb1 = hexToRgb(color1);
+                    const rgb2 = hexToRgb(color2);
+                    
+                    if (!rgb1 || !rgb2) return 1;
+                    
+                    const lum1 = getLuminance(rgb1.r, rgb1.g, rgb1.b);
+                    const lum2 = getLuminance(rgb2.r, rgb2.g, rgb2.b);
+                    
+                    const brightest = Math.max(lum1, lum2);
+                    const darkest = Math.min(lum1, lum2);
+                    
+                    return (brightest + 0.05) / (darkest + 0.05);
+                }
+                
+                // Helper function to get optimal text color for abbreviation box
+                function getAbbrevBoxColors(teamName, bgColor, textColor) {
+                    const minContrast = 4.5; // WCAG AA standard
+                    const contrast = getContrastRatio(bgColor, textColor);
+                    
+                    if (contrast >= minContrast) {
+                        return { bg: bgColor, text: textColor };
+                    }
+                    
+                    // If contrast is insufficient, try white or black text
+                    const whiteContrast = getContrastRatio(bgColor, '#FFFFFF');
+                    const blackContrast = getContrastRatio(bgColor, '#000000');
+                    
+                    if (whiteContrast >= minContrast && whiteContrast > blackContrast) {
+                        return { bg: bgColor, text: '#FFFFFF' };
+                    } else if (blackContrast >= minContrast) {
+                        return { bg: bgColor, text: '#000000' };
+                    } else {
+                        // If still insufficient, adjust background to be lighter/darker
+                        // Try a lighter version of the background
+                        const team = findTeamData(teamName);
+                        const primaryColor = team ? (team.color_1 || '#6c757d') : '#6c757d';
+                        const primaryContrast = getContrastRatio(primaryColor, '#FFFFFF');
+                        if (primaryContrast >= minContrast) {
+                            return { bg: primaryColor, text: '#FFFFFF' };
+                        } else {
+                            return { bg: bgColor, text: '#000000' }; // Fallback
+                        }
+                    }
                 }
                 
                 // Helper function to get team URL
@@ -434,6 +604,23 @@
                     const isScheduled = game.game_status === 'scheduled';
                     
                     // Get team colors and logos
+                    // Debug logging for NFL teams
+                    if (gameLeague === 'NFL') {
+                        console.log(`\n=== NFL Game Debug ===`);
+                        console.log(`Game: ${game.visitor_team} @ ${game.home_team}`);
+                        console.log(`Total teams in teamColors:`, Object.keys(teamColors).length);
+                        console.log(`NFL teams available:`, Object.keys(teamColors).filter(k => {
+                            const team = teamColors[k];
+                            return team && (team.logo_url && team.logo_url.includes('/nfl/'));
+                        }).slice(0, 10));
+                        console.log(`Looking for visitor: "${game.visitor_team}"`);
+                        const visitorTeam = findTeamData(game.visitor_team);
+                        console.log(`Visitor team found:`, visitorTeam ? 'YES' : 'NO', visitorTeam);
+                        console.log(`Looking for home: "${game.home_team}"`);
+                        const homeTeam = findTeamData(game.home_team);
+                        console.log(`Home team found:`, homeTeam ? 'YES' : 'NO', homeTeam);
+                        console.log(`=== End NFL Debug ===\n`);
+                    }
                     const visitorColor = getTeamColor(game.visitor_team);
                     const homeColor = getTeamColor(game.home_team);
                     const visitorTextColor = getTextColor(visitorColor);
@@ -442,6 +629,10 @@
                     const homeLogo = getTeamLogo(game.home_team);
                     const visitorLogoBg = getTeamLogoBg(game.visitor_team);
                     const homeLogoBg = getTeamLogoBg(game.home_team);
+                    
+                    // Get team data for full names and abbreviations (needed early)
+                    const visitorTeamData = findTeamData(game.visitor_team);
+                    const homeTeamData = findTeamData(game.home_team);
                     
                     // Determine winner
                     let visitorIsWinner = false;
@@ -475,12 +666,17 @@
                         }
                         return shortName;
                     }
-                    const visitorShortName = getShortTeamName(game.visitor_team);
-                    const homeShortName = getShortTeamName(game.home_team);
+                    // Get full team names from database if available, otherwise use API team name
+                    // Use real_team_name first (has spaces between words)
+                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team;
+                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team;
+                    const visitorShortName = getShortTeamName(visitorFullName);
+                    const homeShortName = getShortTeamName(homeFullName);
                     
                     // Format status
+                    // IMPORTANT: Check for scores FIRST - if game has a score, it's not scheduled
                     let statusDisplay = '';
-                    if (isFinal) {
+                    if (hasScore && isFinal) {
                         const period = parseInt(game.current_period) || 4;
                         if (period > 4) {
                             const otCount = period - 4;
@@ -488,30 +684,77 @@
                         } else {
                             statusDisplay = 'F';
                         }
+                    } else if (hasScore) {
+                        // Has score but not final - show current period
+                        if (game.current_period && game.time_remaining) {
+                            const period = parseInt(game.current_period);
+                            // Use P for Period in NHL, Q for Quarter in NBA/NFL
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        } else {
+                            statusDisplay = 'Live';
+                        }
                     } else if (game.current_period && game.time_remaining) {
+                        // Game in progress but no score yet (shouldn't happen, but handle it)
                         const period = parseInt(game.current_period);
-                        // Use P for Period in NHL, Q for Quarter in NBA
                         const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
                         let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
                         statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                     } else if (isScheduled && game.game_time) {
-                        const gameDate = new Date(game.game_time);
-                        const now = new Date();
-                        const diffMs = gameDate - now;
-                        const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-                        if (diffMs > 0) {
-                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                            const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
-                            statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
-                        } else {
-                            statusDisplay = `${gameTimeStr} - Scheduled`;
+                        // Parse game time - API should return ISO 8601 format
+                        // If the time appears to be in the past but there's no score, it might be a timezone issue
+                        let gameDate;
+                        try {
+                            gameDate = new Date(game.game_time);
+                            // If parsing fails, try to handle it
+                            if (isNaN(gameDate.getTime())) {
+                                console.warn('Invalid game_time:', game.game_time);
+                                statusDisplay = 'Scheduled';
+                                gameDate = null;
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing game_time:', game.game_time, e);
+                            statusDisplay = 'Scheduled';
+                            gameDate = null;
+                        }
+                        
+                        if (gameDate) {
+                            const now = new Date();
+                            const diffMs = gameDate - now;
+                            const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+                            
+                            if (diffMs > 0) {
+                                // Game is in the future
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                // For NHL and NFL, always show time until game if it's in the future
+                                // For other leagues, show time if less than 24h15m (1455 minutes)
+                                const totalMinutes = Math.floor(diffMs / (1000 * 60));
+                                if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
+                                    const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
+                                    statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
+                                } else {
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
+                                }
+                            } else {
+                                // Game time is in the past but no score - likely timezone issue or game hasn't started
+                                // For NFL, if it's more than 3 hours in the past, it's definitely a timezone issue
+                                const hoursPast = Math.abs(diffMs) / (1000 * 60 * 60);
+                                if (hoursPast > 3) {
+                                    // Likely timezone issue - show as scheduled with original time
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
+                                } else {
+                                    // Less than 3 hours past - might be starting soon or just started
+                                    statusDisplay = `${gameTimeStr} - Scheduled`;
+                                }
+                            }
                         }
                     } else {
                         statusDisplay = 'Scheduled';
                     }
                     
-                    // Get team records - W-L-OTL for NHL, W-L for other leagues
+                    // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
                     let visitorRecord = '';
                     let homeRecord = '';
                     if (gameLeague === 'NHL') {
@@ -524,26 +767,22 @@
                             ? game.home_otl 
                             : (game.home_overtime_losses !== undefined && game.home_overtime_losses !== null ? game.home_overtime_losses : 0);
                         
-                        // Debug logging for NHL games
-                        if (game.visitor_team && game.home_team) {
-                            console.log(`NHL Game ${game.visitor_team} @ ${game.home_team}:`, {
-                                visitor_wins: game.visitor_wins,
-                                visitor_losses: game.visitor_losses,
-                                visitor_overtime_losses: game.visitor_overtime_losses,
-                                visitor_otl: game.visitor_otl,
-                                home_wins: game.home_wins,
-                                home_losses: game.home_losses,
-                                home_overtime_losses: game.home_overtime_losses,
-                                home_otl: game.home_otl,
-                                full_game: game
-                            });
-                        }
-                        
                         if (game.visitor_wins !== undefined && game.visitor_losses !== undefined) {
                             visitorRecord = `${game.visitor_wins}-${game.visitor_losses}-${visitorOTL}`;
                         }
                         if (game.home_wins !== undefined && game.home_losses !== undefined) {
                             homeRecord = `${game.home_wins}-${game.home_losses}-${homeOTL}`;
+                        }
+                    } else if (gameLeague === 'NFL') {
+                        // NFL format: W-L-T
+                        const visitorTies = game.visitor_ties !== undefined && game.visitor_ties !== null ? game.visitor_ties : 0;
+                        const homeTies = game.home_ties !== undefined && game.home_ties !== null ? game.home_ties : 0;
+                        
+                        if (game.visitor_wins !== undefined && game.visitor_losses !== undefined) {
+                            visitorRecord = `${game.visitor_wins}-${game.visitor_losses}-${visitorTies}`;
+                        }
+                        if (game.home_wins !== undefined && game.home_losses !== undefined) {
+                            homeRecord = `${game.home_wins}-${game.home_losses}-${homeTies}`;
                         }
                     } else {
                         // Other leagues: W-L
@@ -572,19 +811,29 @@
                     const visitorUrl = getTeamUrl(game.visitor_team, gameLeague);
                     const homeUrl = getTeamUrl(game.home_team, gameLeague);
                     
-                    // Get team abbreviations
-                    const visitorAbbrev = game.visitor_team_abbrev || '';
-                    const homeAbbrev = game.home_team_abbrev || '';
+                    // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
+                    // (visitorTeamData and homeTeamData are already defined above)
+                    const visitorAbbrev = visitorTeamData?.abbreviation || game.visitor_team_abbrev || '';
+                    const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
+                    
+                    // Get abbreviation box colors with contrast checking
+                    const visitorAbbrevBg = getTeamColor2(game.visitor_team);
+                    const visitorAbbrevText = getTeamColor3(game.visitor_team);
+                    const visitorAbbrevColors = getAbbrevBoxColors(game.visitor_team, visitorAbbrevBg, visitorAbbrevText);
+                    
+                    const homeAbbrevBg = getTeamColor2(game.home_team);
+                    const homeAbbrevText = getTeamColor3(game.home_team);
+                    const homeAbbrevColors = getAbbrevBoxColors(game.home_team, homeAbbrevBg, homeAbbrevText);
                     
                     return `
                         <tr>
-                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap;">
+                            <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    ${visitorAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: rgba(255, 255, 255, 0.2); border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${visitorAbbrev}</span>` : ''}
+                                    ${visitorAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${visitorAbbrevColors.bg}; color: ${visitorAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${visitorAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.visitor_team}">${visitorShortName}</span>
                                     ${visitorRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${visitorRecord})</span>` : ''}
                                 </a>
@@ -592,13 +841,13 @@
                             <td style="text-align: center; font-weight: 700; font-size: 1.3rem; padding: 10px 8px; position: relative; white-space: nowrap; min-width: 80px;">
                                 ${scoreDisplay}
                             </td>
-                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap;">
+                            <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
-                                    ${homeAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: rgba(255, 255, 255, 0.2); border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${homeAbbrev}</span>` : ''}
+                                    ${homeAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${homeAbbrevColors.bg}; color: ${homeAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${homeAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.home_team}">${homeShortName}</span>
                                     ${homeRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${homeRecord})</span>` : ''}
                                 </a>
@@ -625,8 +874,19 @@
                 if (scheduleData.games) {
                     scheduleData.games.forEach(game => {
                         const scoreData = scoresMap[game.game_id];
+                        // Preserve league from game (set when combining data from multiple leagues)
+                        // Ensure league is always set - it should be set when combining data
+                        let gameLeague = game.league || game.sport;
+                        if (!gameLeague && league !== 'all') {
+                            gameLeague = league;
+                        } else if (!gameLeague) {
+                            // Last resort - this shouldn't happen if data combining worked correctly
+                            gameLeague = 'nba'; // Default fallback
+                        }
                         allGamesMap[game.game_id] = {
                             ...game,
+                            league: gameLeague, // Explicitly preserve league
+                            sport: gameLeague, // Also set sport for compatibility
                             home_score: scoreData?.home_score,
                             visitor_score: scoreData?.visitor_score,
                             is_final: scoreData?.is_final,
@@ -635,10 +895,93 @@
                             time_remaining: scoreData?.time_remaining,
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
-                            home_wins: scoreData?.home_wins !== undefined ? scoreData.home_wins : game.home_wins,
-                            home_losses: scoreData?.home_losses !== undefined ? scoreData.home_losses : game.home_losses,
-                            visitor_wins: scoreData?.visitor_wins !== undefined ? scoreData.visitor_wins : game.visitor_wins,
-                            visitor_losses: scoreData?.visitor_losses !== undefined ? scoreData.visitor_losses : game.visitor_losses,
+                            // For NFL, try to get records from Tank01 API if not in game data
+                            // Use visitorTeamData and homeTeamData to get proper team names for matching
+                            home_wins: (() => {
+                                if (scoreData?.home_wins !== undefined) return scoreData.home_wins;
+                                if (game.home_wins !== undefined) return game.home_wins;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    // Try matching by various team name formats
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].wins;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].wins;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].wins;
+                                }
+                                return undefined;
+                            })(),
+                            home_losses: (() => {
+                                if (scoreData?.home_losses !== undefined) return scoreData.home_losses;
+                                if (game.home_losses !== undefined) return game.home_losses;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].losses;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].losses;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].losses;
+                                }
+                                return undefined;
+                            })(),
+                            home_ties: (() => {
+                                if (scoreData?.home_ties !== undefined && scoreData?.home_ties !== null) return scoreData.home_ties;
+                                if (game.home_ties !== undefined && game.home_ties !== null) return game.home_ties;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const homeTeamName = game.home_team;
+                                    const homeTeamAbbrev = game.home_team_abbrev || '';
+                                    const homeFullName = tempHomeTeamData?.real_team_name || tempHomeTeamData?.full_team_name || homeTeamName;
+                                    
+                                    if (nflTeamRecords[homeTeamName]) return nflTeamRecords[homeTeamName].ties;
+                                    if (nflTeamRecords[homeFullName]) return nflTeamRecords[homeFullName].ties;
+                                    if (homeTeamAbbrev && nflTeamRecords[homeTeamAbbrev]) return nflTeamRecords[homeTeamAbbrev].ties;
+                                }
+                                return 0;
+                            })(),
+                            visitor_wins: (() => {
+                                if (scoreData?.visitor_wins !== undefined) return scoreData.visitor_wins;
+                                if (game.visitor_wins !== undefined) return game.visitor_wins;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].wins;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].wins;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].wins;
+                                }
+                                return undefined;
+                            })(),
+                            visitor_losses: (() => {
+                                if (scoreData?.visitor_losses !== undefined) return scoreData.visitor_losses;
+                                if (game.visitor_losses !== undefined) return game.visitor_losses;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].losses;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].losses;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].losses;
+                                }
+                                return undefined;
+                            })(),
+                            visitor_ties: (() => {
+                                if (scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null) return scoreData.visitor_ties;
+                                if (game.visitor_ties !== undefined && game.visitor_ties !== null) return game.visitor_ties;
+                                if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                    const visitorTeamName = game.visitor_team;
+                                    const visitorTeamAbbrev = game.visitor_team_abbrev || '';
+                                    const visitorFullName = tempVisitorTeamData?.real_team_name || tempVisitorTeamData?.full_team_name || visitorTeamName;
+                                    
+                                    if (nflTeamRecords[visitorTeamName]) return nflTeamRecords[visitorTeamName].ties;
+                                    if (nflTeamRecords[visitorFullName]) return nflTeamRecords[visitorFullName].ties;
+                                    if (visitorTeamAbbrev && nflTeamRecords[visitorTeamAbbrev]) return nflTeamRecords[visitorTeamAbbrev].ties;
+                                }
+                                return 0;
+                            })(),
                             home_otl: scoreData?.home_otl !== undefined && scoreData?.home_otl !== null 
                                 ? scoreData.home_otl 
                                 : (game.home_otl !== undefined && game.home_otl !== null ? game.home_otl : 0),
@@ -652,8 +995,9 @@
                             visitor_overtime_losses: scoreData?.visitor_otl !== undefined && scoreData?.visitor_otl !== null 
                                 ? scoreData.visitor_otl 
                                 : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
-                            home_team_abbrev: game.home_team_abbrev || game.home_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || '',
-                            visitor_team_abbrev: game.visitor_team_abbrev || game.visitor_team?.split(' ').pop()?.substring(0, 3).toUpperCase() || ''
+                            // Abbreviations will be looked up from teamColors when rendering
+                            home_team_abbrev: game.home_team_abbrev || '',
+                            visitor_team_abbrev: game.visitor_team_abbrev || ''
                         };
                     });
                 }
@@ -663,14 +1007,27 @@
                     scoresData.scores.forEach(scoreGame => {
                         if (!allGamesMap[scoreGame.game_id]) {
                             // Game exists in scores but not in schedule - add it
+                            // Determine league from scoreGame data - try multiple sources
+                            let scoreLeague = scoreGame.league || scoreGame.sport;
+                            // If still not found and we're in "all" mode, try to infer from team names or API source
+                            if (!scoreLeague && league === 'all') {
+                                // Try to infer from which scoresData object this came from
+                                // This is a fallback - the league should be set when combining data
+                                scoreLeague = 'nba'; // Default fallback, but this shouldn't happen
+                            } else if (!scoreLeague) {
+                                scoreLeague = league; // Use the selected league
+                            }
                             allGamesMap[scoreGame.game_id] = {
                                 game_id: scoreGame.game_id,
+                                league: scoreLeague, // Preserve league
+                                sport: scoreLeague, // Also set sport
                                 game_date: scoresData.date,
                                 game_time: null,
                                 home_team: scoreGame.home_team,
-                                home_team_abbrev: scoreGame.home_team_abbrev || scoreGame.home_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                // Abbreviations will be looked up from teamColors when rendering
+                                home_team_abbrev: scoreGame.home_team_abbrev || '',
                                 visitor_team: scoreGame.visitor_team,
-                                visitor_team_abbrev: scoreGame.visitor_team_abbrev || scoreGame.visitor_team.split(' ').pop().substring(0, 3).toUpperCase(),
+                                visitor_team_abbrev: scoreGame.visitor_team_abbrev || '',
                                 game_status: scoreGame.game_status,
                                 game_type: 'regular',
                                 home_score: scoreGame.home_score,
@@ -678,10 +1035,19 @@
                                 is_final: scoreGame.is_final,
                                 current_period: scoreGame.current_period,
                                 time_remaining: scoreGame.time_remaining,
-                                home_wins: null,
-                                home_losses: null,
-                                visitor_wins: null,
-                                visitor_losses: null,
+                                // For NFL, try to get records from Tank01 API if not in score data
+                                home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
+                                home_losses: scoreGame.home_losses !== undefined && scoreGame.home_losses !== null ? scoreGame.home_losses : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].losses : null),
+                                home_ties: scoreGame.home_ties !== undefined && scoreGame.home_ties !== null ? scoreGame.home_ties : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].ties : null),
+                                visitor_wins: scoreGame.visitor_wins !== undefined && scoreGame.visitor_wins !== null ? scoreGame.visitor_wins : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].wins : null),
+                                visitor_losses: scoreGame.visitor_losses !== undefined && scoreGame.visitor_losses !== null ? scoreGame.visitor_losses : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].losses : null),
+                                visitor_ties: scoreGame.visitor_ties !== undefined && scoreGame.visitor_ties !== null ? scoreGame.visitor_ties : 
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].ties : null),
                                 home_otl: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
                                 visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
                                 // Also keep old field names for backward compatibility
@@ -691,6 +1057,15 @@
                         } else {
                             // Update existing game with latest score data
                             const existing = allGamesMap[scoreGame.game_id];
+                            // Preserve league - don't overwrite if already set, but set if missing
+                            if (!existing.league) {
+                                existing.league = scoreGame.league || scoreGame.sport || (league !== 'all' ? league : 'nba');
+                                existing.sport = existing.league;
+                            } else if (scoreGame.league && !existing.league) {
+                                // If existing doesn't have league but scoreGame does, use it
+                                existing.league = scoreGame.league;
+                                existing.sport = scoreGame.league;
+                            }
                             existing.home_score = scoreGame.home_score;
                             existing.visitor_score = scoreGame.visitor_score;
                             existing.is_final = scoreGame.is_final;
@@ -709,6 +1084,27 @@
                             }
                             if (scoreGame.visitor_losses !== undefined) {
                                 existing.visitor_losses = scoreGame.visitor_losses;
+                            }
+                            // For NFL, update records from Tank01 API if missing
+                            if (existing.league === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
+                                if ((!existing.home_wins || existing.home_wins === null) && nflTeamRecords[scoreGame.home_team]) {
+                                    existing.home_wins = nflTeamRecords[scoreGame.home_team].wins;
+                                    existing.home_losses = nflTeamRecords[scoreGame.home_team].losses;
+                                    existing.home_ties = nflTeamRecords[scoreGame.home_team].ties;
+                                } else if ((!existing.home_wins || existing.home_wins === null) && scoreGame.home_team_abbrev && nflTeamRecords[scoreGame.home_team_abbrev]) {
+                                    existing.home_wins = nflTeamRecords[scoreGame.home_team_abbrev].wins;
+                                    existing.home_losses = nflTeamRecords[scoreGame.home_team_abbrev].losses;
+                                    existing.home_ties = nflTeamRecords[scoreGame.home_team_abbrev].ties;
+                                }
+                                if ((!existing.visitor_wins || existing.visitor_wins === null) && nflTeamRecords[scoreGame.visitor_team]) {
+                                    existing.visitor_wins = nflTeamRecords[scoreGame.visitor_team].wins;
+                                    existing.visitor_losses = nflTeamRecords[scoreGame.visitor_team].losses;
+                                    existing.visitor_ties = nflTeamRecords[scoreGame.visitor_team].ties;
+                                } else if ((!existing.visitor_wins || existing.visitor_wins === null) && scoreGame.visitor_team_abbrev && nflTeamRecords[scoreGame.visitor_team_abbrev]) {
+                                    existing.visitor_wins = nflTeamRecords[scoreGame.visitor_team_abbrev].wins;
+                                    existing.visitor_losses = nflTeamRecords[scoreGame.visitor_team_abbrev].losses;
+                                    existing.visitor_ties = nflTeamRecords[scoreGame.visitor_team_abbrev].ties;
+                                }
                             }
                             // Update OTL from scores - API uses home_otl/visitor_otl
                             if (scoreGame.home_otl !== undefined && scoreGame.home_otl !== null) {
@@ -765,9 +1161,33 @@
                     } else {
                         // Flat list - try to determine league from game data
                         games.forEach(game => {
-                            const gameLeague = (game.league || game.sport || 'Unknown').toUpperCase();
+                            // Try multiple ways to determine league
+                            let gameLeague = game.league || game.sport;
+                            // If still not found, try to infer from team names or other data
+                            if (!gameLeague) {
+                                // Try to infer from team names or use the selected league
+                                if (league !== 'all') {
+                                    gameLeague = league;
+                                } else {
+                                    // Last resort - try to infer from team data
+                                    const visitorTeam = findTeamData(game.visitor_team);
+                                    if (visitorTeam && visitorTeam.league) {
+                                        gameLeague = visitorTeam.league.toLowerCase();
+                                    } else {
+                                        gameLeague = 'nba'; // Default fallback
+                                    }
+                                }
+                            }
+                            gameLeague = gameLeague.toUpperCase();
                             if (!gamesByLeague[gameLeague]) {
                                 gamesByLeague[gameLeague] = [];
+                            }
+                            // Ensure league is set on the game object
+                            if (!game.league) {
+                                game.league = gameLeague.toLowerCase();
+                            }
+                            if (!game.sport) {
+                                game.sport = gameLeague.toLowerCase();
                             }
                             gamesByLeague[gameLeague].push(game);
                         });
@@ -799,10 +1219,10 @@
                         
                         html += `
                             <div class="league-section mb-4">
-                                <div class="league-header mb-3">
+                                <div class="league-header mb-2" style="padding: 0.5rem 0;">
                                     <div class="d-flex align-items-center justify-content-center">
-                                        ${leagueLogo ? `<img src="${leagueLogo}" alt="${leagueUpper}" style="height: 50px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">` : ''}
-                                        <span style="font-size: 1.3rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
+                                        ${leagueLogo ? `<img src="${leagueLogo}" alt="${leagueUpper}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">` : ''}
+                                        <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
                                     </div>
                                 </div>
                                 <div class="table-responsive-scores">
@@ -820,7 +1240,15 @@
                         
                         // Render games for this league
                         leagueGames.forEach(game => {
-                            html += renderGameRow(game, teamColors, leagueUpper);
+                            // Ensure game has league set
+                            const gameLeague = (game.league || game.sport || leagueUpper).toUpperCase();
+                            if (!game.league) game.league = gameLeague.toLowerCase();
+                            if (!game.sport) game.sport = gameLeague.toLowerCase();
+                            
+                            // For "all" view, we need to get team colors specific to this league
+                            // since teamColors is merged from all leagues
+                            // The merged teamColors should already have all teams, so we can use it as-is
+                            html += renderGameRow(game, teamColors, gameLeague);
                         });
                         
                         html += `
@@ -832,12 +1260,15 @@
                     });
                 } else {
                     // Render single league
-                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : '{{ "NHL" | get_league_logo }}';
+                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
+                                      leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
+                                      leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
+                                      '{{ "NBA" | get_league_logo }}';
                     html = `
-                        <div class="league-header mb-3">
+                        <div class="league-header mb-2" style="padding: 0.5rem 0;">
                             <div class="d-flex align-items-center justify-content-center">
-                                <img src="${leagueLogo}" alt="${leagueUpper}" style="height: 60px; vertical-align: middle; margin-right: 10px;" onerror="this.style.display='none';">
-                                <span style="font-size: 1.5rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
+                                <img src="${leagueLogo}" alt="${leagueUpper}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
+                                <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
                             </div>
                         </div>
                         <div class="table-responsive-scores">
@@ -869,16 +1300,18 @@
             } catch (error) {
                 console.error('Error loading scores and schedules:', error);
                 console.error('Error details:', {
-                    message: error.message,
-                    stack: error.stack,
+                    message: error?.message || String(error),
+                    stack: error?.stack,
+                    name: error?.name,
                     league: league,
                     timezone: timezone
                 });
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
                 container.innerHTML = `
                     <div class="text-center">
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            Unable to load scores and schedules. Error: ${error.message}
+                            Unable to load scores and schedules. Error: ${errorMessage}
                             <br><small>Please check the console for more details.</small>
                         </div>
                     </div>

@@ -1,0 +1,16 @@
+[Unit]
+Description=Timer for Sportspuff v6 Cache Warmer
+Requires=cache-warmer.service
+
+[Timer]
+# Run every minute - the script will determine if it's game hours
+# and adjust behavior accordingly (full refresh during games, lighter during off-hours)
+OnCalendar=*:0/1
+# Also run on boot (with 30 second delay)
+OnBootSec=30s
+# If missed, run as soon as possible
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

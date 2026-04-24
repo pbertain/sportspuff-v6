@@ -1,0 +1,17 @@
+[Unit]
+Description=Timer for NFL Team Data Updater
+Requires=nfl-team-data-updater.service
+
+[Timer]
+# Run daily at 2:00 AM (after games typically finish)
+OnCalendar=*-*-* 02:00:00
+# Also run on boot (with 5 minute delay)
+OnBootSec=5min
+# If missed, run as soon as possible
+Persistent=true
+# Randomize start time within 30 minutes to avoid API rate limits
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target
+

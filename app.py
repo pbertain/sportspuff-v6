@@ -27,15 +27,16 @@ load_dotenv()
 _api_cache = {}
 _cache_ttl = {
     'schedule': 300,  # 5 minutes for schedules
-    'scores': 5,      # 5 seconds for scores (games update very frequently)
+    'scores': 30,     # 30 seconds for scores (increased to reduce API calls since API can be slow)
 }
 
-def get_cached_response(cache_key, cache_type):
-    """Get cached response if still valid"""
+def get_cached_response(cache_key, cache_type, allow_expired=False):
+    """Get cached response if still valid, or expired if allow_expired=True"""
     if cache_key in _api_cache:
         cached_data, timestamp = _api_cache[cache_key]
         ttl = _cache_ttl.get(cache_type, 60)
-        if (datetime.now(timezone.utc) - timestamp).total_seconds() < ttl:
+        age = (datetime.now(timezone.utc) - timestamp).total_seconds()
+        if age < ttl or allow_expired:
             return cached_data
     return None
 
@@ -76,9 +77,13 @@ DB_CONFIG = {
 def get_db_connection():
     """Get database connection"""
     try:
+        logger.info(f"Attempting database connection with config: host={DB_CONFIG['host']}, database={DB_CONFIG['database']}, user={DB_CONFIG['user']}")
         conn = psycopg2.connect(**DB_CONFIG)
+        logger.info("Database connection successful")
         return conn
     except psycopg2.Error as e:
+        # Log the error
+        logger.error(f'Database connection error: {e}', exc_info=True)
         # Only flash if we're in a request context
         try:
             flash(f'Database connection error: {e}', 'error')
@@ -92,6 +97,7 @@ def index():
     """Home page with overview statistics"""
     conn = get_db_connection()
     if not conn:
+        logger.warning("get_db_connection() returned None - database unavailable")
         # Fallback data when database is not available
         return render_template('index.html', 
                              team_count=0,
@@ -103,6 +109,7 @@ def index():
                              API_BASE_URL=API_BASE_URL,
                              db_available=False)
     
+    logger.info("Database connection obtained, executing queries")
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -133,7 +140,7 @@ def index():
         # Use full_team_name for proper capitalization and spacing
         cursor.execute("""
             SELECT t.full_team_name, t.real_team_name, t.team_color_1, t.team_color_2, t.team_color_3, 
-                   t.logo_filename, l.league_name, l.league_name_proper
+                   t.logo_filename, t.team_abbreviation, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
             WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba')
@@ -157,44 +164,127 @@ def index():
                 # Use splitsp.lat for all logos
                 logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{team["logo_filename"]}'
             
+            # Get team abbreviation - use from database if available, otherwise generate
+            abbrev = team.get('team_abbreviation')
+            if not abbrev:
+                abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
+            
+            # Use real_team_name as primary key (has spaces between words)
+            full_name = team['full_team_name']
+            real_name = team['real_team_name']
+            
             team_data = {
                 'color_1': team['team_color_1'],
                 'color_2': team['team_color_2'],
                 'color_3': team['team_color_3'],
-                'logo_url': logo_url
+                'logo_url': logo_url,
+                'abbreviation': abbrev,
+                'full_team_name': full_name,  # Store full team name as backup
+                'real_team_name': real_name   # Store real team name for display (has spaces)
             }
             
-            # Use full_team_name as primary key (proper capitalization and spacing)
-            full_name = team['full_team_name']
-            real_name = team['real_team_name']
+            # Map real_team_name (primary) - this has spaces between words
+            team_colors[league_proper][real_name] = team_data
             
-            # Map full_team_name (primary)
-            team_colors[league_proper][full_name] = team_data
+            # Also map full_team_name for backward compatibility
+            if full_name and full_name != real_name:
+                team_colors[league_proper][full_name] = team_data
             
-            # Also map real_team_name for backward compatibility
-            if real_name and real_name != full_name:
-                team_colors[league_proper][real_name] = team_data
-            
-            # Map common variations using full_team_name
+            # Map common variations using real_team_name (which has spaces)
             # Los Angeles variations
-            if 'Los Angeles' in full_name:
+            if 'Los Angeles' in real_name:
                 # Map "LA Clippers" to "Los Angeles Clippers"
-                team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
-            elif full_name.startswith('LA '):
+                team_colors[league_proper][real_name.replace('Los Angeles', 'LA')] = team_data
+            elif real_name.startswith('LA '):
                 # Map "Los Angeles Clippers" to "LA Clippers"
-                team_colors[league_proper][full_name.replace('LA ', 'Los Angeles ')] = team_data
+                team_colors[league_proper][real_name.replace('LA ', 'Los Angeles ')] = team_data
             
             # New York variations
-            if 'New York' in full_name:
-                team_colors[league_proper][full_name.replace('New York', 'NY')] = team_data
-            elif full_name.startswith('NY '):
-                team_colors[league_proper][full_name.replace('NY ', 'New York ')] = team_data
+            if 'New York' in real_name:
+                team_colors[league_proper][real_name.replace('New York', 'NY')] = team_data
+            elif real_name.startswith('NY '):
+                team_colors[league_proper][real_name.replace('NY ', 'New York ')] = team_data
             
             # San Francisco variations
-            if 'San Francisco' in full_name:
-                team_colors[league_proper][full_name.replace('San Francisco', 'SF')] = team_data
-            elif full_name.startswith('SF '):
-                team_colors[league_proper][full_name.replace('SF ', 'San Francisco ')] = team_data
+            if 'San Francisco' in real_name:
+                team_colors[league_proper][real_name.replace('San Francisco', 'SF')] = team_data
+            elif real_name.startswith('SF '):
+                team_colors[league_proper][real_name.replace('SF ', 'San Francisco ')] = team_data
+            
+            # NFL-specific mappings: Map abbreviations and common variations
+            if league_proper == 'NFL':
+                # NFL team abbreviation mappings (API often returns abbreviations)
+                nfl_abbrev_map = {
+                    'ARI': 'Arizona Cardinals',
+                    'ATL': 'Atlanta Falcons',
+                    'BAL': 'Baltimore Ravens',
+                    'BUF': 'Buffalo Bills',
+                    'CAR': 'Carolina Panthers',
+                    'CHI': 'Chicago Bears',
+                    'CIN': 'Cincinnati Bengals',
+                    'CLE': 'Cleveland Browns',
+                    'DAL': 'Dallas Cowboys',
+                    'DEN': 'Denver Broncos',
+                    'DET': 'Detroit Lions',
+                    'GB': 'Green Bay Packers',
+                    'HOU': 'Houston Texans',
+                    'IND': 'Indianapolis Colts',
+                    'JAX': 'Jacksonville Jaguars',
+                    'KC': 'Kansas City Chiefs',
+                    'LV': 'Las Vegas Raiders',
+                    'LAC': 'Los Angeles Chargers',
+                    'LAR': 'Los Angeles Rams',
+                    'MIA': 'Miami Dolphins',
+                    'MIN': 'Minnesota Vikings',
+                    'NE': 'New England Patriots',
+                    'NO': 'New Orleans Saints',
+                    'NYG': 'New York Giants',
+                    'NYJ': 'New York Jets',
+                    'PHI': 'Philadelphia Eagles',
+                    'PIT': 'Pittsburgh Steelers',
+                    'SF': 'San Francisco 49ers',
+                    'SEA': 'Seattle Seahawks',
+                    'TB': 'Tampa Bay Buccaneers',
+                    'TEN': 'Tennessee Titans',
+                    'WSH': 'Washington Commanders',
+                    'WAS': 'Washington Commanders'  # Alternative abbreviation
+                }
+                
+                # Map abbreviations to real team name (which has spaces)
+                for abbrev, mapped_name in nfl_abbrev_map.items():
+                    if mapped_name == real_name or mapped_name == full_name:
+                        # Map abbreviation to this team
+                        team_colors[league_proper][abbrev] = team_data
+                        # Also map just the team name part (e.g., "Cardinals", "Eagles")
+                        team_name_only = real_name.split()[-1]  # Last word
+                        if team_name_only:
+                            team_colors[league_proper][team_name_only] = team_data
+                            # Also map "City Team" format (e.g., "Arizona Cardinals")
+                            city_part = ' '.join(real_name.split()[:-1])
+                            if city_part:
+                                team_colors[league_proper][f"{city_part} {team_name_only}"] = team_data
+                                # Map common city abbreviations
+                                if city_part == 'New England':
+                                    team_colors[league_proper]['NE Patriots'] = team_data
+                                    team_colors[league_proper]['New England'] = team_data
+                                elif city_part == 'Kansas City':
+                                    team_colors[league_proper]['KC Chiefs'] = team_data
+                                    team_colors[league_proper]['Kansas City'] = team_data
+                                elif city_part == 'Tampa Bay':
+                                    team_colors[league_proper]['TB Buccaneers'] = team_data
+                                    team_colors[league_proper]['Tampa Bay'] = team_data
+                                elif city_part == 'Green Bay':
+                                    team_colors[league_proper]['GB Packers'] = team_data
+                                    team_colors[league_proper]['Green Bay'] = team_data
+                                elif city_part == 'Las Vegas':
+                                    team_colors[league_proper]['LV Raiders'] = team_data
+                                    team_colors[league_proper]['Las Vegas'] = team_data
+                                elif 'Los Angeles' in city_part:
+                                    team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
+                                    if 'Chargers' in full_name:
+                                        team_colors[league_proper]['LAC'] = team_data
+                                    elif 'Rams' in full_name:
+                                        team_colors[league_proper]['LAR'] = team_data
         
         # Keep nba_team_colors for backward compatibility
         nba_team_colors = team_colors.get('NBA', {})
@@ -214,7 +304,13 @@ def index():
                              db_available=True)
     
     except Exception as e:
+        logger.error(f'Error loading dashboard: {e}', exc_info=True)
         flash(f'Error loading dashboard: {e}', 'error')
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
         return render_template('index.html', 
                              team_count=0,
                              stadium_count=0,
@@ -330,6 +426,102 @@ def league_page(league_name):
     except Exception as e:
         return render_template('error.html', message=str(e))
 
+def get_team_abbreviation(team_name, league):
+    """Get three-letter abbreviation for a team based on league and team name"""
+    # NFL abbreviations
+    nfl_abbrev_map = {
+        'Arizona Cardinals': 'ARI', 'Atlanta Falcons': 'ATL', 'Baltimore Ravens': 'BAL',
+        'Buffalo Bills': 'BUF', 'Carolina Panthers': 'CAR', 'Chicago Bears': 'CHI',
+        'Cincinnati Bengals': 'CIN', 'Cleveland Browns': 'CLE', 'Dallas Cowboys': 'DAL',
+        'Denver Broncos': 'DEN', 'Detroit Lions': 'DET', 'Green Bay Packers': 'GB',
+        'Houston Texans': 'HOU', 'Indianapolis Colts': 'IND', 'Jacksonville Jaguars': 'JAX',
+        'Kansas City Chiefs': 'KC', 'Las Vegas Raiders': 'LV', 'Los Angeles Chargers': 'LAC',
+        'Los Angeles Rams': 'LAR', 'Miami Dolphins': 'MIA', 'Minnesota Vikings': 'MIN',
+        'New England Patriots': 'NE', 'New Orleans Saints': 'NO', 'New York Giants': 'NYG',
+        'New York Jets': 'NYJ', 'Philadelphia Eagles': 'PHI', 'Pittsburgh Steelers': 'PIT',
+        'San Francisco 49ers': 'SF', 'Seattle Seahawks': 'SEA', 'Tampa Bay Buccaneers': 'TB',
+        'Tennessee Titans': 'TEN', 'Washington Commanders': 'WSH'
+    }
+    # Also map common variations
+    nfl_abbrev_map['New York Jets'] = 'NYJ'
+    nfl_abbrev_map['New England Patriots'] = 'NE'
+    
+    # NBA abbreviations (common 3-letter abbreviations)
+    nba_abbrev_map = {
+        'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
+        'Charlotte Hornets': 'CHA', 'Chicago Bulls': 'CHI', 'Cleveland Cavaliers': 'CLE',
+        'Dallas Mavericks': 'DAL', 'Denver Nuggets': 'DEN', 'Detroit Pistons': 'DET',
+        'Golden State Warriors': 'GSW', 'Houston Rockets': 'HOU', 'Indiana Pacers': 'IND',
+        'LA Clippers': 'LAC', 'Los Angeles Clippers': 'LAC', 'Los Angeles Lakers': 'LAL',
+        'Memphis Grizzlies': 'MEM', 'Miami Heat': 'MIA', 'Milwaukee Bucks': 'MIL',
+        'Minnesota Timberwolves': 'MIN', 'New Orleans Pelicans': 'NOP', 'New York Knicks': 'NYK',
+        'Oklahoma City Thunder': 'OKC', 'Orlando Magic': 'ORL', 'Philadelphia 76ers': 'PHI',
+        'Phoenix Suns': 'PHX', 'Portland Trail Blazers': 'POR', 'Sacramento Kings': 'SAC',
+        'San Antonio Spurs': 'SAS', 'Toronto Raptors': 'TOR', 'Utah Jazz': 'UTA',
+        'Washington Wizards': 'WAS'
+    }
+    
+    # NHL abbreviations
+    nhl_abbrev_map = {
+        'Anaheim Ducks': 'ANA', 'Arizona Coyotes': 'ARI', 'Boston Bruins': 'BOS',
+        'Buffalo Sabres': 'BUF', 'Calgary Flames': 'CGY', 'Carolina Hurricanes': 'CAR',
+        'Chicago Blackhawks': 'CHI', 'Colorado Avalanche': 'COL', 'Columbus Blue Jackets': 'CBJ',
+        'Dallas Stars': 'DAL', 'Detroit Red Wings': 'DET', 'Edmonton Oilers': 'EDM',
+        'Florida Panthers': 'FLA', 'Los Angeles Kings': 'LAK', 'Minnesota Wild': 'MIN',
+        'Montreal Canadiens': 'MTL', 'Nashville Predators': 'NSH', 'New Jersey Devils': 'NJD',
+        'New York Islanders': 'NYI', 'New York Rangers': 'NYR', 'Ottawa Senators': 'OTT',
+        'Philadelphia Flyers': 'PHI', 'Pittsburgh Penguins': 'PIT', 'San Jose Sharks': 'SJS',
+        'Seattle Kraken': 'SEA', 'St. Louis Blues': 'STL', 'Tampa Bay Lightning': 'TBL',
+        'Toronto Maple Leafs': 'TOR', 'Vegas Golden Knights': 'VGK', 'Vancouver Canucks': 'VAN',
+        'Washington Capitals': 'WSH', 'Winnipeg Jets': 'WPG'
+    }
+    
+    # MLB abbreviations
+    mlb_abbrev_map = {
+        'Arizona Diamondbacks': 'ARI', 'Atlanta Braves': 'ATL', 'Baltimore Orioles': 'BAL',
+        'Boston Red Sox': 'BOS', 'Chicago Cubs': 'CHC', 'Chicago White Sox': 'CWS',
+        'Cincinnati Reds': 'CIN', 'Cleveland Guardians': 'CLE', 'Colorado Rockies': 'COL',
+        'Detroit Tigers': 'DET', 'Houston Astros': 'HOU', 'Kansas City Royals': 'KC',
+        'Los Angeles Angels': 'LAA', 'Los Angeles Dodgers': 'LAD', 'Miami Marlins': 'MIA',
+        'Milwaukee Brewers': 'MIL', 'Minnesota Twins': 'MIN', 'New York Mets': 'NYM',
+        'New York Yankees': 'NYY', 'Oakland Athletics': 'OAK', 'Philadelphia Phillies': 'PHI',
+        'Pittsburgh Pirates': 'PIT', 'San Diego Padres': 'SD', 'San Francisco Giants': 'SF',
+        'Seattle Mariners': 'SEA', 'St. Louis Cardinals': 'STL', 'Tampa Bay Rays': 'TB',
+        'Texas Rangers': 'TEX', 'Toronto Blue Jays': 'TOR', 'Washington Nationals': 'WSH'
+    }
+    
+    # Select the appropriate map based on league
+    abbrev_map = {}
+    if league.upper() == 'NFL':
+        abbrev_map = nfl_abbrev_map
+    elif league.upper() == 'NBA':
+        abbrev_map = nba_abbrev_map
+    elif league.upper() == 'NHL':
+        abbrev_map = nhl_abbrev_map
+    elif league.upper() == 'MLB':
+        abbrev_map = mlb_abbrev_map
+    
+    # Try exact match first
+    if team_name in abbrev_map:
+        return abbrev_map[team_name]
+    
+    # Try case-insensitive match
+    for key, abbrev in abbrev_map.items():
+        if key.lower() == team_name.lower():
+            return abbrev
+    
+    # Fallback: Generate abbreviation from team name (first letter of each word, max 3)
+    words = team_name.split()
+    if len(words) >= 2:
+        # Take first letter of first two words, or first three letters of first word
+        abbrev = (words[0][0] + words[1][0] + (words[2][0] if len(words) > 2 else words[0][1] if len(words[0]) > 1 else '')).upper()
+        return abbrev[:3]
+    elif len(words) == 1:
+        # Single word: take first 3 letters
+        return words[0][:3].upper()
+    
+    return ''
+
 @app.route('/teams')
 def teams():
     """List all teams with pagination"""
@@ -391,6 +583,10 @@ def teams():
         """
         cursor.execute(teams_query, params + [per_page, offset])
         teams = cursor.fetchall()
+        
+        # Add abbreviations to each team
+        for team in teams:
+            team['abbreviation'] = get_team_abbreviation(team['real_team_name'], team.get('league', ''))
         
         # Get divisions for the selected league
         divisions = []
@@ -470,6 +666,7 @@ def stadiums():
             ORDER BY s.full_stadium_name
             LIMIT %s OFFSET %s
         """
+        # Note: s.image field contains stadium image path if available (may be relative path like 'stadiums/league/stadium_name_img.png')
         cursor.execute(stadiums_query, params + [per_page, offset])
         stadiums = cursor.fetchall()
         
@@ -680,6 +877,25 @@ def api_stadiums():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stadiums/<path:filename>')
+def serve_stadium_image(filename):
+    """Serve stadium images from the stadiums directory"""
+    import os
+    # Check if file exists in stadiums directory
+    stadiums_dir = os.path.join(os.path.dirname(__file__), 'stadiums')
+    file_path = os.path.join(stadiums_dir, filename)
+    if os.path.exists(file_path):
+        return send_from_directory(stadiums_dir, filename)
+    else:
+        # Try with subdirectories (e.g., stadiums/nba/stadium.jpg)
+        for root, dirs, files in os.walk(stadiums_dir):
+            for file in files:
+                if file == filename or filename in file:
+                    return send_from_directory(root, file)
+        # Return 404 if not found
+        from flask import abort
+        abort(404)
+
 @app.route('/static/logos/<path:filename>')
 def serve_logo(filename):
     """Serve logo files from splitsp.lat"""
@@ -757,19 +973,55 @@ def proxy_schedule(league, date):
             api_date = date
         
         # Check cache first - but verify it's for today's date
+        # Use cache more aggressively since API can be slow
         cached_response = get_cached_response(cache_key, 'schedule')
         if cached_response:
             # Verify the cached data is for today (check response date field)
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
             if cached_date == today_date:
+                logger.info(f"Returning cached schedule for {league} from {cached_date}")
                 return jsonify(cached_response)
             # If cached date doesn't match today, clear it and fetch fresh
         
         # Fetch from API with timezone parameter
-        url = f'{API_BASE_URL}/api/v1/schedule/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching schedule from: {url}")
-        response = requests.get(url, timeout=10)
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
+        if not api_base:
+            # Try to get from default API_BASE_URL if defined
+            try:
+                api_base = API_BASE_URL
+            except NameError:
+                api_base = None
+        if not api_base:
+            logger.error("SPORTSPUFF_API_BASE_URL not configured")
+            return jsonify({'error': 'API base URL not configured'}), 500
+        url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
+        logger.info(f"Fetching schedule from: {url} (timeout=20s)")
+        try:
+            # Use shorter timeout to avoid nginx 502 errors
+            # Nginx typically has 60s timeout, so we use 20s to leave buffer
+            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
+            logger.info(f"Schedule API response status: {response.status_code}, length: {len(response.content)}")
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout fetching schedule from {url} after 20s")
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule due to timeout")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error - frontend can handle this
+            logger.warning("No cache available, returning empty schedule")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request exception fetching schedule: {e}", exc_info=True)
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule due to request exception")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error
+            logger.warning("No cache available, returning empty schedule")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
         
         # Check if response is successful
         if response.status_code != 200:
@@ -782,7 +1034,11 @@ def proxy_schedule(league, date):
             logger.error(f"Error proxying schedule request: {error_msg}")
             return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
         
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as e:
+            logger.error(f"Failed to parse JSON from schedule API: {e}, response text: {response.text[:500]}")
+            return jsonify({'error': 'Invalid JSON response from API'}), 500
         
         # Check for API errors in response
         if isinstance(data, dict) and 'error' in data:
@@ -794,14 +1050,120 @@ def proxy_schedule(league, date):
         
         return jsonify(data)
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout proxying schedule request to {url}")
-        return jsonify({'error': 'API request timed out'}), 500
+        logger.error(f"Timeout proxying schedule request")
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after outer timeout")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying schedule request: {e}")
-        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after outer request exception")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
     except Exception as e:
         logger.error(f"Unexpected error in proxy_schedule: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached schedule after unexpected error")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty schedule")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
+
+@app.route('/api/nfl/team-records')
+def nfl_team_records():
+    """Fetch NFL team records from Tank01 API"""
+    try:
+        rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
+        if not rapidapi_key:
+            logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
+            # Return empty records instead of 500 - frontend can handle this gracefully
+            return jsonify({'teams': {}}), 200
+        
+        url = "https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams"
+        querystring = {
+            "sortBy": "standings",
+            "rosters": "false",
+            "schedules": "false",
+            "topPerformers": "true",
+            "teamStats": "true",
+            "teamStatsSeason": "2024"
+        }
+        headers = {
+            "x-rapidapi-key": rapidapi_key,
+            "x-rapidapi-host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
+        }
+        
+        logger.info("Fetching NFL team records from Tank01 API")
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get('statusCode') == 200 and 'body' in data:
+            teams = data['body']
+            # Create a mapping of team name to record
+            # Team name format: teamCity + " " + teamName (e.g., "New England Patriots")
+            team_records = {}
+            for team in teams:
+                team_city = team.get('teamCity', '')
+                team_name = team.get('teamName', '')
+                full_team_name = f"{team_city} {team_name}".strip()
+                
+                # Get record values (API returns as strings)
+                wins = int(team.get('wins', 0)) if team.get('wins') else 0
+                loss = int(team.get('loss', 0)) if team.get('loss') else 0
+                tie = int(team.get('tie', 0)) if team.get('tie') else 0
+                
+                # Store by full team name
+                team_records[full_team_name] = {
+                    'wins': wins,
+                    'losses': loss,
+                    'ties': tie
+                }
+                
+                # Also store by abbreviation if available
+                team_abv = team.get('teamAbv', '').strip()
+                if team_abv:
+                    team_records[team_abv] = {
+                        'wins': wins,
+                        'losses': loss,
+                        'ties': tie
+                    }
+            
+            logger.info(f"Fetched records for {len(team_records)} NFL teams")
+            return jsonify({'teams': team_records}), 200
+        else:
+            logger.error(f"Unexpected API response: {data}")
+            # Return empty records instead of 500 - frontend can handle this gracefully
+            return jsonify({'teams': {}}), 200
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching NFL team records: {e}")
+        # Return empty records instead of 500 - frontend can handle this gracefully
+        return jsonify({'teams': {}}), 200
+    except Exception as e:
+        logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
+        # Return empty records instead of 500 - frontend can handle this gracefully
+        return jsonify({'teams': {}}), 200
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
@@ -820,21 +1182,55 @@ def proxy_scores(league, date):
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
         
-        # Check cache only if very recent (< 5 seconds) - otherwise always fetch fresh
+        # Check cache FIRST - return immediately if available
+        # This prevents hitting the slow API and causing nginx timeouts
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
             cached_date = cached_response.get('date', '')
             today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            # Only use cache if it's from today AND very recent (< 5 seconds)
+            # Only use cache if it's from today AND within TTL (30 seconds)
             if cached_date == today_date:
-                # Use cache if very recent (handled by get_cached_response with 5s TTL)
-                # Otherwise continue to fetch fresh
-                pass
+                logger.info(f"Returning cached scores for {league} from {cached_date}")
+                return jsonify(cached_response)
         
-        # Always fetch fresh scores (cache is just for rapid consecutive requests)
-        url = f'{API_BASE_URL}/api/v1/scores/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching scores from: {url}")
-        response = requests.get(url, timeout=10)
+        # Only fetch fresh scores if cache is expired or missing
+        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
+        if not api_base:
+            # Try to get from default API_BASE_URL if defined
+            try:
+                api_base = API_BASE_URL
+            except NameError:
+                api_base = None
+        if not api_base:
+            logger.error("SPORTSPUFF_API_BASE_URL not configured")
+            return jsonify({'error': 'API base URL not configured'}), 500
+        url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
+        logger.info(f"Fetching scores from: {url} (timeout=20s)")
+        try:
+            # Use shorter timeout to avoid nginx 502 errors
+            # Nginx typically has 60s timeout, so we use 20s to leave buffer
+            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
+            logger.info(f"Scores API response status: {response.status_code}, length: {len(response.content)}")
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout fetching scores from {url} after 20s")
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores due to timeout")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error - frontend can handle this
+            logger.warning("No cache available, returning empty scores")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request exception fetching scores: {e}", exc_info=True)
+            # Return cached response if available, even if expired
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores due to request exception")
+                return jsonify(expired_cache)
+            # Return empty structure instead of error
+            logger.warning("No cache available, returning empty scores")
+            return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
         
         # Check if response is successful
         if response.status_code != 200:
@@ -854,7 +1250,18 @@ def proxy_scores(league, date):
                     return jsonify(cached_response)
             return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
         
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as e:
+            logger.error(f"Failed to parse JSON from scores API: {e}, response text: {response.text[:500]}")
+            # Try cached response as fallback
+            if 'cached_response' in locals() and cached_response:
+                cached_date = cached_response.get('date', '')
+                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+                if cached_date == today_date:
+                    logger.info("Returning cached scores as fallback after JSON parse error")
+                    return jsonify(cached_response)
+            return jsonify({'error': 'Invalid JSON response from API'}), 500
         
         # Check for API errors in response
         if isinstance(data, dict) and 'error' in data:
@@ -873,28 +1280,44 @@ def proxy_scores(league, date):
         
         return jsonify(data)
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout proxying scores request to {url}")
-        # Try cached response as fallback
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached scores as fallback after timeout")
-                return jsonify(cached_response)
-        return jsonify({'error': 'API request timed out'}), 500
+        logger.error(f"Timeout proxying scores request")
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after outer timeout")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying scores request: {e}")
-        # If API fails, try to return cached response as fallback only if very recent
-        if 'cached_response' in locals() and cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info("Returning cached scores as fallback")
-                return jsonify(cached_response)
-        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after outer request exception")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
     except Exception as e:
         logger.error(f"Unexpected error in proxy_scores: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        # Try to return expired cached response if available
+        try:
+            expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+            if expired_cache:
+                logger.warning("Returning expired cached scores after unexpected error")
+                return jsonify(expired_cache)
+        except:
+            pass
+        # Return empty structure instead of error
+        logger.warning("No cache available, returning empty scores")
+        return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
 
 @app.route('/api/team-colors/<league>')
 def get_team_colors(league):
