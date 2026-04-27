@@ -81,8 +81,8 @@
 - name: Install data processing requirements
   pip:
     name:
-      - pandas==1.5.3
-      - openpyxl==3.1.2
+      - pandas>=2.0
+      - openpyxl>=3.1
     virtualenv: "{{ app_dir }}/venv"
     virtualenv_command: "{{ app_dir }}/venv/bin/python"
     extra_args: "--timeout 300 --retries 3 --prefer-binary"
