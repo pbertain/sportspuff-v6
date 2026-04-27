@@ -98,6 +98,16 @@
     group: "{{ app_group }}"
     mode: '0600'
 
+# Run database migrations
+- name: Run database migrations
+  shell: >
+    PGPASSWORD="{{ db_password }}"
+    psql -h {{ db_host }} -U {{ db_user }} -d {{ db_name }}
+    -f {{ app_dir }}/migrate_add_team_record_columns.sql
+  register: migration_result
+  changed_when: "'Added' in migration_result.stderr"
+  failed_when: migration_result.rc != 0
+
 # Import data from CSV files into PostgreSQL
 # Uses ON CONFLICT ... DO UPDATE so it's safe to run on every deploy
 - name: Import data from CSV files
