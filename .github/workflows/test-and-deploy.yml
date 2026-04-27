@@ -75,7 +75,9 @@ jobs:
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
           -e target_env=dev \
-          -e db_password_secret="${{ secrets.DB_PASSWORD }}"
+          -e db_password_secret="${{ secrets.DB_PASSWORD }}" \
+          -e vault_rapidapi_key="${{ secrets.RAPIDAPI_KEY }}" \
+          -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
 
@@ -114,6 +116,8 @@ jobs:
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
           -e target_env=prod \
-          -e db_password_secret="${{ secrets.DB_PASSWORD }}"
+          -e db_password_secret="${{ secrets.DB_PASSWORD }}" \
+          -e vault_rapidapi_key="${{ secrets.RAPIDAPI_KEY }}" \
+          -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False

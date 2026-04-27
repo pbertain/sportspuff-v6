@@ -98,14 +98,23 @@
     group: "{{ app_group }}"
     mode: '0600'
 
-# Skip PostgreSQL setup entirely - get app working first
-- name: Skip PostgreSQL setup
-  debug:
-    msg: "Skipping PostgreSQL setup - app will run without database for now"
+# Import data from CSV files into PostgreSQL
+# Uses ON CONFLICT ... DO UPDATE so it's safe to run on every deploy
+- name: Import data from CSV files
+  command: "{{ app_dir }}/venv/bin/python {{ app_dir }}/import_data_modular.py"
+  args:
+    chdir: "{{ app_dir }}"
+  environment:
+    DB_HOST: "{{ db_host }}"
+    DB_NAME: "{{ db_name }}"
+    DB_USER: "{{ db_user }}"
+    DB_PASSWORD: "{{ db_password }}"
+  register: import_result
+  changed_when: "'Successfully imported' in import_result.stdout"
 
-- name: Skip data import
+- name: Show import results
   debug:
-    msg: "Skipping data import - requires PostgreSQL setup"
+    msg: "{{ import_result.stdout_lines | default(['No output']) }}"
 
 # Deploy NBA systemd service and timer
 # TODO: Create nba-scores-updater.service.j2 and nba-scores-updater.timer.j2 templates if needed
