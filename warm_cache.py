@@ -39,7 +39,7 @@ def warm_cache():
     """Warm the cache by calling proxy endpoints"""
     # Check current hour to determine if we're in game hours
     current_hour = datetime.now(timezone.utc).hour
-    is_game_hours = (current_hour >= 18) or (current_hour < 2)  # 6 PM - 2 AM UTC
+    is_game_hours = (current_hour >= 15) or (current_hour < 8)  # 8 AM - 1 AM PT (15:00 - 08:00 UTC)
     
     # During off-hours, only run every 5 minutes to reduce API calls
     # Check if we should skip this run (only run on :00, :05, :10, :15, etc.)

@@ -143,7 +143,7 @@ def index():
                    t.logo_filename, t.team_abbreviation, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
-            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba')
+            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba', 'mlc')
             AND t.team_color_1 IS NOT NULL
         """)
         all_teams = cursor.fetchall()
@@ -370,6 +370,7 @@ def league_page(league_name):
         teams_query = """
             SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
                    t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
+                   t.team_wins, t.team_losses,
                    s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
                    c.conference_name, d.division_name,
                    l.league_name_proper as team_league
@@ -378,11 +379,11 @@ def league_page(league_name):
             LEFT JOIN leagues l ON t.league_id = l.league_id
             LEFT JOIN conferences c ON t.conference_id = c.conference_id
             LEFT JOIN divisions d ON t.division_id = d.division_id
-            WHERE l.league_name_proper = %s 
+            WHERE l.league_name_proper = %s
             AND t.real_team_name NOT IN (
                 'Major League Baseball', 'National Football League', 'National Basketball Association',
                 'National Hockey League', 'Major League Soccer', 'Women''s National Basketball League',
-                'India Premier League'
+                'India Premier League', 'Major League Cricket'
             )
             ORDER BY COALESCE(c.conference_name, 'No Conference'), COALESCE(d.division_name, 'No Division'), t.real_team_name
         """
@@ -401,6 +402,22 @@ def league_page(league_name):
                 organized_teams[conference][division] = []
             
             organized_teams[conference][division].append(team)
+
+        # For MLB (and other leagues with standings), sort teams within each division by wins desc
+        # and compute Games Behind (GB)
+        if league_name == 'MLB':
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
+                    if teams_list and teams_list[0].get('team_wins') is not None:
+                        leader_wins = teams_list[0].get('team_wins') or 0
+                        leader_losses = teams_list[0].get('team_losses') or 0
+                        for team in teams_list:
+                            tw = team.get('team_wins') or 0
+                            tl = team.get('team_losses') or 0
+                            gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
+                            team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
         
         # Get league info including champion details
         league_query = """
@@ -951,6 +968,8 @@ def get_league_logo(league):
             return 'https://www.splitsp.lat/logos/mls/mls_logo.png'
         elif league_lower == 'wnba':
             return 'https://www.splitsp.lat/logos/wnba/wnba_logo.png'
+        elif league_lower == 'mlc':
+            return '/static/images/logos/mlc/mlc_logo.png'
         else:
             return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
     return '/static/images/no-logo.png'
@@ -1164,6 +1183,87 @@ def nfl_team_records():
         logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
         # Return empty records instead of 500 - frontend can handle this gracefully
         return jsonify({'teams': {}}), 200
+
+@app.route('/api/wnba/season-info')
+def wnba_season_info():
+    """Fetch WNBA season info (dates for preseason, regular season, postseason) from WNBA API"""
+    try:
+        wnba_api_key = os.getenv('WNBA_API_KEY', '')
+        if not wnba_api_key:
+            logger.warning("WNBA_API_KEY not set")
+            return jsonify({'error': 'WNBA API key not configured'}), 200
+
+        year = request.args.get('year', datetime.now().year)
+        url = f"https://wnba-api.p.rapidapi.com/wnbastandings?year={year}"
+        headers = {
+            "x-rapidapi-key": wnba_api_key,
+            "x-rapidapi-host": "wnba-api.p.rapidapi.com",
+            "Content-Type": "application/json"
+        }
+
+        cache_key = f'wnba_season_info:{year}'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        season_info = {'year': int(year), 'season_types': [], 'standings': []}
+
+        if 'seasons' in data and isinstance(data['seasons'], list):
+            for season in data['seasons']:
+                if season.get('year') == int(year) and 'types' in season:
+                    for stype in season['types']:
+                        season_info['season_types'].append({
+                            'name': stype.get('name', ''),
+                            'abbreviation': stype.get('abbreviation', ''),
+                            'start_date': stype.get('startDate', ''),
+                            'end_date': stype.get('endDate', '')
+                        })
+                    break
+
+        if 'standings' in data and 'entries' in data['standings']:
+            for entry in data['standings']['entries']:
+                team = entry.get('team', {})
+                stats = {s['name']: s.get('displayValue', s.get('value', '')) for s in entry.get('stats', [])}
+                season_info['standings'].append({
+                    'team_name': team.get('displayName', ''),
+                    'abbreviation': team.get('abbreviation', ''),
+                    'wins': stats.get('wins', ''),
+                    'losses': stats.get('losses', ''),
+                    'win_pct': stats.get('winPercent', ''),
+                    'games_behind': stats.get('gamesBehind', ''),
+                    'clincher': stats.get('clincher', '')
+                })
+
+        set_cached_response(cache_key, season_info)
+        return jsonify(season_info)
+
+    except Exception as e:
+        logger.error(f"Error fetching WNBA season info: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 200
+
+@app.route('/api/ipl/standings')
+def ipl_standings():
+    """Fetch IPL standings from ipl.cloud-puff.net"""
+    try:
+        cache_key = 'ipl_standings'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get('https://ipl.cloud-puff.net/api/standings', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching IPL standings: {e}")
+        return jsonify({'standings': []}), 200
 
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):

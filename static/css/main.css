@@ -28,6 +28,10 @@
   --ipl-accent: #FF6B35;      /* Orange-Red */
   --ipl-accent-dark: #E55A2B;
   --mls-accent: #2BAE66;      /* Emerald Green */
+
+  /* MLC Colors */
+  --mlc-accent: #1A5276;      /* Deep Teal */
+  --mlc-accent-dark: #0E3A54;
   
   /* Gradients */
   --primary-gradient: linear-gradient(135deg, var(--deep-purple) 0%, var(--electric-red) 100%);
@@ -412,6 +416,7 @@ main, .main-content {
 .league-card.wnba::before { background: var(--wnba-accent); }
 .league-card.mls::before { background: var(--mls-accent); }
 .league-card.ipl::before { background: var(--ipl-accent); }
+.league-card.mlc::before { background: var(--mlc-accent); }
 
 .league-card:hover {
   transform: translateY(-10px);

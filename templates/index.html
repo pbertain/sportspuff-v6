@@ -30,10 +30,13 @@
                     <div class="mb-2">
                         <label for="league-select" class="form-label text-white fw-bold">League:</label>
                         <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all" selected>All (NBA, NHL & NFL)</option>
+                            <option value="all" selected>All Leagues</option>
+                            <option value="mlb">MLB</option>
                             <option value="nba">NBA</option>
-                            <option value="nhl">NHL</option>
                             <option value="nfl">NFL</option>
+                            <option value="nhl">NHL</option>
+                            <option value="mls">MLS</option>
+                            <option value="wnba">WNBA</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -154,6 +157,16 @@
                         <h3 class="league-name">Indian Premier League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'IPL') | map(attribute='count') | first or 0 }} Teams</p>
                     </a>
+
+                    <!-- MLC -->
+                    <a href="{{ url_for('league_page', league_name='MLC') }}" class="league-card mlc fade-in-up" data-league="MLC">
+                        <div class="league-logo">
+                            <img src="{{ 'MLC' | get_league_logo }}" alt="MLC Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-cricket" style="color: var(--mlc-accent); display: none;"></i>
+                        </div>
+                        <h3 class="league-name">Major League Cricket</h3>
+                        <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLC') | map(attribute='count') | first or 0 }} Teams</p>
+                    </a>
                 </div>
             </div>
         </div>
@@ -219,72 +232,46 @@
                 }
                 
                 if (league === 'all') {
-                    // For "all", fetch NBA, NHL, and NFL separately and combine
-                    const nbaScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nbaScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nhlScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nhlScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nflScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
-                    const nflScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
-                    
-                    const nbaScheduleDirect = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
-                    const nbaScoresDirect = `${API_BASE}/scores/nba/today?tz=${timezone}`;
-                    const nhlScheduleDirect = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
-                    const nhlScoresDirect = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
-                    const nflScheduleDirect = `${API_BASE}/schedule/nfl/today?tz=${timezone}`;
-                    const nflScoresDirect = `${API_BASE}/scores/nfl/today?tz=${timezone}`;
-                    
+                    // For "all", fetch all leagues separately and combine
+                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba'];
+
                     // Fetch NFL team records from Tank01 API
                     try {
                         const nflRecordsResponse = await fetch('/api/nfl/team-records');
                         if (nflRecordsResponse.ok) {
                             const nflRecordsData = await nflRecordsResponse.json();
                             nflTeamRecords = nflRecordsData.teams || {};
-                            console.log('Fetched NFL team records:', Object.keys(nflTeamRecords).length, 'teams');
-                        } else {
-                            console.warn('Failed to fetch NFL team records:', nflRecordsResponse.status);
                         }
                     } catch (error) {
                         console.warn('Error fetching NFL team records:', error);
                     }
-                    
-                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores, nflSchedule, nflScores] = await Promise.all([
-                        fetchWithFallback(nbaScheduleProxy, nbaScheduleDirect),
-                        fetchWithFallback(nbaScoresProxy, nbaScoresDirect),
-                        fetchWithFallback(nhlScheduleProxy, nhlScheduleDirect),
-                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect),
-                        fetchWithFallback(nflScheduleProxy, nflScheduleDirect),
-                        fetchWithFallback(nflScoresProxy, nflScoresDirect)
+
+                    // Fetch schedule and scores for all leagues in parallel
+                    const fetchPromises = allLeagues.flatMap(lg => [
+                        fetchWithFallback(proxyScheduleUrl.replace(/\/nba\//, `/${lg}/`) + `?tz=${timezone}`, '').then(d => ({type: 'schedule', league: lg, data: d})),
+                        fetchWithFallback(proxyScoresUrl.replace(/\/nba\//, `/${lg}/`) + `?tz=${timezone}`, '').then(d => ({type: 'scores', league: lg, data: d}))
                     ]);
-                    
-                    // Combine NBA, NHL, and NFL data
-                    // Explicitly set league on each game to ensure it's preserved
-                    const nbaGames = (nbaSchedule.games || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
-                    const nhlGames = (nhlSchedule.games || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
-                    const nflGames = (nflSchedule.games || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
-                    
-                    scheduleData = {
-                        date: nbaSchedule.date || nhlSchedule.date || nflSchedule.date,
-                        games: [...nbaGames, ...nhlGames, ...nflGames]
-                    };
-                    
-                    const nbaScoresList = (nbaScores.scores || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
-                    const nhlScoresList = (nhlScores.scores || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
-                    const nflScoresList = (nflScores.scores || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
-                    
-                    scoresData = {
-                        date: nbaScores.date || nhlScores.date || nflScores.date,
-                        scores: [...nbaScoresList, ...nhlScoresList, ...nflScoresList]
-                    };
-                    
-                    // Debug logging for NFL
-                    console.log('NFL Schedule games:', nflGames.length);
-                    console.log('NFL Scores games:', nflScoresList.length);
-                    console.log('Total games by league:', {
-                        nba: nbaGames.length,
-                        nhl: nhlGames.length,
-                        nfl: nflGames.length
+
+                    const results = await Promise.all(fetchPromises.map(p => p.catch(e => ({type: 'error', data: {games: [], scores: []}}))));
+
+                    let allGames = [];
+                    let allScores = [];
+                    let dateStr = '';
+
+                    results.forEach(r => {
+                        if (r.type === 'schedule') {
+                            const games = (r.data.games || []).map(g => ({...g, league: r.league, sport: r.league}));
+                            allGames.push(...games);
+                            if (!dateStr) dateStr = r.data.date;
+                        } else if (r.type === 'scores') {
+                            const scores = (r.data.scores || []).map(g => ({...g, league: r.league, sport: r.league}));
+                            allScores.push(...scores);
+                            if (!dateStr) dateStr = r.data.date;
+                        }
                     });
+
+                    scheduleData = { date: dateStr, games: allGames };
+                    scoresData = { date: dateStr, scores: allScores };
                 } else {
                     // For single league
                     // Fetch NFL team records if viewing NFL
@@ -689,8 +676,8 @@
                         if (game.current_period && game.time_remaining) {
                             const period = parseInt(game.current_period);
                             // Use P for Period in NHL, Q for Quarter in NBA/NFL
-                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : gameLeague === 'MLB' ? 'Inn' : 'Q';
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
                             statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                         } else {
                             statusDisplay = 'Live';
@@ -698,8 +685,8 @@
                     } else if (game.current_period && game.time_remaining) {
                         // Game in progress but no score yet (shouldn't happen, but handle it)
                         const period = parseInt(game.current_period);
-                        const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                        let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                        const periodPrefix = gameLeague === 'NHL' ? 'P' : gameLeague === 'MLB' ? 'Inn' : 'Q';
+                        let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
                         statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                     } else if (isScheduled && game.game_time) {
                         // Parse game time - API should return ISO 8601 format
@@ -755,9 +742,15 @@
                     }
                     
                     // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
+                    // During playoffs, suppress regular season records (they're misleading)
+                    const isPlayoffGame = game.game_type === 'playoffs';
                     let visitorRecord = '';
                     let homeRecord = '';
-                    if (gameLeague === 'NHL') {
+                    if (isPlayoffGame) {
+                        // Don't show regular season records during playoffs
+                        visitorRecord = '';
+                        homeRecord = '';
+                    } else if (gameLeague === 'NHL') {
                         // NHL format: W-L-OTL
                         // API uses home_otl/visitor_otl (not home_overtime_losses)
                         const visitorOTL = game.visitor_otl !== undefined && game.visitor_otl !== null 
