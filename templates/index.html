@@ -768,8 +768,8 @@
                         if (series) {
                             const vWins = series.top_seed === visitorAbbr ? series.top_seed_wins : series.bottom_seed_wins;
                             const hWins = series.top_seed === homeAbbr ? series.top_seed_wins : series.bottom_seed_wins;
-                            visitorRecord = `Series: ${vWins}`;
-                            homeRecord = `Series: ${hWins}`;
+                            visitorRecord = `${vWins}-${hWins}`;
+                            homeRecord = `${hWins}-${vWins}`;
                         }
                     } else if (isPlayoffGame) {
                         visitorRecord = '';
