@@ -27,5 +27,9 @@ league_id,conference_id,division_id,division_name,division_full_name
 5,502,504,Pacific,Pacific Division
 6,601,601,Eastern,Eastern Conference
 6,602,602,Western,Western Conference
-7,701,701,IPL,India Premier League
-8,801,801,MLC,Major League Cricket
+7,117,135,UA,Unaffiliated
+7,118,136,Dosa,Dosa Division
+7,118,137,Naan,Naan Division
+8,119,138,UA,Unaffiliated
+8,120,139,East,Eastern
+8,120,140,West,Western
