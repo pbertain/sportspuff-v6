@@ -37,6 +37,8 @@
                             <option value="nhl">NHL</option>
                             <option value="mls">MLS</option>
                             <option value="wnba">WNBA</option>
+                            <option value="ipl">IPL</option>
+                            <option value="mlc">MLC</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -201,6 +203,7 @@
                 
                 let scheduleData, scoresData;
                 let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
+                let nhlPlayoffSeries = {}; // NHL playoff series records
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
@@ -244,6 +247,17 @@
                         }
                     } catch (error) {
                         console.warn('Error fetching NFL team records:', error);
+                    }
+
+                    // Fetch NHL playoff series records
+                    try {
+                        const nhlSeriesResponse = await fetch('/api/nhl/playoff-series');
+                        if (nhlSeriesResponse.ok) {
+                            const nhlSeriesData = await nhlSeriesResponse.json();
+                            nhlPlayoffSeries = nhlSeriesData.series || {};
+                        }
+                    } catch (error) {
+                        console.warn('Error fetching NHL playoff series:', error);
                     }
 
                     // Fetch schedule and scores for all leagues in parallel
@@ -742,12 +756,22 @@
                     }
                     
                     // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
-                    // During playoffs, suppress regular season records (they're misleading)
+                    // During playoffs, show series record instead of regular season records
                     const isPlayoffGame = game.game_type === 'playoffs';
                     let visitorRecord = '';
                     let homeRecord = '';
-                    if (isPlayoffGame) {
-                        // Don't show regular season records during playoffs
+                    if (isPlayoffGame && gameLeague === 'NHL' && Object.keys(nhlPlayoffSeries).length > 0) {
+                        // Show NHL playoff series record
+                        const visitorAbbr = (visitorTeamData?.abbreviation || game.visitor_team_abbrev || '').toUpperCase();
+                        const homeAbbr = (homeTeamData?.abbreviation || game.home_team_abbrev || '').toUpperCase();
+                        const series = nhlPlayoffSeries[visitorAbbr] || nhlPlayoffSeries[homeAbbr];
+                        if (series) {
+                            const vWins = series.top_seed === visitorAbbr ? series.top_seed_wins : series.bottom_seed_wins;
+                            const hWins = series.top_seed === homeAbbr ? series.top_seed_wins : series.bottom_seed_wins;
+                            visitorRecord = `Series: ${vWins}`;
+                            homeRecord = `Series: ${hWins}`;
+                        }
+                    } else if (isPlayoffGame) {
                         visitorRecord = '';
                         homeRecord = '';
                     } else if (gameLeague === 'NHL') {

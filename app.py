@@ -1265,6 +1265,48 @@ def ipl_standings():
         logger.error(f"Error fetching IPL standings: {e}")
         return jsonify({'standings': []}), 200
 
+@app.route('/api/nhl/playoff-series')
+def nhl_playoff_series():
+    """Fetch NHL playoff series records from NHL API schedule data"""
+    try:
+        cache_key = 'nhl_playoff_series'
+        cached = get_cached_response(cache_key, 'scores')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get('https://api-web.nhle.com/v1/schedule/now', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        series_map = {}
+        for week in data.get('gameWeek', []):
+            for game in week.get('games', []):
+                series = game.get('seriesStatus', {})
+                if not series:
+                    continue
+                top = series.get('topSeedTeamAbbrev', '')
+                bottom = series.get('bottomSeedTeamAbbrev', '')
+                if top and bottom:
+                    key = f"{min(top,bottom)}-{max(top,bottom)}"
+                    series_map[key] = {
+                        'top_seed': top,
+                        'top_seed_wins': series.get('topSeedWins', 0),
+                        'bottom_seed': bottom,
+                        'bottom_seed_wins': series.get('bottomSeedWins', 0),
+                        'round': series.get('round', 0),
+                        'game_number_of_series': series.get('gameNumberOfSeries', 0),
+                    }
+                    series_map[top] = series_map[key]
+                    series_map[bottom] = series_map[key]
+
+        result = {'series': series_map}
+        set_cached_response(cache_key, result)
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error fetching NHL playoff series: {e}")
+        return jsonify({'series': {}}), 200
+
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
     """Proxy scores API requests to avoid CORS issues with very short caching"""

@@ -179,6 +179,46 @@
     daemon_reload: yes
     state: started
 
+# Deploy standings updater systemd service and timer (MLB W-L records)
+- name: Deploy standings updater systemd service
+  template:
+    src: standings-updater.service.j2
+    dest: /etc/systemd/system/standings-updater.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Deploy standings updater systemd timer
+  template:
+    src: standings-updater.timer.j2
+    dest: /etc/systemd/system/standings-updater.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable standings updater timer
+  systemd:
+    name: standings-updater.timer
+    enabled: yes
+    daemon_reload: yes
+    state: started
+
+# Run standings updater immediately on deploy
+- name: Run standings updater now
+  command: "{{ app_dir }}/venv/bin/python {{ app_dir }}/fetch_standings.py"
+  args:
+    chdir: "{{ app_dir }}"
+  environment:
+    DB_HOST: "{{ db_host }}"
+    DB_NAME: "{{ db_name }}"
+    DB_USER: "{{ db_user }}"
+    DB_PASSWORD: "{{ db_password }}"
+  register: standings_result
+  changed_when: "'Updated standings' in standings_result.stdout"
+  ignore_errors: yes
+
 # Deploy cache warmer systemd service and timer
 - name: Deploy cache warmer systemd service
   template:
