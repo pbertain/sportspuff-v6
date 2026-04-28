@@ -140,11 +140,16 @@
                                     {% for team in teams %}
                                     <tr>
                                         <td>
-                                            <strong>{{ team.real_team_name }}</strong>
-                                            {% if team.abbreviation %}
-                                            <br>
-                                            <span class="team-abbrev">{{ team.abbreviation }}</span>
-                                            {% endif %}
+                                            <a href="{{ url_for('team_detail_by_name', league_name=team.league.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
+                                                <img src="{{ team.team_id | get_logo }}" alt="" style="height: 24px; width: 24px; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
+                                                <span>
+                                                    <strong>{{ team.real_team_name }}</strong>
+                                                    {% if team.abbreviation %}
+                                                    <br>
+                                                    <span class="team-abbrev">{{ team.abbreviation }}</span>
+                                                    {% endif %}
+                                                </span>
+                                            </a>
                                         </td>
                                         <td>
                                             <span class="badge">{{ team.league.upper() }}</span>
