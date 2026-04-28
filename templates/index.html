@@ -613,8 +613,8 @@
                 // Helper function to render a game row
                 function renderGameRow(game, teamColors, gameLeague) {
                     const hasScore = game.home_score !== undefined && game.visitor_score !== undefined;
-                    const isFinal = game.is_final || game.game_status === 'final';
-                    const isScheduled = game.game_status === 'scheduled';
+                    const isFinal = game.is_final || (game.game_status && game.game_status.toLowerCase() === 'final');
+                    const isScheduled = game.game_status && game.game_status.toLowerCase() === 'scheduled';
                     
                     // Get team colors and logos
                     // Debug logging for NFL teams
