@@ -4,7 +4,11 @@
             <img src="https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png" alt="Sportspuff" style="height: 200px; margin-right: 20px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
             <i class="fas fa-baseball-ball me-2" style="display: none;"></i>Sportspuff
         </a>
-        <div class="navbar-nav ms-auto">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="navbar-nav ms-auto">
             <a class="nav-link {% if request.endpoint == 'teams' %}active{% endif %}" href="{{ url_for('teams') }}">Teams</a>
             <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
             <a class="nav-link {% if request.endpoint == 'api_teams' or request.endpoint == 'api_stadiums' %}active{% endif %}" href="{{ url_for('api_teams') }}" target="_blank">API</a>
@@ -21,7 +25,9 @@
                     <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLC') }}">MLC</a></li>
                 </ul>
+            </div>
             </div>
         </div>
     </div>
