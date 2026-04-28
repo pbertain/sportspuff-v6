@@ -1265,6 +1265,35 @@ def ipl_standings():
         logger.error(f"Error fetching IPL standings: {e}")
         return jsonify({'standings': []}), 200
 
+@app.route('/api/mlb/team-records')
+def mlb_team_records():
+    """Fetch MLB team records from database (populated by fetch_standings.py)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'teams': {}}), 200
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT t.real_team_name, t.team_wins, t.team_losses
+            FROM teams t
+            JOIN leagues l ON t.league_id = l.league_id
+            WHERE l.league_name_proper = 'MLB'
+            AND t.team_wins IS NOT NULL
+        """)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        team_records = {}
+        for row in rows:
+            team_records[row['real_team_name']] = {
+                'wins': row['team_wins'] or 0,
+                'losses': row['team_losses'] or 0
+            }
+        return jsonify({'teams': team_records}), 200
+    except Exception as e:
+        logger.error(f"Error fetching MLB team records: {e}")
+        return jsonify({'teams': {}}), 200
+
 @app.route('/api/nhl/playoff-series')
 def nhl_playoff_series():
     """Fetch NHL playoff series records from NHL API schedule data"""

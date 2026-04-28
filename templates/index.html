@@ -204,6 +204,7 @@
                 let scheduleData, scoresData;
                 let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
                 let nhlPlayoffSeries = {}; // NHL playoff series records
+                let mlbTeamRecords = {}; // MLB team records from database
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
@@ -258,6 +259,17 @@
                         }
                     } catch (error) {
                         console.warn('Error fetching NHL playoff series:', error);
+                    }
+
+                    // Fetch MLB team records from database
+                    try {
+                        const mlbRecordsResponse = await fetch('/api/mlb/team-records');
+                        if (mlbRecordsResponse.ok) {
+                            const mlbRecordsData = await mlbRecordsResponse.json();
+                            mlbTeamRecords = mlbRecordsData.teams || {};
+                        }
+                    } catch (error) {
+                        console.warn('Error fetching MLB team records:', error);
                     }
 
                     // Fetch schedule and scores for all leagues in parallel
@@ -678,30 +690,50 @@
                     // IMPORTANT: Check for scores FIRST - if game has a score, it's not scheduled
                     let statusDisplay = '';
                     if (hasScore && isFinal) {
-                        const period = parseInt(game.current_period) || 4;
-                        if (period > 4) {
-                            const otCount = period - 4;
-                            statusDisplay = otCount === 1 ? 'F/OT' : `F/${otCount}OT`;
+                        if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 9;
+                            statusDisplay = inning > 9 ? `F/${inning}` : 'F';
                         } else {
-                            statusDisplay = 'F';
+                            const period = parseInt(game.current_period) || 4;
+                            if (period > 4) {
+                                const otCount = period - 4;
+                                statusDisplay = otCount === 1 ? 'F/OT' : `F/${otCount}OT`;
+                            } else {
+                                statusDisplay = 'F';
+                            }
                         }
                     } else if (hasScore) {
-                        // Has score but not final - show current period
-                        if (game.current_period && game.time_remaining) {
+                        if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 1;
+                            const halfRaw = (game.time_remaining || '').toLowerCase();
+                            const half = halfRaw.includes('top') ? 'Top' :
+                                         halfRaw.includes('mid') ? 'Mid' :
+                                         halfRaw.includes('bot') ? 'Bot' :
+                                         halfRaw.includes('end') ? 'End' : halfRaw;
+                            statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
+                        } else if (game.current_period && game.time_remaining) {
                             const period = parseInt(game.current_period);
-                            // Use P for Period in NHL, Q for Quarter in NBA/NFL
-                            const periodPrefix = gameLeague === 'NHL' ? 'P' : gameLeague === 'MLB' ? 'Inn' : 'Q';
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
                             let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
                             statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                         } else {
                             statusDisplay = 'Live';
                         }
                     } else if (game.current_period && game.time_remaining) {
-                        // Game in progress but no score yet (shouldn't happen, but handle it)
-                        const period = parseInt(game.current_period);
-                        const periodPrefix = gameLeague === 'NHL' ? 'P' : gameLeague === 'MLB' ? 'Inn' : 'Q';
-                        let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
-                        statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 1;
+                            const halfRaw = (game.time_remaining || '').toLowerCase();
+                            const half = halfRaw.includes('top') ? 'Top' :
+                                         halfRaw.includes('mid') ? 'Mid' :
+                                         halfRaw.includes('bot') ? 'Bot' :
+                                         halfRaw.includes('end') ? 'End' : halfRaw;
+                            statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
+                        } else {
+                            const period = parseInt(game.current_period);
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
+                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        }
                     } else if (isScheduled && game.game_time) {
                         // Parse game time - API should return ISO 8601 format
                         // If the time appears to be in the past but there's no score, it might be a timezone issue
@@ -801,11 +833,27 @@
                         if (game.home_wins !== undefined && game.home_losses !== undefined) {
                             homeRecord = `${game.home_wins}-${game.home_losses}-${homeTies}`;
                         }
+                    } else if (gameLeague === 'MLB') {
+                        // MLB: Use records from database (populated by fetch_standings.py)
+                        const vName = visitorTeamData?.real_team_name || game.visitor_team;
+                        const hName = homeTeamData?.real_team_name || game.home_team;
+                        const vRec = mlbTeamRecords[vName] || mlbTeamRecords[game.visitor_team];
+                        const hRec = mlbTeamRecords[hName] || mlbTeamRecords[game.home_team];
+                        if (vRec && (vRec.wins > 0 || vRec.losses > 0)) {
+                            visitorRecord = `${vRec.wins}-${vRec.losses}`;
+                        } else if (game.visitor_wins && game.visitor_losses) {
+                            visitorRecord = `${game.visitor_wins}-${game.visitor_losses}`;
+                        }
+                        if (hRec && (hRec.wins > 0 || hRec.losses > 0)) {
+                            homeRecord = `${hRec.wins}-${hRec.losses}`;
+                        } else if (game.home_wins && game.home_losses) {
+                            homeRecord = `${game.home_wins}-${game.home_losses}`;
+                        }
                     } else {
                         // Other leagues: W-L
-                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined) 
+                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
                             ? `${game.visitor_wins}-${game.visitor_losses}` : '';
-                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined) 
+                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined)
                             ? `${game.home_wins}-${game.home_losses}` : '';
                     }
                     
