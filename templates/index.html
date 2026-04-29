@@ -621,7 +621,7 @@
                     const isScheduled = statusLower === 'scheduled' || statusLower === 'upcoming' || statusLower === 'pre';
                     const isInProgress = statusLower === 'in_progress' || statusLower === 'live' || statusLower === 'active';
                     const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
-                        && !isScheduled && (game.home_score > 0 || game.visitor_score > 0 || isFinal || isInProgress);
+                        && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0);
 
                     // Debug: log MLB game status to identify final detection issues
                     if (gameLeague === 'MLB') {
