@@ -58,6 +58,10 @@ CORS(app, resources={r"/api/proxy/*": {"origins": "*"}})
 API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
 logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
 
+@app.context_processor
+def inject_globals():
+    return {'API_BASE_URL': API_BASE_URL}
+
 # Load logo mapping
 LOGO_MAPPING = {}
 try:

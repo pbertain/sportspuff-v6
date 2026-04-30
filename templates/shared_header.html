@@ -11,7 +11,7 @@
             <div class="navbar-nav ms-auto">
             <a class="nav-link {% if request.endpoint == 'teams' %}active{% endif %}" href="{{ url_for('teams') }}">Teams</a>
             <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
-            <a class="nav-link {% if request.endpoint == 'api_teams' or request.endpoint == 'api_stadiums' %}active{% endif %}" href="{{ url_for('api_teams') }}" target="_blank">API</a>
+            <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
             <a class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a>
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">

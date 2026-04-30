@@ -624,8 +624,8 @@
                         && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0);
 
                     // Debug: log MLB game status to identify final detection issues
-                    if (gameLeague === 'MLB') {
-                        console.log(`MLB: ${game.visitor_team} @ ${game.home_team} | is_final=${game.is_final} game_status="${game.game_status}" score=${game.visitor_score}-${game.home_score} period=${game.current_period} time=${game.time_remaining} | isFinal=${isFinal} hasScore=${hasScore}`);
+                    if (gameLeague === 'MLB' || gameLeague === 'NBA') {
+                        console.log(`${gameLeague}: ${game.visitor_team} @ ${game.home_team} | is_final=${game.is_final} game_status="${game.game_status}" score=${game.visitor_score}-${game.home_score} period=${game.current_period} time=${game.time_remaining} game_time=${game.game_time} | isFinal=${isFinal} isScheduled=${isScheduled} hasScore=${hasScore}`);
                     }
 
                     // Get team colors and logos
@@ -747,53 +747,31 @@
                             statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                         }
                     } else if (isScheduled && game.game_time) {
-                        // Parse game time - API should return ISO 8601 format
-                        // If the time appears to be in the past but there's no score, it might be a timezone issue
                         let gameDate;
                         try {
                             gameDate = new Date(game.game_time);
-                            // If parsing fails, try to handle it
                             if (isNaN(gameDate.getTime())) {
-                                console.warn('Invalid game_time:', game.game_time);
-                                statusDisplay = 'Scheduled';
                                 gameDate = null;
                             }
                         } catch (e) {
-                            console.warn('Error parsing game_time:', game.game_time, e);
-                            statusDisplay = 'Scheduled';
                             gameDate = null;
                         }
-                        
+
                         if (gameDate) {
                             const now = new Date();
                             const diffMs = gameDate - now;
                             const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-                            
+
                             if (diffMs > 0) {
-                                // Game is in the future
                                 const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                                 const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                                // For NHL and NFL, always show time until game if it's in the future
-                                // For other leagues, show time if less than 24h15m (1455 minutes)
-                                const totalMinutes = Math.floor(diffMs / (1000 * 60));
-                                if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
-                                    const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
-                                    statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
-                                } else {
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                }
+                                const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
+                                statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                             } else {
-                                // Game time is in the past but no score - likely timezone issue or game hasn't started
-                                // For NFL, if it's more than 3 hours in the past, it's definitely a timezone issue
-                                const hoursPast = Math.abs(diffMs) / (1000 * 60 * 60);
-                                if (hoursPast > 3) {
-                                    // Likely timezone issue - show as scheduled with original time
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                } else {
-                                    // Less than 3 hours past - might be starting soon or just started
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                }
+                                statusDisplay = `${gameTimeStr}`;
                             }
+                        } else {
+                            statusDisplay = 'Scheduled';
                         }
                     } else {
                         statusDisplay = 'Scheduled';
