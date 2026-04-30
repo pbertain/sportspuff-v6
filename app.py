@@ -62,6 +62,93 @@ logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
 def inject_globals():
     return {'API_BASE_URL': API_BASE_URL}
 
+SEASON_DATES = {
+    'MLB': {
+        'year': 2026,
+        'types': [
+            {'name': 'Spring Training', 'start': '2026-02-20', 'end': '2026-03-25'},
+            {'name': 'Regular Season', 'start': '2026-03-26', 'end': '2026-09-27'},
+            {'name': 'Postseason', 'start': '2026-09-29', 'end': '2026-11-01'},
+        ]
+    },
+    'NBA': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2025-10-05', 'end': '2025-10-17'},
+            {'name': 'Regular Season', 'start': '2025-10-19', 'end': '2026-04-12'},
+            {'name': 'Play-In', 'start': '2026-04-14', 'end': '2026-04-17'},
+            {'name': 'Playoffs', 'start': '2026-04-18', 'end': '2026-06-19'},
+        ]
+    },
+    'NFL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2026-08-06', 'end': '2026-08-28'},
+            {'name': 'Regular Season', 'start': '2026-09-10', 'end': '2027-01-03'},
+            {'name': 'Playoffs', 'start': '2027-01-09', 'end': '2027-01-31'},
+            {'name': 'Super Bowl', 'start': '2027-02-07', 'end': '2027-02-07'},
+        ]
+    },
+    'NHL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2025-09-21', 'end': '2025-10-03'},
+            {'name': 'Regular Season', 'start': '2025-10-07', 'end': '2026-04-17'},
+            {'name': 'Playoffs', 'start': '2026-04-19', 'end': '2026-06-20'},
+        ]
+    },
+    'MLS': {
+        'year': 2026,
+        'types': [
+            {'name': 'Regular Season', 'start': '2026-02-21', 'end': '2026-10-04'},
+            {'name': 'Playoffs', 'start': '2026-10-20', 'end': '2026-12-13'},
+        ]
+    },
+    'IPL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Group Stage', 'start': '2026-03-22', 'end': '2026-05-18'},
+            {'name': 'Playoffs', 'start': '2026-05-20', 'end': '2026-05-31'},
+        ]
+    },
+    'MLC': {
+        'year': 2026,
+        'types': [
+            {'name': 'Regular Season', 'start': '2026-07-01', 'end': '2026-07-27'},
+            {'name': 'Playoffs', 'start': '2026-07-28', 'end': '2026-08-02'},
+        ]
+    },
+}
+
+@app.route('/api/season-info/<league>')
+def season_info(league):
+    """Return season date info for any league"""
+    league_upper = league.upper()
+    if league_upper == 'WNBA':
+        return redirect(url_for('wnba_season_info'))
+    data = SEASON_DATES.get(league_upper)
+    if not data:
+        return jsonify({'year': datetime.now().year, 'season_types': []}), 200
+    now = datetime.now().strftime('%Y-%m-%d')
+    current_phase = 'Off Season'
+    season_types = []
+    for t in data['types']:
+        if t['start'] <= now <= t['end']:
+            current_phase = t['name']
+        start_fmt = datetime.strptime(t['start'], '%Y-%m-%d').strftime('%b %-d')
+        end_fmt = datetime.strptime(t['end'], '%Y-%m-%d').strftime('%b %-d')
+        season_types.append({
+            'name': t['name'],
+            'start_date': t['start'],
+            'end_date': t['end'],
+            'display': f"{t['name']}: {start_fmt} - {end_fmt}"
+        })
+    return jsonify({
+        'year': data['year'],
+        'current_phase': current_phase,
+        'season_types': season_types
+    })
+
 # Load logo mapping
 LOGO_MAPPING = {}
 try:

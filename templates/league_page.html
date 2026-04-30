@@ -22,6 +22,36 @@
             </div>
         </div>
 
+        {% if league_name != 'WNBA' %}
+        <!-- Season Info Banner -->
+        <div id="season-info-banner" class="row mb-4" style="display: none;">
+            <div class="col-12">
+                <div class="card" style="background: rgba(100, 100, 200, 0.1); border: 1px solid rgba(150, 150, 200, 0.3);">
+                    <div class="card-body text-center">
+                        <h4 id="season-phase" style="color: #B0A0D0;"></h4>
+                        <div id="season-dates" class="d-flex justify-content-center gap-3 flex-wrap mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            fetch('/api/season-info/{{ league_name }}')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.season_types || data.season_types.length === 0) return;
+                    const banner = document.getElementById('season-info-banner');
+                    const phaseEl = document.getElementById('season-phase');
+                    const datesEl = document.getElementById('season-dates');
+                    phaseEl.textContent = `${data.year} Season - ${data.current_phase}`;
+                    data.season_types.forEach(st => {
+                        datesEl.innerHTML += `<span class="badge bg-dark px-3 py-2">${st.display}</span>`;
+                    });
+                    banner.style.display = '';
+                })
+                .catch(() => {});
+        </script>
+        {% endif %}
+
             <!-- Division Boxes Layout -->
             {% if league_name == 'MLS' %}
             <!-- MLS: Both conferences on same row -->
