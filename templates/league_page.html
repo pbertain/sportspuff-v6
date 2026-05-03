@@ -228,7 +228,7 @@
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover align-middle mb-0" style="color: #F5F0FF;">
                                     <thead><tr>
-                                        <th>#</th><th>Team</th><th>M</th><th>W</th><th>L</th><th>Pts</th><th>NRR</th>
+                                        <th>#</th><th>Team</th><th>M</th><th>W</th><th>L</th><th>NR</th><th>Pts</th><th>NRR</th>
                                     </tr></thead>
                                     <tbody id="ipl-standings-body"></tbody>
                                 </table>
@@ -238,7 +238,7 @@
                 </div>
             </div>
             <script>
-                fetch('/api/ipl/standings')
+                fetch('/api/cricket/standings/ipl')
                     .then(r => r.json())
                     .then(data => {
                         if (!data.standings || data.standings.length === 0) return;
@@ -248,7 +248,7 @@
                             tbody.innerHTML += `<tr>
                                 <td>${t.rank}</td>
                                 <td><strong>${t.abbreviation}</strong> ${t.team_name}</td>
-                                <td>${t.matches}</td><td>${t.wins}</td><td>${t.losses}</td>
+                                <td>${t.matches}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.no_result || 0}</td>
                                 <td><strong>${t.points}</strong></td>
                                 <td class="${nrrClass}">${t.nrr}</td>
                             </tr>`;
@@ -290,7 +290,44 @@
             </div>
             {% endfor %}
             {% elif league_name == 'MLC' %}
-            <!-- MLC: East and West divisions side by side -->
+            <!-- MLC: Standings table + East and West divisions side by side -->
+            <div id="mlc-standings" class="row mb-4" style="display: none;">
+                <div class="col-12 col-lg-8 mx-auto">
+                    <div class="card" style="background: rgba(26, 82, 118, 0.1); border: 1px solid rgba(26, 82, 118, 0.3);">
+                        <div class="card-body">
+                            <h4 class="text-center" style="color: var(--mlc-accent);">MLC Standings</h4>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0" style="color: #F5F0FF;">
+                                    <thead><tr>
+                                        <th>#</th><th>Team</th><th>M</th><th>W</th><th>L</th><th>NR</th><th>Pts</th><th>NRR</th>
+                                    </tr></thead>
+                                    <tbody id="mlc-standings-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                fetch('/api/cricket/standings/mlc')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.standings || data.standings.length === 0) return;
+                        const tbody = document.getElementById('mlc-standings-body');
+                        data.standings.forEach(t => {
+                            const nrrClass = parseFloat(t.nrr) >= 0 ? 'text-success' : 'text-danger';
+                            tbody.innerHTML += `<tr>
+                                <td>${t.rank}</td>
+                                <td><strong>${t.abbreviation}</strong> ${t.team_name}</td>
+                                <td>${t.matches}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.no_result || 0}</td>
+                                <td><strong>${t.points}</strong></td>
+                                <td class="${nrrClass}">${t.nrr}</td>
+                            </tr>`;
+                        });
+                        document.getElementById('mlc-standings').style.display = '';
+                    })
+                    .catch(e => console.warn('Failed to load MLC standings:', e));
+            </script>
             {% for conference_name, divisions in organized_teams.items() %}
             <div class="row mb-4 conference-section">
                 <div class="col-12">
