@@ -1115,28 +1115,17 @@ def proxy_schedule(league, date):
     try:
         # Get timezone from query parameter, default to 'pst'
         tz = request.args.get('tz', 'pst')
-        
-        # For "today", use actual date for cache key but pass "today" to API
-        # API only accepts "today" as a keyword, not date strings
+
         if date.lower() == 'today':
-            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'schedule:{league}:{actual_date}:{tz}'
-            api_date = 'today'  # API only accepts "today", not date strings
+            cache_key = f'schedule:{league}:today:{tz}'
+            api_date = 'today'
         else:
             cache_key = f'schedule:{league}:{date}:{tz}'
             api_date = date
-        
-        # Check cache first - but verify it's for today's date
-        # Use cache more aggressively since API can be slow
+
         cached_response = get_cached_response(cache_key, 'schedule')
         if cached_response:
-            # Verify the cached data is for today (check response date field)
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info(f"Returning cached schedule for {league} from {cached_date}")
-                return jsonify(cached_response)
-            # If cached date doesn't match today, clear it and fetch fresh
+            return jsonify(cached_response)
         
         # Fetch from API with timezone parameter
         api_base = API_BASE_URL
@@ -1476,27 +1465,17 @@ def proxy_scores(league, date):
     try:
         # Get timezone from query parameter, default to 'pst'
         tz = request.args.get('tz', 'pst')
-        
-        # For "today", use actual date for cache key but pass "today" to API
-        # API only accepts "today" as a keyword, not date strings
+
         if date.lower() == 'today':
-            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'scores:{league}:{actual_date}:{tz}'
-            api_date = 'today'  # API only accepts "today", not date strings
+            cache_key = f'scores:{league}:today:{tz}'
+            api_date = 'today'
         else:
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
-        
-        # Check cache FIRST - return immediately if available
-        # This prevents hitting the slow API and causing nginx timeouts
+
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            # Only use cache if it's from today AND within TTL (30 seconds)
-            if cached_date == today_date:
-                logger.info(f"Returning cached scores for {league} from {cached_date}")
-                return jsonify(cached_response)
+            return jsonify(cached_response)
 
         # Only fetch fresh scores if cache is expired or missing
         api_base = API_BASE_URL
