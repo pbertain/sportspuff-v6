@@ -134,7 +134,7 @@ def season_info(league):
             cached = get_cached_response(cache_key, 'schedule')
             if cached:
                 return jsonify(cached)
-            response = requests.get(f'{CRICKET_API_BASE_URL}/v1/season-info/{league.lower()}', timeout=10)
+            response = requests.get(f'{API_BASE_URL}/api/v1/season-info/{league.lower()}', timeout=10)
             response.raise_for_status()
             data = response.json()
             fmt = lambda d: datetime.strptime(d, '%Y-%m-%d').strftime('%b %-d') if d else ''
@@ -1114,20 +1114,8 @@ def proxy_schedule(league, date):
             # If cached date doesn't match today, clear it and fetch fresh
         
         # Fetch from API with timezone parameter
-        # Route cricket leagues (IPL, MLC) through CricketPuff API
-        if league.lower() in ('ipl', 'mlc'):
-            api_base = CRICKET_API_BASE_URL
-        else:
-            api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
-            if not api_base:
-                try:
-                    api_base = API_BASE_URL
-                except NameError:
-                    api_base = None
-            if not api_base:
-                logger.error("SPORTSPUFF_API_BASE_URL not configured")
-                return jsonify({'error': 'API base URL not configured'}), 500
-        url = f'{api_base}/v1/schedule/{league}/{api_date}?tz={tz}' if league.lower() in ('ipl', 'mlc') else f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
+        api_base = API_BASE_URL
+        url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching schedule from: {url} (timeout=20s)")
         try:
             # Use shorter timeout to avoid nginx 502 errors
@@ -1370,7 +1358,7 @@ def cricket_standings(league):
         if cached:
             return jsonify(cached)
 
-        response = requests.get(f'{CRICKET_API_BASE_URL}/v1/standings/{league_lower}', timeout=10)
+        response = requests.get(f'{API_BASE_URL}/api/v1/standings/{league_lower}', timeout=10)
         response.raise_for_status()
         data = response.json()
 
@@ -1484,22 +1472,10 @@ def proxy_scores(league, date):
             if cached_date == today_date:
                 logger.info(f"Returning cached scores for {league} from {cached_date}")
                 return jsonify(cached_response)
-        
+
         # Only fetch fresh scores if cache is expired or missing
-        # Route cricket leagues (IPL, MLC) through CricketPuff API
-        if league.lower() in ('ipl', 'mlc'):
-            api_base = CRICKET_API_BASE_URL
-        else:
-            api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
-            if not api_base:
-                try:
-                    api_base = API_BASE_URL
-                except NameError:
-                    api_base = None
-            if not api_base:
-                logger.error("SPORTSPUFF_API_BASE_URL not configured")
-                return jsonify({'error': 'API base URL not configured'}), 500
-        url = f'{api_base}/v1/scores/{league}/{api_date}?tz={tz}' if league.lower() in ('ipl', 'mlc') else f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
+        api_base = API_BASE_URL
+        url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching scores from: {url} (timeout=20s)")
         try:
             # Use shorter timeout to avoid nginx 502 errors

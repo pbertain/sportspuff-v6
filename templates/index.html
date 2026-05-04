@@ -237,7 +237,7 @@
                 
                 if (league === 'all') {
                     // For "all", fetch all leagues separately and combine
-                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba'];
+                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc'];
 
                     // Fetch NFL team records from Tank01 API
                     try {
@@ -620,8 +620,9 @@
                         || statusLower === 'off';
                     const isScheduled = statusLower === 'scheduled' || statusLower === 'upcoming' || statusLower === 'pre';
                     const isInProgress = statusLower === 'in_progress' || statusLower === 'live' || statusLower === 'active';
+                    const isCricket = gameLeague === 'IPL' || gameLeague === 'MLC';
                     const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
-                        && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0);
+                        && (isFinal || isInProgress || (isCricket ? (game.home_score && game.home_score !== '0') : (game.home_score > 0 || game.visitor_score > 0)));
 
                     // Debug: log MLB game status to identify final detection issues
                     if (gameLeague === 'MLB' || gameLeague === 'NBA') {
@@ -663,8 +664,21 @@
                     let visitorIsWinner = false;
                     let homeIsWinner = false;
                     if (hasScore && isFinal) {
-                        visitorIsWinner = game.visitor_score > game.home_score;
-                        homeIsWinner = game.home_score > game.visitor_score;
+                        if (isCricket) {
+                            // Cricket: parse runs from score string like "159/7[18.1]" or use winner field
+                            if (game.winner) {
+                                const winnerName = game.winner.toLowerCase();
+                                visitorIsWinner = game.visitor_team && winnerName.includes(game.visitor_team.toLowerCase().split(' ').pop());
+                                homeIsWinner = !visitorIsWinner;
+                            } else {
+                                const parseRuns = (s) => parseInt(String(s).split('/')[0]) || 0;
+                                visitorIsWinner = parseRuns(game.visitor_score) > parseRuns(game.home_score);
+                                homeIsWinner = parseRuns(game.home_score) > parseRuns(game.visitor_score);
+                            }
+                        } else {
+                            visitorIsWinner = game.visitor_score > game.home_score;
+                            homeIsWinner = game.home_score > game.visitor_score;
+                        }
                     }
                     
                     // Helper to get short team name
@@ -702,7 +716,9 @@
                     // IMPORTANT: Check for scores FIRST - if game has a score, it's not scheduled
                     let statusDisplay = '';
                     if (hasScore && isFinal) {
-                        if (gameLeague === 'MLB') {
+                        if (isCricket) {
+                            statusDisplay = game.time_remaining || 'Complete';
+                        } else if (gameLeague === 'MLB') {
                             const inning = parseInt(game.current_period) || 9;
                             statusDisplay = inning > 9 ? `F/${inning}` : 'F';
                         } else {
@@ -715,7 +731,9 @@
                             }
                         }
                     } else if (hasScore) {
-                        if (gameLeague === 'MLB') {
+                        if (isCricket) {
+                            statusDisplay = game.time_remaining || 'Live';
+                        } else if (gameLeague === 'MLB') {
                             const inning = parseInt(game.current_period) || 1;
                             const halfRaw = (game.time_remaining || '').toLowerCase();
                             const half = halfRaw.includes('top') ? 'Top' :
@@ -1254,7 +1272,7 @@
                 
                 if (league === 'all') {
                     // Render grouped by league
-                    const leagueOrder = ['NBA', 'NHL', 'MLB', 'NFL', 'WNBA', 'MLS'];
+                    const leagueOrder = ['NBA', 'NHL', 'MLB', 'NFL', 'WNBA', 'MLS', 'IPL', 'MLC'];
                     Object.keys(gamesByLeague).sort((a, b) => {
                         const aIdx = leagueOrder.indexOf(a.toUpperCase());
                         const bIdx = leagueOrder.indexOf(b.toUpperCase());
@@ -1270,7 +1288,9 @@
                                           leagueUpper === 'MLB' ? '{{ "MLB" | get_league_logo }}' :
                                           leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
                                           leagueUpper === 'WNBA' ? '{{ "WNBA" | get_league_logo }}' :
-                                          leagueUpper === 'MLS' ? '{{ "MLS" | get_league_logo }}' : '';
+                                          leagueUpper === 'MLS' ? '{{ "MLS" | get_league_logo }}' :
+                                          leagueUpper === 'IPL' ? '{{ "IPL" | get_league_logo }}' :
+                                          leagueUpper === 'MLC' ? '{{ "MLC" | get_league_logo }}' : '';
                         
                         html += `
                             <div class="league-section mb-4">
