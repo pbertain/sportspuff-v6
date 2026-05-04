@@ -893,8 +893,14 @@
                                 const vClass = visitorIsWinner ? 'winner-score' : '';
                                 const hClass = homeIsWinner ? 'winner-score' : '';
                                 scoreDisplay = `<span class="${vClass}" style="font-size:0.9rem">${vScore}</span><br><span class="${hClass}" style="font-size:0.9rem">${hScore}</span>`;
+                            } else if (isFinal && game.cricket_winner) {
+                                const winnerAbbr = game.cricket_winner;
+                                const resultText = game.cricket_result || `${winnerAbbr} won`;
+                                scoreDisplay = `<span style="font-size:0.8rem">${resultText}</span>`;
                             } else if (vScore || hScore) {
                                 scoreDisplay = `<span style="font-size:0.9rem">${vScore || 'batting'}</span><br><span style="font-size:0.9rem">${hScore || 'batting'}</span>`;
+                            } else if (game.cricket_result) {
+                                scoreDisplay = `<span style="font-size:0.8rem">${game.cricket_result}</span>`;
                             } else {
                                 scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }

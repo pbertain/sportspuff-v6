@@ -240,9 +240,16 @@
             </div>
             <script>
                 fetch('/api/cricket/standings/ipl')
-                    .then(r => r.json())
+                    .then(r => {
+                        if (!r.ok) console.error('IPL standings fetch failed:', r.status);
+                        return r.json();
+                    })
                     .then(data => {
-                        if (!data.standings || data.standings.length === 0) return;
+                        console.log('IPL standings data:', data);
+                        if (!data.standings || data.standings.length === 0) {
+                            console.warn('No IPL standings data returned');
+                            return;
+                        }
                         const tbody = document.getElementById('ipl-standings-body');
                         const cardsContainer = document.getElementById('ipl-cards-container');
 
