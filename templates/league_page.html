@@ -83,15 +83,19 @@
                 {% endfor %}
             </div>
             {% elif league_name == 'NHL' %}
-            <!-- NHL: Eastern and Western conferences side by side, divisions within each -->
+            <!-- NHL: All 4 divisions in one row, grouped by conference with color-coded backgrounds -->
             <div class="row mb-4">
                 {% for conference_name, divisions in organized_teams.items() %}
-                <div class="col-lg-6 col-md-12 mb-4">
-                    <h2 class="conference-title">{{ conference_name }}</h2>
-                    <div class="row">
-                        {% for division_name, teams in divisions.items() %}
-                        <div class="col-lg-6 col-md-6 mb-4">
-                            <div class="division-box">
+                {% set conf_bg = 'rgba(30, 60, 120, 0.15)' if loop.index == 1 else 'rgba(120, 30, 30, 0.15)' %}
+                {% set conf_border = 'rgba(70, 130, 220, 0.4)' if loop.index == 1 else 'rgba(220, 70, 70, 0.4)' %}
+                {% set conf_title_color = '#4682B4' if loop.index == 1 else '#CD5C5C' %}
+                    {% for division_name, teams in divisions.items() %}
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }}; border-radius: 12px; padding: 12px; height: 100%;">
+                            {% if loop.first %}
+                            <div style="text-align: center; color: {{ conf_title_color }}; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">{{ conference_name }}</div>
+                            {% endif %}
+                            <div class="division-box" style="margin-bottom: 0;">
                                 <h3 class="division-title">{{ division_name }}</h3>
                                 <div class="teams-list">
                                     {% for team in teams %}
@@ -110,9 +114,8 @@
                                 </div>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
-                </div>
+                    {% endfor %}
                 {% endfor %}
             </div>
             {% elif league_name == 'WNBA' %}
