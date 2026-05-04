@@ -661,18 +661,19 @@
                         console.log(`Home team found:`, homeTeam ? 'YES' : 'NO', homeTeam);
                         console.log(`=== End NFL Debug ===\n`);
                     }
-                    const visitorColor = getTeamColor(game.visitor_team);
-                    const homeColor = getTeamColor(game.home_team);
-                    const visitorTextColor = getTextColor(visitorColor);
-                    const homeTextColor = getTextColor(homeColor);
-                    const visitorLogo = getTeamLogo(game.visitor_team);
-                    const homeLogo = getTeamLogo(game.home_team);
-                    const visitorLogoBg = getTeamLogoBg(game.visitor_team);
-                    const homeLogoBg = getTeamLogoBg(game.home_team);
-                    
-                    // Get team data for full names and abbreviations (needed early)
+                    // Get team data for full names and abbreviations (league-aware lookup)
                     const visitorTeamData = findTeamData(game.visitor_team, gameLeague);
                     const homeTeamData = findTeamData(game.home_team, gameLeague);
+
+                    // Use league-aware team data for colors and logos
+                    const visitorColor = visitorTeamData?.color_1 || '#6c757d';
+                    const homeColor = homeTeamData?.color_1 || '#6c757d';
+                    const visitorTextColor = getTextColor(visitorColor);
+                    const homeTextColor = getTextColor(homeColor);
+                    const visitorLogo = visitorTeamData?.logo_url || '/static/images/no-logo.png';
+                    const homeLogo = homeTeamData?.logo_url || '/static/images/no-logo.png';
+                    const visitorLogoBg = visitorTeamData?.color_3 || '#FFFFFF';
+                    const homeLogoBg = homeTeamData?.color_3 || '#FFFFFF';
                     
                     // Determine winner
                     let visitorIsWinner = false;
@@ -919,12 +920,12 @@
                     const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
                     
                     // Get abbreviation box colors with contrast checking
-                    const visitorAbbrevBg = getTeamColor2(game.visitor_team);
-                    const visitorAbbrevText = getTeamColor3(game.visitor_team);
+                    const visitorAbbrevBg = visitorTeamData?.color_2 || '#FFFFFF';
+                    const visitorAbbrevText = visitorTeamData?.color_3 || '#000000';
                     const visitorAbbrevColors = getAbbrevBoxColors(game.visitor_team, visitorAbbrevBg, visitorAbbrevText);
-                    
-                    const homeAbbrevBg = getTeamColor2(game.home_team);
-                    const homeAbbrevText = getTeamColor3(game.home_team);
+
+                    const homeAbbrevBg = homeTeamData?.color_2 || '#FFFFFF';
+                    const homeAbbrevText = homeTeamData?.color_3 || '#000000';
                     const homeAbbrevColors = getAbbrevBoxColors(game.home_team, homeAbbrevBg, homeAbbrevText);
                     
                     return `
@@ -987,14 +988,19 @@
                         }
                         allGamesMap[game.game_id] = {
                             ...game,
-                            league: gameLeague, // Explicitly preserve league
-                            sport: gameLeague, // Also set sport for compatibility
+                            league: gameLeague,
+                            sport: gameLeague,
                             home_score: scoreData?.home_score,
                             visitor_score: scoreData?.visitor_score,
                             is_final: scoreData?.is_final,
                             game_status: scoreData?.game_status || game.game_status,
                             current_period: scoreData?.current_period,
                             time_remaining: scoreData?.time_remaining,
+                            // Preserve cricket score fields from schedule or scores
+                            cricket_home_score: scoreData?.cricket_home_score || game.cricket_home_score || '',
+                            cricket_away_score: scoreData?.cricket_away_score || game.cricket_away_score || '',
+                            cricket_winner: scoreData?.cricket_winner || game.cricket_winner || '',
+                            cricket_result: scoreData?.cricket_result || game.cricket_result || '',
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
                             // For NFL, try to get records from Tank01 API if not in game data
@@ -1137,6 +1143,10 @@
                                 is_final: scoreGame.is_final,
                                 current_period: scoreGame.current_period,
                                 time_remaining: scoreGame.time_remaining,
+                                cricket_home_score: scoreGame.cricket_home_score || '',
+                                cricket_away_score: scoreGame.cricket_away_score || '',
+                                cricket_winner: scoreGame.cricket_winner || '',
+                                cricket_result: scoreGame.cricket_result || '',
                                 // For NFL, try to get records from Tank01 API if not in score data
                                 home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : 
                                     (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
