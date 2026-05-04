@@ -1312,14 +1312,7 @@
                     }).forEach(leagueName => {
                         const leagueGames = gamesByLeague[leagueName];
                         const leagueUpper = leagueName.toUpperCase();
-                        const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
-                                          leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
-                                          leagueUpper === 'MLB' ? '{{ "MLB" | get_league_logo }}' :
-                                          leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
-                                          leagueUpper === 'WNBA' ? '{{ "WNBA" | get_league_logo }}' :
-                                          leagueUpper === 'MLS' ? '{{ "MLS" | get_league_logo }}' :
-                                          leagueUpper === 'IPL' ? '{{ "IPL" | get_league_logo }}' :
-                                          leagueUpper === 'MLC' ? '{{ "MLC" | get_league_logo }}' : '';
+                        const leagueLogo = `https://www.splitsp.lat/logos/${leagueName.toLowerCase()}/${leagueName.toLowerCase()}_logo.png`;
                         
                         html += `
                             <div class="league-section mb-4">
@@ -1364,10 +1357,7 @@
                     });
                 } else {
                     // Render single league
-                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
-                                      leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
-                                      leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
-                                      '{{ "NBA" | get_league_logo }}';
+                    const leagueLogo = `https://www.splitsp.lat/logos/${league}/${league}_logo.png`;
                     html = `
                         <div class="league-header mb-2" style="padding: 0.5rem 0;">
                             <div class="d-flex align-items-center justify-content-center">

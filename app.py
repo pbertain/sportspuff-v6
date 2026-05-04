@@ -1103,30 +1103,11 @@ def get_logo(team_id):
 
 @app.template_filter('get_league_logo')
 def get_league_logo(league):
-    """Template filter to get league logo - try local first, then splitsp.lat"""
+    """Template filter to get league logo from splitsp.lat"""
     if league:
         league_lower = league.lower()
-        # Try local first
-        local_logo = f'/static/images/logos/{league_lower}/{league_lower}_logo.png'
-        # For now, use splitsp.lat as fallback
-        # Use correct acronym-based URLs
-        if league_lower == 'mlb':
-            return 'https://www.splitsp.lat/logos/mlb/mlb_logo.png'
-        elif league_lower == 'nfl':
-            return 'https://www.splitsp.lat/logos/nfl/nfl_logo.png'
-        elif league_lower == 'nba':
-            return '/static/images/logos/nba/nba_logo.png'
-        elif league_lower == 'nhl':
-            return 'https://www.splitsp.lat/logos/nhl/nhl_logo.png'
-        elif league_lower == 'mls':
-            return 'https://www.splitsp.lat/logos/mls/mls_logo.png'
-        elif league_lower == 'wnba':
-            return 'https://www.splitsp.lat/logos/wnba/wnba_logo.png'
-        elif league_lower == 'mlc':
-            return '/static/images/logos/mlc/mlc_logo.png'
-        else:
-            return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
-    return '/static/images/no-logo.png'
+        return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
+    return 'https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png'
 
 @app.route('/api/proxy/schedule/<league>/<date>')
 def proxy_schedule(league, date):
