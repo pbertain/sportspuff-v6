@@ -253,7 +253,7 @@ def index():
                    t.logo_filename, t.team_abbreviation, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
-            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba', 'mlc')
+            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba', 'ipl', 'mlc')
             AND t.team_color_1 IS NOT NULL
         """)
         all_teams = cursor.fetchall()
