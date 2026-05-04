@@ -635,7 +635,8 @@
                     const isInProgress = statusLower === 'in_progress' || statusLower === 'live' || statusLower === 'active';
                     const isCricket = gameLeague === 'IPL' || gameLeague === 'MLC';
                     const hasCricketScore = isCricket && (game.cricket_home_score || game.cricket_away_score);
-                    const hasScore = hasCricketScore || (game.home_score !== undefined && game.visitor_score !== undefined
+                    const hasCricketLive = isCricket && isInProgress && game.cricket_result;
+                    const hasScore = hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
                         && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0));
 
                     // Debug: log MLB game status to identify final detection issues
@@ -747,7 +748,7 @@
                         }
                     } else if (hasScore) {
                         if (isCricket) {
-                            statusDisplay = game.time_remaining || 'Live';
+                            statusDisplay = game.cricket_result || game.time_remaining || 'Live';
                         } else if (gameLeague === 'MLB') {
                             const inning = parseInt(game.current_period) || 1;
                             const halfRaw = (game.time_remaining || '').toLowerCase();
@@ -888,15 +889,14 @@
                         const hScore = isCricket ? (game.cricket_home_score || game.home_score || '') : game.home_score;
 
                         if (isCricket) {
-                            // Cricket: show each score on its own line in the score cell
-                            const vLabel = game.visitor_team_abbrev || 'VIS';
-                            const hLabel = game.home_team_abbrev || 'HOME';
-                            if (isFinal) {
+                            if (isFinal && (vScore || hScore)) {
                                 const vClass = visitorIsWinner ? 'winner-score' : '';
                                 const hClass = homeIsWinner ? 'winner-score' : '';
                                 scoreDisplay = `<span class="${vClass}" style="font-size:0.9rem">${vScore}</span><br><span class="${hClass}" style="font-size:0.9rem">${hScore}</span>`;
+                            } else if (vScore || hScore) {
+                                scoreDisplay = `<span style="font-size:0.9rem">${vScore || 'batting'}</span><br><span style="font-size:0.9rem">${hScore || 'batting'}</span>`;
                             } else {
-                                scoreDisplay = `<span style="font-size:0.9rem">${vScore || '-'}</span><br><span style="font-size:0.9rem">${hScore || '-'}</span>`;
+                                scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }
                         } else if (isFinal) {
                             if (visitorIsWinner) {
