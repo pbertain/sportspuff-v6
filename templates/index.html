@@ -392,9 +392,22 @@
                 }
                 
                 // Helper function to find team data with fuzzy matching
-                function findTeamData(teamName) {
+                function findTeamData(teamName, forLeague) {
                     if (!teamName || !teamColors || Object.keys(teamColors).length === 0) {
                         return null;
+                    }
+
+                    // If league specified and we have league-specific colors, search there first
+                    if (forLeague && validatedAllTeamColors) {
+                        const leagueKey = forLeague.toUpperCase();
+                        const leagueColors = validatedAllTeamColors[leagueKey];
+                        if (leagueColors && typeof leagueColors === 'object') {
+                            const searchName = teamName.trim();
+                            if (leagueColors[searchName]) return leagueColors[searchName];
+                            for (const key in leagueColors) {
+                                if (key.toLowerCase() === searchName.toLowerCase()) return leagueColors[key];
+                            }
+                        }
                     }
                     
                     const searchName = teamName.trim();
@@ -658,8 +671,8 @@
                     const homeLogoBg = getTeamLogoBg(game.home_team);
                     
                     // Get team data for full names and abbreviations (needed early)
-                    const visitorTeamData = findTeamData(game.visitor_team);
-                    const homeTeamData = findTeamData(game.home_team);
+                    const visitorTeamData = findTeamData(game.visitor_team, gameLeague);
+                    const homeTeamData = findTeamData(game.home_team, gameLeague);
                     
                     // Determine winner
                     let visitorIsWinner = false;
@@ -718,7 +731,7 @@
                     let statusDisplay = '';
                     if (hasScore && isFinal) {
                         if (isCricket) {
-                            statusDisplay = game.time_remaining || 'Complete';
+                            statusDisplay = 'F';
                         } else if (gameLeague === 'MLB') {
                             const inning = parseInt(game.current_period) || 9;
                             statusDisplay = inning > 9 ? `F/${inning}` : 'F';
@@ -1288,7 +1301,7 @@
                 
                 if (league === 'all') {
                     // Render grouped by league
-                    const leagueOrder = ['NBA', 'NHL', 'MLB', 'NFL', 'WNBA', 'MLS', 'IPL', 'MLC'];
+                    const leagueOrder = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
                     Object.keys(gamesByLeague).sort((a, b) => {
                         const aIdx = leagueOrder.indexOf(a.toUpperCase());
                         const bIdx = leagueOrder.indexOf(b.toUpperCase());

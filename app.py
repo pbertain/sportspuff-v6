@@ -481,7 +481,7 @@ def league_page(league_name):
             SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
                    t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
                    t.team_wins, t.team_losses,
-                   s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
+                   s.stadium_id as s_stadium_id, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
                    c.conference_name, d.division_name,
                    l.league_name_proper as team_league
             FROM teams t
@@ -511,6 +511,7 @@ def league_page(league_name):
             if division not in organized_teams[conference]:
                 organized_teams[conference][division] = []
             
+            team['abbreviation'] = get_team_abbreviation(team['real_team_name'], league_name)
             organized_teams[conference][division].append(team)
 
         # For MLB (and other leagues with standings), sort teams within each division by wins desc
@@ -616,7 +617,42 @@ def get_team_abbreviation(team_name, league):
         'Seattle Mariners': 'SEA', 'St. Louis Cardinals': 'STL', 'Tampa Bay Rays': 'TB',
         'Texas Rangers': 'TEX', 'Toronto Blue Jays': 'TOR', 'Washington Nationals': 'WSH'
     }
-    
+
+    wnba_abbrev_map = {
+        'Atlanta Dream': 'ATL', 'Chicago Sky': 'CHI', 'Connecticut Sun': 'CON',
+        'Dallas Wings': 'DAL', 'Golden State Valkyries': 'GSV', 'Indiana Fever': 'IND',
+        'Las Vegas Aces': 'LV', 'Los Angeles Sparks': 'LA', 'Minnesota Lynx': 'MIN',
+        'New York Liberty': 'NYL', 'Phoenix Mercury': 'PHX', 'Portland Fire': 'POR',
+        'Seattle Storm': 'SEA', 'Toronto Tempo': 'TOR', 'Washington Mystics': 'WAS'
+    }
+
+    ipl_abbrev_map = {
+        'Chennai Super Kings': 'CSK', 'Delhi Capitals': 'DC', 'Gujarat Titans': 'GT',
+        'Kolkata Knight Riders': 'KKR', 'Lucknow Super Giants': 'LSG',
+        'Mumbai Indians': 'MI', 'Punjab Kings': 'PBKS', 'Rajasthan Royals': 'RR',
+        'Royal Challengers Bengaluru': 'RCB', 'Sunrisers Hyderabad': 'SRH'
+    }
+
+    mlc_abbrev_map = {
+        'Los Angeles Knight Riders': 'LAKR', 'MI New York': 'MINY',
+        'San Francisco Unicorns': 'SFU', 'Seattle Orcas': 'SEA',
+        'Texas Super Kings': 'TSK', 'Washington Freedom': 'WSH'
+    }
+
+    mls_abbrev_map = {
+        'Atlanta United FC': 'ATL', 'Austin FC': 'ATX', 'CF Montréal': 'MTL',
+        'Charlotte FC': 'CLT', 'Chicago Fire FC': 'CHI', 'Colorado Rapids': 'COL',
+        'Columbus Crew': 'CLB', 'D.C. United': 'DC', 'FC Cincinnati': 'CIN',
+        'FC Dallas': 'DAL', 'Houston Dynamo FC': 'HOU', 'Inter Miami CF': 'MIA',
+        'Los Angeles FC': 'LAFC', 'Los Angeles Galaxy': 'LA', 'Minnesota United FC': 'MIN',
+        'Nashville SC': 'NSH', 'New England Revolution': 'NE', 'New York City FC': 'NYC',
+        'New York Red Bulls': 'RBNY', 'Orlando City SC': 'ORL', 'Philadelphia Union': 'PHI',
+        'Portland Timbers': 'POR', 'Real Salt Lake': 'RSL', 'San Diego FC': 'SD',
+        'San Jose Earthquakes': 'SJ', 'Seattle Sounders FC': 'SEA',
+        'Sporting Kansas City': 'SKC', 'St. Louis City SC': 'STL',
+        'Toronto FC': 'TOR', 'Vancouver Whitecaps FC': 'VAN'
+    }
+
     # Select the appropriate map based on league
     abbrev_map = {}
     if league.upper() == 'NFL':
@@ -627,6 +663,14 @@ def get_team_abbreviation(team_name, league):
         abbrev_map = nhl_abbrev_map
     elif league.upper() == 'MLB':
         abbrev_map = mlb_abbrev_map
+    elif league.upper() == 'WNBA':
+        abbrev_map = wnba_abbrev_map
+    elif league.upper() == 'IPL':
+        abbrev_map = ipl_abbrev_map
+    elif league.upper() == 'MLC':
+        abbrev_map = mlc_abbrev_map
+    elif league.upper() == 'MLS':
+        abbrev_map = mls_abbrev_map
     
     # Try exact match first
     if team_name in abbrev_map:
