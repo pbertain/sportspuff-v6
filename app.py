@@ -1372,7 +1372,7 @@ def cricket_standings(league):
         if cached:
             return jsonify(cached)
 
-        response = requests.get(f'{API_BASE_URL}/api/v1/standings/{league_lower}', timeout=10)
+        response = requests.get(f'{CRICKET_API_BASE_URL}/v1/standings/{league_lower}', timeout=10)
         response.raise_for_status()
         data = response.json()
 
