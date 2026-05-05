@@ -480,7 +480,7 @@ def league_page(league_name):
         teams_query = """
             SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
                    t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
-                   t.team_wins, t.team_losses,
+                   t.team_wins, t.team_losses, t.team_ties,
                    s.stadium_id as s_stadium_id, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
                    c.conference_name, d.division_name,
                    l.league_name_proper as team_league
@@ -528,6 +528,18 @@ def league_page(league_name):
                             tw = team.get('team_wins') or 0
                             tl = team.get('team_losses') or 0
                             gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
+                            team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
+
+        # For MLS, sort teams within each conference by points (3*W + 1*T) desc
+        if league_name == 'MLS':
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    for team in teams_list:
+                        w = team.get('team_wins') or 0
+                        t = team.get('team_ties') or 0
+                        team['mls_points'] = w * 3 + t
+                    teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
                             team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
         
         # Get league info including champion details

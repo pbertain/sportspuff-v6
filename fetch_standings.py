@@ -91,5 +91,54 @@ def fetch_mlb_standings():
             conn.close()
 
 
+def fetch_mls_standings():
+    """Fetch MLS standings from sportspuff-api scores and update the database."""
+    logger.info("Fetching MLS standings from sportspuff-api...")
+    api_base = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
+    try:
+        response = requests.get(f'{api_base}/api/v1/scores/mls/today', timeout=15)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        logger.error(f"Error fetching MLS scores: {e}")
+        return False
+
+    conn = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        updated = 0
+
+        for game in data.get('scores', data.get('games', [])):
+            for side in [('home_team', 'home_wins', 'home_losses'), ('visitor_team', 'visitor_wins', 'visitor_losses')]:
+                team_name = game.get(side[0], '')
+                wins = game.get(side[1])
+                losses = game.get(side[2])
+                if team_name and wins is not None and losses is not None:
+                    cursor.execute("""
+                        UPDATE teams SET team_wins = %s, team_losses = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE real_team_name = %s
+                        AND league_id = (SELECT league_id FROM leagues WHERE league_name_proper = 'MLS')
+                        AND (team_wins IS NULL OR team_wins != %s OR team_losses != %s)
+                    """, (wins, losses, team_name, wins, losses))
+                    if cursor.rowcount > 0:
+                        updated += 1
+
+        conn.commit()
+        cursor.close()
+        logger.info(f"Updated standings for {updated} MLS teams")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error updating MLS standings: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 if __name__ == '__main__':
     fetch_mlb_standings()
+    fetch_mls_standings()
