@@ -1445,6 +1445,34 @@ def ipl_standings():
     """Redirect to generic cricket standings endpoint"""
     return cricket_standings('ipl')
 
+@app.route('/api/mls/team-records')
+def mls_team_records():
+    """Fetch MLS team records from sportspuff-api schedule"""
+    try:
+        cache_key = 'mls_team_records'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get(f'{API_BASE_URL}/api/v1/schedule/mls/today', timeout=15)
+        if response.status_code != 200:
+            return jsonify({'teams': {}}), 200
+        data = response.json()
+        team_records = {}
+        for game in data.get('games', []):
+            for prefix in ['home', 'visitor']:
+                name = game.get(f'{prefix}_team', '')
+                wins = game.get(f'{prefix}_wins')
+                losses = game.get(f'{prefix}_losses')
+                if name and wins is not None:
+                    team_records[name] = {'wins': wins, 'losses': losses, 'draws': game.get(f'{prefix}_draws', 0)}
+        result = {'teams': team_records}
+        set_cached_response(cache_key, result)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching MLS team records: {e}")
+        return jsonify({'teams': {}}), 200
+
 @app.route('/api/mlb/team-records')
 def mlb_team_records():
     """Fetch MLB team records from database (populated by fetch_standings.py)"""
