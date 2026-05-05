@@ -1120,6 +1120,52 @@ def get_league_logo(league):
         return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
     return 'https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png'
 
+@app.route('/api/proxy/all-scores/<date>')
+def proxy_all_scores(date):
+    """Aggregated endpoint: fetch schedule+scores for all leagues in one request."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    tz = request.args.get('tz', 'pst')
+    api_date = 'today' if date.lower() == 'today' else date
+
+    cache_key = f'all_scores:{api_date}:{tz}'
+    cached = get_cached_response(cache_key, 'scores')
+    if cached:
+        return jsonify(cached)
+
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    result = {}
+
+    def fetch_league(lg):
+        api_base = API_BASE_URL
+        schedule_url = f'{api_base}/api/v1/schedule/{lg}/{api_date}?tz={tz}'
+        scores_url = f'{api_base}/api/v1/scores/{lg}/{api_date}?tz={tz}'
+        league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
+        try:
+            r = requests.get(schedule_url, timeout=15)
+            if r.status_code == 200:
+                league_data['schedule'] = r.json()
+        except:
+            pass
+        try:
+            r = requests.get(scores_url, timeout=15)
+            if r.status_code == 200:
+                league_data['scores'] = r.json()
+        except:
+            pass
+        return lg, league_data
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(fetch_league, lg): lg for lg in leagues}
+        for future in as_completed(futures):
+            try:
+                lg, data = future.result()
+                result[lg] = data
+            except:
+                pass
+
+    set_cached_response(cache_key, result)
+    return jsonify(result)
+
 @app.route('/api/proxy/schedule/<league>/<date>')
 def proxy_schedule(league, date):
     """Proxy schedule API requests to avoid CORS issues with caching"""

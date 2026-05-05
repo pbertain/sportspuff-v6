@@ -236,68 +236,64 @@
                 }
                 
                 if (league === 'all') {
-                    // For "all", fetch all leagues separately and combine
                     const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc'];
 
-                    // Fetch NFL team records from Tank01 API
-                    try {
-                        const nflRecordsResponse = await fetch('/api/nfl/team-records');
-                        if (nflRecordsResponse.ok) {
-                            const nflRecordsData = await nflRecordsResponse.json();
-                            nflTeamRecords = nflRecordsData.teams || {};
-                        }
-                    } catch (error) {
-                        console.warn('Error fetching NFL team records:', error);
+                    // Show cached data immediately while fetching fresh
+                    const cacheKey = `sportspuff_scores_${timezone}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        try {
+                            const cachedData = JSON.parse(cached);
+                            if (cachedData.timestamp && Date.now() - cachedData.timestamp < 300000) {
+                                scheduleData = cachedData.schedule;
+                                scoresData = cachedData.scores;
+                                nflTeamRecords = cachedData.nflRecords || {};
+                                nhlPlayoffSeries = cachedData.nhlSeries || {};
+                                mlbTeamRecords = cachedData.mlbRecords || {};
+                                // Render cached data immediately, then refresh
+                            }
+                        } catch(e) {}
                     }
 
-                    // Fetch NHL playoff series records
-                    try {
-                        const nhlSeriesResponse = await fetch('/api/nhl/playoff-series');
-                        if (nhlSeriesResponse.ok) {
-                            const nhlSeriesData = await nhlSeriesResponse.json();
-                            nhlPlayoffSeries = nhlSeriesData.series || {};
-                        }
-                    } catch (error) {
-                        console.warn('Error fetching NHL playoff series:', error);
-                    }
-
-                    // Fetch MLB team records from database
-                    try {
-                        const mlbRecordsResponse = await fetch('/api/mlb/team-records');
-                        if (mlbRecordsResponse.ok) {
-                            const mlbRecordsData = await mlbRecordsResponse.json();
-                            mlbTeamRecords = mlbRecordsData.teams || {};
-                        }
-                    } catch (error) {
-                        console.warn('Error fetching MLB team records:', error);
-                    }
-
-                    // Fetch schedule and scores for all leagues in parallel
-                    const fetchPromises = allLeagues.flatMap(lg => [
-                        fetchWithFallback(proxyScheduleUrl.replace(/\/nba\//, `/${lg}/`) + `?tz=${timezone}`, '').then(d => ({type: 'schedule', league: lg, data: d})),
-                        fetchWithFallback(proxyScoresUrl.replace(/\/nba\//, `/${lg}/`) + `?tz=${timezone}`, '').then(d => ({type: 'scores', league: lg, data: d}))
+                    // Fetch supplemental data and league data in parallel
+                    const [nflRes, nhlRes, mlbRes, allData] = await Promise.all([
+                        fetch('/api/nfl/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/nhl/playoff-series').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/mlb/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch(`/api/proxy/all-scores/today?tz=${timezone}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                     ]);
-
-                    const results = await Promise.all(fetchPromises.map(p => p.catch(e => ({type: 'error', data: {games: [], scores: []}}))));
+                    nflTeamRecords = nflRes.teams || {};
+                    nhlPlayoffSeries = nhlRes.series || {};
+                    mlbTeamRecords = mlbRes.teams || {};
 
                     let allGames = [];
                     let allScores = [];
                     let dateStr = '';
 
-                    results.forEach(r => {
-                        if (r.type === 'schedule') {
-                            const games = (r.data.games || []).map(g => ({...g, league: r.league, sport: r.league}));
-                            allGames.push(...games);
-                            if (!dateStr) dateStr = r.data.date;
-                        } else if (r.type === 'scores') {
-                            const scores = (r.data.scores || []).map(g => ({...g, league: r.league, sport: r.league}));
-                            allScores.push(...scores);
-                            if (!dateStr) dateStr = r.data.date;
-                        }
-                    });
+                    for (const lg of allLeagues) {
+                        const ld = allData[lg];
+                        if (!ld) continue;
+                        const games = (ld.schedule?.games || []).map(g => ({...g, league: lg, sport: lg}));
+                        const scores = (ld.scores?.scores || []).map(g => ({...g, league: lg, sport: lg}));
+                        allGames.push(...games);
+                        allScores.push(...scores);
+                        if (!dateStr) dateStr = ld.schedule?.date || ld.scores?.date || '';
+                    }
 
                     scheduleData = { date: dateStr, games: allGames };
                     scoresData = { date: dateStr, scores: allScores };
+
+                    // Cache for next load
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify({
+                            timestamp: Date.now(),
+                            schedule: scheduleData,
+                            scores: scoresData,
+                            nflRecords: nflTeamRecords,
+                            nhlSeries: nhlPlayoffSeries,
+                            mlbRecords: mlbTeamRecords
+                        }));
+                    } catch(e) {}
                 } else {
                     // For single league
                     // Fetch NFL team records if viewing NFL
