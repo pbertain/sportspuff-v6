@@ -92,16 +92,23 @@ def fetch_mlb_standings():
 
 
 def fetch_mls_standings():
-    """Fetch MLS standings from sportspuff-api scores and update the database."""
+    """Fetch MLS standings from sportspuff-api and update the database."""
     logger.info("Fetching MLS standings from sportspuff-api...")
     api_base = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
-    try:
-        response = requests.get(f'{api_base}/api/v1/scores/mls/today', timeout=15)
-        response.raise_for_status()
-        data = response.json()
-    except Exception as e:
-        logger.error(f"Error fetching MLS scores: {e}")
-        return False
+
+    games = []
+    for endpoint in [f'{api_base}/api/v1/scores/mls/today', f'{api_base}/api/v1/schedule/mls/today']:
+        try:
+            response = requests.get(endpoint, timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                games.extend(data.get('scores', data.get('games', [])))
+        except Exception as e:
+            logger.warning(f"Error fetching {endpoint}: {e}")
+
+    if not games:
+        logger.info("No MLS games data available")
+        return True
 
     conn = None
     try:

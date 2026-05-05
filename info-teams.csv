@@ -168,16 +168,16 @@ Minnesota_Lynx,minnesota_lynx,Minnesota Lynx,6,1094,116,134,111,minneapolis,mn,u
 Phoenix_Mercury,phoenix_mercury,Phoenix Mercury,6,1129,116,134,112,phoenix,az,us,198.0,phoenix_mercury_logo.png,#211747,#CB6015,#B1B3B3
 Portland_Fire,portland_fire,Portland Fire,6,1179,116,134,115,portland,or,us,185.0,portland_fire_logo.png,#C8102E,#BBDDE6,#4E3629
 Seattle_Storm,seattle_storm,Seattle Storm,6,1152,116,134,113,seattle,wa,us,133.0,seattle_storm_logo.png,#2C5234,#FBE122,#78BE21
-Chennai_Super_Kings,chennai_super_kings,Chennai Super Kings,7,1024,118,136,101,chennai,tn,in,242.0,chennai_super_kings_logo.png,#f0f000,#e0e000,#e0d000
-Delhi_Capitals,delhi_capitals,Delhi Capitals,7,1048,118,137,102,delhi,dl,in,243.0,delhi_capitals_logo.png,#0090f0,#4040a0,#202060
-Gujarat_Titans,gujarat_titans,Gujarat Titans,7,1062,118,137,103,ahmedabad,gj,in,244.0,gujarat_titans_logo.png,#D2B48C,#0066CC,#2F4F4F
-Kolkata_Knight_Riders,kolkata_knight_riders,Kolkata Knight Riders,7,1074,118,136,104,kolkata,wb,in,245.0,kolkata_knight_riders_logo.png,#9030f0,#6020a0,#601090
-Lucknow_Super_Giants,lucknow_super_giants,Lucknow Super Giants,7,1087,118,137,105,lucknow,up,in,246.0,lucknow_super_giants_logo.png,#FF4500,#0066CC,#00CC66
-Mumbai_Indians,mumbai_indians,Mumbai Indians,7,1101,118,136,106,mumbai,mh,in,247.0,mumbai_indians_logo.png,#0070e0,#0050b0,#0040a0
+Chennai_Super_Kings,chennai_super_kings,Chennai Super Kings,7,1024,118,136,101,chennai,tn,in,242.0,chennai_super_kings_logo.png,#f0f000,#1a1a00,#003300
+Delhi_Capitals,delhi_capitals,Delhi Capitals,7,1048,118,137,102,delhi,dl,in,243.0,delhi_capitals_logo.png,#0050b0,#FFFFFF,#FF0000
+Gujarat_Titans,gujarat_titans,Gujarat Titans,7,1062,118,137,103,ahmedabad,gj,in,244.0,gujarat_titans_logo.png,#1a2b3c,#D2B48C,#FFFFFF
+Kolkata_Knight_Riders,kolkata_knight_riders,Kolkata Knight Riders,7,1074,118,136,104,kolkata,wb,in,245.0,kolkata_knight_riders_logo.png,#3B1D8F,#FFD700,#FFFFFF
+Lucknow_Super_Giants,lucknow_super_giants,Lucknow Super Giants,7,1087,118,137,105,lucknow,up,in,246.0,lucknow_super_giants_logo.png,#004B8D,#FF4500,#FFFFFF
+Mumbai_Indians,mumbai_indians,Mumbai Indians,7,1101,118,136,106,mumbai,mh,in,247.0,mumbai_indians_logo.png,#004BA0,#FFD700,#FFFFFF
 Punjab_Kings,punjab_kings,Punjab Kings,7,1136,118,137,107,mohali,pb,in,248.0,punjab_kings_logo.png,#DC143C,#FFD700,#FFFFFF
 Rajasthan_Royals,rajasthan_royals,Rajasthan Royals,7,1137,118,137,108,jaipur,rj,in,249.0,rajasthan_royals_logo.png,#FF69B4,#800080,#FFFFFF
-Royal_Challengers_Bengaluru,royal_challengers_bengaluru,Royal Challengers Bengaluru,7,1139,118,136,109,bengaluru,ka,in,250.0,royal_challengers_bengaluru_logo.png,#f02000,#d01000,#c01000
-Sunrisers_Hyderabad,sunrisers_hyderabad,Sunrisers Hyderabad,7,1157,118,136,110,hyderabad,tg,in,251.0,sunrisers_hyderabad_logo.png,#f09000,#f05000,#f03000
+Royal_Challengers_Bengaluru,royal_challengers_bengaluru,Royal Challengers Bengaluru,7,1139,118,136,109,bengaluru,ka,in,250.0,royal_challengers_bengaluru_logo.png,#1C1C1C,#CF0000,#FFD700
+Sunrisers_Hyderabad,sunrisers_hyderabad,Sunrisers Hyderabad,7,1157,118,136,110,hyderabad,tg,in,251.0,sunrisers_hyderabad_logo.png,#FF6700,#000000,#FFFFFF
 Major_League_Cricket,major_league_cricket,Major League Cricket,8,1184,119,138,100,new_york,ny,us,,mlc_logo.png,#1a5276,#FFFFFF,#D4AC0D
 Los_Angeles_Knight_Riders,los_angeles_knight_riders,Los Angeles Knight Riders,8,1185,120,140,101,los_angeles,ca,us,254.0,los_angeles_knight_riders_logo.png,#3B1D8F,#FFD700,#FFFFFF
 MI_New_York,mi_new_york,MI New York,8,1186,120,139,102,new_york,ny,us,253.0,mi_new_york_logo.png,#004BA0,#FFD700,#FFFFFF

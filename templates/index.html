@@ -683,10 +683,21 @@
                         const cityMap = {
                             'Los Angeles': 'LA',
                             'San Francisco': 'SF',
+                            'San Diego': 'SD',
+                            'San Antonio': 'SA',
+                            'San Jose': 'SJ',
                             'New York': 'NY',
                             'New Jersey': 'NJ',
+                            'New England': 'NE',
+                            'New Orleans': 'NO',
                             'Golden State': 'GS',
                             'Oklahoma City': 'OKC',
+                            'Kansas City': 'KC',
+                            'Tampa Bay': 'TB',
+                            'Green Bay': 'GB',
+                            'Las Vegas': 'LV',
+                            'Salt Lake': 'SL',
+                            'St. Louis': 'STL',
                             'Portland': 'POR'
                         };
                         let shortName = teamName;
@@ -695,10 +706,6 @@
                                 shortName = shortName.replace(city, abbrev);
                                 break;
                             }
-                        }
-                        const parts = shortName.split(' ');
-                        if (parts.length > 2 && shortName.length > 15) {
-                            return parts.slice(-2).join(' ');
                         }
                         return shortName;
                     }
