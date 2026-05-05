@@ -540,8 +540,7 @@ def league_page(league_name):
                         t = team.get('team_ties') or 0
                         team['mls_points'] = w * 3 + t
                     teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
-                            team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
-        
+
         # Get league info including champion details
         league_query = """
             SELECT l.league_name_proper, l.league_name, l.logo_filename, l.team_count,
