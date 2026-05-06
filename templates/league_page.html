@@ -54,31 +54,43 @@
 
             <!-- Division Boxes Layout -->
             {% if league_name == 'MLS' %}
-            <!-- MLS: Both conferences on same row, sorted by points from API -->
+            <!-- MLS: Both conferences on same row with animated logo backgrounds -->
             <div class="row mb-4 conference-section mls-conference">
                 {% for conference_name, divisions in organized_teams.items() %}
+                {% set conf_bg = 'rgba(30, 80, 30, 0.12)' if loop.index == 1 else 'rgba(30, 50, 100, 0.12)' %}
+                {% set conf_border = 'rgba(43, 174, 102, 0.4)' if loop.index == 1 else 'rgba(70, 130, 220, 0.4)' %}
+                {% set conf_title_color = '#2BAE66' if loop.index == 1 else '#4682B4' %}
                 <div class="col-lg-6 col-md-6 mb-4">
-                    <h2 class="conference-title">{{ conference_name }}</h2>
-                    {% for division_name, teams in divisions.items() %}
-                    <div class="division-box">
-                        <h3 class="division-title">{{ division_name }}</h3>
-                        <div class="teams-list" data-mls-conference="{{ conference_name }}">
-                            {% for team in teams %}
-                            <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" data-team-name="{{ team.real_team_name }}" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
-                                <div style="flex-shrink: 0;">
-                                    <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
-                                </div>
-                                <div style="flex: 1; min-width: 0;">
-                                    <div class="mls-team-record" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}</div>
-                                    {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                    {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                    <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
-                                </div>
-                            </a>
+                    <div class="conf-box" style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }};">
+                        <div class="conf-floating-logos">
+                            {% for division_name, teams in divisions.items() %}
+                                {% for team in teams %}
+                                <img src="{{ team.team_id | get_logo }}" style="top: {{ range(5, 90) | random }}%; left: {{ range(5, 85) | random }}%; animation-delay: -{{ range(0, 20) | random }}s; animation-duration: {{ range(18, 30) | random }}s;" onerror="this.style.display='none';">
+                                {% endfor %}
                             {% endfor %}
                         </div>
+                        <div style="text-align: center; color: {{ conf_title_color }}; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">{{ conference_name }}</div>
+                        {% for division_name, teams in divisions.items() %}
+                        <div class="division-box">
+                            <h3 class="division-title">{{ division_name }}</h3>
+                            <div class="teams-list" data-mls-conference="{{ conference_name }}">
+                                {% for team in teams %}
+                                <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" data-team-name="{{ team.real_team_name }}" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
+                                    <div style="flex-shrink: 0;">
+                                        <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="mls-team-record" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}</div>
+                                        {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
+                                        {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
+                                        <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                    </div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
                 {% endfor %}
             </div>
@@ -133,7 +145,14 @@
                 {% set conf_border = 'rgba(70, 130, 220, 0.4)' if loop.index == 1 else 'rgba(220, 70, 70, 0.4)' %}
                 {% set conf_title_color = '#4682B4' if loop.index == 1 else '#CD5C5C' %}
                 <div class="col-lg-6 col-md-12 mb-4">
-                    <div style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }}; border-radius: 12px; padding: 16px; height: 100%;">
+                    <div class="conf-box" style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }};">
+                        <div class="conf-floating-logos">
+                            {% for division_name, teams in divisions.items() %}
+                                {% for team in teams %}
+                                <img src="{{ team.team_id | get_logo }}" style="top: {{ range(5, 90) | random }}%; left: {{ range(5, 85) | random }}%; animation-delay: -{{ range(0, 20) | random }}s; animation-duration: {{ range(18, 30) | random }}s;" onerror="this.style.display='none';">
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
                         <div style="text-align: center; color: {{ conf_title_color }}; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">{{ conference_name }}</div>
                         <div class="row">
                             {% for division_name, teams in divisions.items() %}
@@ -227,9 +246,19 @@
             {% elif league_name == 'MLB' %}
             <!-- MLB: American League and National League in separate rows, each with 3 division boxes -->
             {% for conference_name, divisions in organized_teams.items() %}
+            {% set conf_bg = 'rgba(14, 76, 146, 0.1)' %}
+            {% set conf_border = 'rgba(14, 76, 146, 0.3)' %}
             <div class="row mb-4 conference-section">
                 <div class="col-12">
-                    <h2 class="conference-title">{{ conference_name }}</h2>
+                    <div class="conf-box" style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }};">
+                        <div class="conf-floating-logos">
+                            {% for division_name, teams in divisions.items() %}
+                                {% for team in teams %}
+                                <img src="{{ team.team_id | get_logo }}" style="top: {{ range(5, 90) | random }}%; left: {{ range(5, 85) | random }}%; animation-delay: -{{ range(0, 20) | random }}s; animation-duration: {{ range(18, 30) | random }}s;" onerror="this.style.display='none';">
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        <h2 class="conference-title">{{ conference_name }}</h2>
                     <div class="row">
                         {% for division_name, teams in divisions.items() %}
                         <div class="col-lg-4 col-md-6 mb-4">
@@ -419,35 +448,45 @@
             </div>
             {% endfor %}
             {% else %}
-            <!-- Other leagues: Standard layout -->
+            <!-- Other leagues: Standard layout with conference boxes -->
             {% for conference_name, divisions in organized_teams.items() %}
+            {% set conf_bg = 'rgba(100, 100, 200, 0.08)' %}
+            {% set conf_border = 'rgba(150, 150, 200, 0.25)' %}
             <div class="row mb-4 conference-section {% if league_name == 'NFL' %}nfl-conference{% endif %}">
                 <div class="col-12">
-                    <h2 class="conference-title">{{ conference_name }}</h2>
-                    
-                    <div class="row">
-                        {% for division_name, teams in divisions.items() %}
-                        <div class="{% if league_name == 'NFL' %}col-lg-3{% elif league_name == 'WNBA' %}col-lg-6{% else %}col-lg-4{% endif %} col-md-6 mb-4">
-                            <div class="division-box">
-                                <h3 class="division-title">{{ division_name }}</h3>
-                                <div class="teams-list">
-                                    {% for team in teams %}
-                                    <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
-                                        <div style="flex-shrink: 0;">
-                                            <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
-                                        </div>
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                            {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                            {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                            <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
-                                        </div>
-                                    </a>
-                                    {% endfor %}
+                    <div class="conf-box" style="background: {{ conf_bg }}; border: 1px solid {{ conf_border }};">
+                        <div class="conf-floating-logos">
+                            {% for division_name, teams in divisions.items() %}
+                                {% for team in teams %}
+                                <img src="{{ team.team_id | get_logo }}" style="top: {{ range(5, 90) | random }}%; left: {{ range(5, 85) | random }}%; animation-delay: -{{ range(0, 20) | random }}s; animation-duration: {{ range(18, 30) | random }}s;" onerror="this.style.display='none';">
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        <h2 class="conference-title">{{ conference_name }}</h2>
+                        <div class="row">
+                            {% for division_name, teams in divisions.items() %}
+                            <div class="{% if league_name == 'NFL' %}col-lg-3{% elif league_name == 'WNBA' %}col-lg-6{% else %}col-lg-4{% endif %} col-md-6 mb-4">
+                                <div class="division-box">
+                                    <h3 class="division-title">{{ division_name }}</h3>
+                                    <div class="teams-list">
+                                        {% for team in teams %}
+                                        <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
+                                            <div style="flex-shrink: 0;">
+                                                <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
+                                            </div>
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
+                                                {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
+                                                {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
+                                                <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                            </div>
+                                        </a>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
