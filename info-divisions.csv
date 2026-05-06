@@ -7,35 +7,35 @@ league_id,conference_id,division_id,division_name,division_full_name
 1,103,106,East, NL East
 1,103,107,West, NL West
 2,104,108,UA,Unaffiliated
-2,105,109,Eastern, Eastern Conference
-2,106,110,Western, Western Conference
-3,105,111,UA,Unaffiliated
-3,106,112, Atlantic, Atlantic
-3,106,113,Central, Central
-3,106,114,Southeast, Southeast
-3,107,115,Northwest, Northwest
-3,107,116,Pacific, Pacific
-3,107,117,Southwest, Southwest
-4,108,118,UA,Unaffiliated
-4,109,119,East, AFC East
-4,109,120,North, AFC North
-4,109,121,South, AFC South
-4,109,122,West, AFC West
-4,110,123,East, NFC East
-4,110,124,North, NFC North
-4,110,125,South, NFC South
-4,110,126,West, NFC West
-5,111,127,UA,Unaffiliated
-5,112,128, Atlantic, Atlantic
-5,112,129,Metropolitan, Metropolitan
-5,113,130,Central, Central
-5,113,131,Pacific, Pacific
-6,114,132,UA,Unaffiliated
-6,115,133,East, Eastern Division
-6,116,134,West, Western Division
-7,117,135,UA,Unaffiliated
-7,118,136,Dosa,Dosa Division
-7,118,137,Naan,Naan Division
-8,119,138,UA,Unaffiliated
-8,120,139,East,Eastern
-8,120,140,West,Western
+2,105,109,bEast Coast,bEastern Coasters
+2,106,110,Wild West,"Wild, Wild West"
+3,107,111,UA,Unaffiliated
+3,108,112, Atlantic, Atlantic
+3,108,113,Central, Central
+3,108,114,Southeast, Southeast
+3,109,115,Northwest, Northwest
+3,109,116,Pacific, Pacific
+3,109,117,Southwest, Southwest
+4,110,118,UA,Unaffiliated
+4,111,119,East, AFC East
+4,111,120,North, AFC North
+4,111,121,South, AFC South
+4,111,122,West, AFC West
+4,112,123,East, NFC East
+4,112,124,North, NFC North
+4,112,125,South, NFC South
+4,112,126,West, NFC West
+5,113,127,UA,Unaffiliated
+5,114,128, Atlantic, Atlantic
+5,114,129,Metropolitan, Metropolitan
+5,115,130,Central, Central
+5,115,131,Pacific, Pacific
+6,116,132,UA,Unaffiliated
+6,117,133,East, Eastern Division
+6,118,134,West, Western Division
+7,119,135,UA,Unaffiliated
+7,120,136,Dosa,Dosa Division
+7,120,137,Naan,Naan Division
+8,121,138,UA,Unaffiliated
+8,122,139,East,Eastern
+8,122,140,West,Western

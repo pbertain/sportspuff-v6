@@ -83,10 +83,26 @@
                 {% endfor %}
             </div>
             <script>
-                fetch('/api/mls/team-records')
+                fetch('/api/proxy/all-scores/today?tz=pt')
                     .then(r => r.json())
-                    .then(data => {
-                        const teams = data.teams || {};
+                    .then(allData => {
+                        const mlsData = allData.mls || {};
+                        const games = [
+                            ...(mlsData.schedule?.games || []),
+                            ...(mlsData.scores?.scores || [])
+                        ];
+                        const teams = {};
+                        games.forEach(g => {
+                            ['home', 'visitor'].forEach(side => {
+                                const name = g[`${side}_team`];
+                                const w = g[`${side}_wins`];
+                                const l = g[`${side}_losses`];
+                                const d = g[`${side}_draws`] || 0;
+                                if (name && w !== undefined && w !== null) {
+                                    teams[name] = {wins: w, losses: l, draws: d};
+                                }
+                            });
+                        });
                         if (Object.keys(teams).length === 0) return;
                         document.querySelectorAll('[data-mls-conference]').forEach(container => {
                             const cards = Array.from(container.querySelectorAll('.team-item'));
@@ -107,7 +123,7 @@
                             cards.forEach(card => container.appendChild(card));
                         });
                     })
-                    .catch(() => {});
+                    .catch(e => console.warn('MLS records fetch failed:', e));
             </script>
             {% elif league_name == 'NHL' %}
             <!-- NHL: 4 divisions in one row, 2 conference boxes each containing 2 divisions -->
