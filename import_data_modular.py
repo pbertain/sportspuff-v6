@@ -256,6 +256,13 @@ def import_teams(conn):
     
     try:
         df = pd.read_csv('info-teams.csv', encoding='utf-8-sig')  # Handle BOM
+
+        # Filter out league placeholder rows (conferences marked as UA/Unaffiliated)
+        league_names = ['Major League Baseball', 'Major League Soccer', 'National Basketball Association',
+                        'National Football League', 'National Hockey League',
+                        "Women's National Basketball League", 'India Premier League', 'Major League Cricket']
+        df = df[~df['real_team_name'].isin(league_names)]
+
         cursor = conn.cursor()
         
         for _, row in df.iterrows():
