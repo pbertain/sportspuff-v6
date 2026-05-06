@@ -378,9 +378,21 @@ main, .main-content {
 /* League Grid */
 .league-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 1rem;
   margin: 2rem 0;
+}
+
+@media (max-width: 1200px) {
+  .league-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .league-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .league-card {
@@ -472,9 +484,9 @@ main, .main-content {
   }
   
   .league-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .stat-number {
     font-size: 2rem;
   }
