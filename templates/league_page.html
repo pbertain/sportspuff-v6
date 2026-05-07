@@ -95,27 +95,12 @@
                 {% endfor %}
             </div>
             <script>
-                // Fetch MLS schedule directly - more reliable than all-scores aggregation
-                Promise.all([
-                    fetch('/api/proxy/schedule/mls/today?tz=pt').then(r => r.ok ? r.json() : {}),
-                    fetch('/api/proxy/scores/mls/today?tz=pt').then(r => r.ok ? r.json() : {})
-                ]).then(([schedData, scoresData]) => {
-                    const games = [...(schedData.games || []), ...(scoresData.scores || [])];
-                    const teams = {};
-                    games.forEach(g => {
-                        ['home', 'visitor'].forEach(side => {
-                            const name = g[`${side}_team`];
-                            const w = g[`${side}_wins`];
-                            const l = g[`${side}_losses`];
-                            const d = g[`${side}_draws`] || g[`${side}_ties`] || 0;
-                            if (name && w !== undefined && w !== null) {
-                                teams[name] = {wins: w, losses: l, draws: d};
-                            }
-                        });
-                    });
-                    console.log('MLS teams with records:', Object.keys(teams).length, teams);
-                    if (Object.keys(teams).length === 0) return;
-                    document.querySelectorAll('[data-mls-conference]').forEach(container => {
+                fetch('/api/mls/team-records')
+                    .then(r => r.json())
+                    .then(data => {
+                        const teams = data.teams || {};
+                        if (Object.keys(teams).length === 0) return;
+                        document.querySelectorAll('[data-mls-conference]').forEach(container => {
                             const cards = Array.from(container.querySelectorAll('.team-item'));
                             cards.forEach(card => {
                                 const name = card.dataset.teamName;

@@ -1447,26 +1447,40 @@ def ipl_standings():
 
 @app.route('/api/mls/team-records')
 def mls_team_records():
-    """Fetch MLS team records from sportspuff-api schedule"""
+    """Fetch MLS team records by checking recent days for games"""
     try:
         cache_key = 'mls_team_records'
         cached = get_cached_response(cache_key, 'schedule')
         if cached:
             return jsonify(cached)
 
-        response = requests.get(f'{API_BASE_URL}/api/v1/schedule/mls/today', timeout=15)
-        if response.status_code != 200:
-            return jsonify({'teams': {}}), 200
-        data = response.json()
-        team_records = {}
-        for game in data.get('games', []):
-            for prefix in ['home', 'visitor']:
-                name = game.get(f'{prefix}_team', '')
-                wins = game.get(f'{prefix}_wins')
-                losses = game.get(f'{prefix}_losses')
-                if name and wins is not None:
-                    team_records[name] = {'wins': wins, 'losses': losses, 'draws': game.get(f'{prefix}_draws', 0)}
-        result = {'teams': team_records}
+        from datetime import timedelta
+        teams = {}
+        today = datetime.now()
+
+        # Check last 7 days to collect records from all teams that played
+        for days_back in range(8):
+            date_str = (today - timedelta(days=days_back)).strftime('%Y%m%d')
+            try:
+                r = requests.get(f'{API_BASE_URL}/api/v1/schedule/mls/{date_str}', timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    for g in data.get('games', []):
+                        for side in ['home', 'visitor']:
+                            name = g.get(f'{side}_team', '')
+                            w = g.get(f'{side}_wins')
+                            if name and w is not None and name not in teams:
+                                teams[name] = {
+                                    'wins': w,
+                                    'losses': g.get(f'{side}_losses', 0),
+                                    'draws': g.get(f'{side}_draws', 0)
+                                }
+            except:
+                pass
+            if len(teams) >= 28:
+                break
+
+        result = {'teams': teams}
         set_cached_response(cache_key, result)
         return jsonify(result)
     except Exception as e:
