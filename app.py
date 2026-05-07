@@ -1447,38 +1447,30 @@ def ipl_standings():
 
 @app.route('/api/mls/team-records')
 def mls_team_records():
-    """Fetch MLS team records by checking recent days for games"""
+    """Fetch MLS team records from sportspuff-api standings endpoint"""
     try:
         cache_key = 'mls_team_records'
         cached = get_cached_response(cache_key, 'schedule')
         if cached:
             return jsonify(cached)
 
-        from datetime import timedelta
-        teams = {}
-        today = datetime.now()
+        response = requests.get(f'{API_BASE_URL}/api/v1/standings/mls', timeout=10)
+        if response.status_code != 200:
+            return jsonify({'teams': {}}), 200
 
-        # Check last 7 days to collect records from all teams that played
-        for days_back in range(8):
-            date_str = (today - timedelta(days=days_back)).strftime('%Y%m%d')
-            try:
-                r = requests.get(f'{API_BASE_URL}/api/v1/schedule/mls/{date_str}', timeout=10)
-                if r.status_code == 200:
-                    data = r.json()
-                    for g in data.get('games', []):
-                        for side in ['home', 'visitor']:
-                            name = g.get(f'{side}_team', '')
-                            w = g.get(f'{side}_wins')
-                            if name and w is not None and name not in teams:
-                                teams[name] = {
-                                    'wins': w,
-                                    'losses': g.get(f'{side}_losses', 0),
-                                    'draws': g.get(f'{side}_draws', 0)
-                                }
-            except:
-                pass
-            if len(teams) >= 28:
-                break
+        data = response.json()
+        teams = {}
+        for t in data.get('teams', []):
+            abbrev = t.get('abbreviation', '')
+            name = t.get('team_name', abbrev)
+            teams[name] = {
+                'wins': t.get('wins', 0),
+                'losses': t.get('losses', 0),
+                'draws': t.get('draws', 0),
+                'points': t.get('points', 0)
+            }
+            if abbrev:
+                teams[abbrev] = teams[name]
 
         result = {'teams': teams}
         set_cached_response(cache_key, result)

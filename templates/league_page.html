@@ -107,10 +107,10 @@
                                 const rec = teams[name];
                                 if (rec) {
                                     const w = rec.wins || 0, l = rec.losses || 0, d = rec.draws || 0;
-                                    const pts = w * 3 + d;
+                                    const pts = rec.points || (w * 3 + d);
                                     card.dataset.pts = pts;
                                     const recEl = card.querySelector('.mls-team-record');
-                                    if (recEl) recEl.innerHTML = `${name} <span style="font-weight:400;font-size:0.9rem">(${w}W-${l}L-${d}D, ${pts}pts)</span>`;
+                                    if (recEl) recEl.innerHTML = `${name} <span style="font-weight:400;font-size:0.9rem">(${w}W-${d}D-${l}L, ${pts}pts)</span>`;
                                 } else {
                                     card.dataset.pts = 0;
                                 }
