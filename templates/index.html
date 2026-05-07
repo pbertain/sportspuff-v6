@@ -811,6 +811,12 @@
                             visitorRecord = `${vWins}-${hWins}`;
                             homeRecord = `${hWins}-${vWins}`;
                         }
+                    } else if (isPlayoffGame && (gameLeague === 'NBA' || gameLeague === 'WNBA')) {
+                        // NBA/WNBA: API returns series record in wins/losses during playoffs
+                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
+                            ? `${game.visitor_wins}-${game.visitor_losses}` : '';
+                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined)
+                            ? `${game.home_wins}-${game.home_losses}` : '';
                     } else if (isPlayoffGame) {
                         visitorRecord = '';
                         homeRecord = '';
