@@ -1,0 +1,13 @@
+[Unit]
+Description=Timer for Standings Updater
+Requires=standings-updater.service
+
+[Timer]
+# Run every 2 hours during baseball season
+OnCalendar=*-*-* 00/2:00:00
+OnBootSec=5min
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

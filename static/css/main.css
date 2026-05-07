@@ -28,6 +28,10 @@
   --ipl-accent: #FF6B35;      /* Orange-Red */
   --ipl-accent-dark: #E55A2B;
   --mls-accent: #2BAE66;      /* Emerald Green */
+
+  /* MLC Colors */
+  --mlc-accent: #1A5276;      /* Deep Teal */
+  --mlc-accent-dark: #0E3A54;
   
   /* Gradients */
   --primary-gradient: linear-gradient(135deg, var(--deep-purple) 0%, var(--electric-red) 100%);
@@ -374,9 +378,21 @@ main, .main-content {
 /* League Grid */
 .league-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 1rem;
   margin: 2rem 0;
+}
+
+@media (max-width: 1200px) {
+  .league-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .league-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .league-card {
@@ -412,6 +428,40 @@ main, .main-content {
 .league-card.wnba::before { background: var(--wnba-accent); }
 .league-card.mls::before { background: var(--mls-accent); }
 .league-card.ipl::before { background: var(--ipl-accent); }
+.league-card.mlc::before { background: var(--mlc-accent); }
+
+/* Conference boxes with floating logos */
+.conf-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 16px;
+  height: 100%;
+}
+.conf-floating-logos {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.conf-floating-logos img {
+  position: absolute;
+  opacity: 0.06;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  animation: confFloat 20s ease-in-out infinite;
+}
+.conf-box > *:not(.conf-floating-logos) {
+  position: relative;
+  z-index: 1;
+}
+@keyframes confFloat {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(15px, -20px) rotate(5deg); }
+  50% { transform: translate(-10px, 15px) rotate(-3deg); }
+  75% { transform: translate(20px, 10px) rotate(4deg); }
+}
 
 .league-card:hover {
   transform: translateY(-10px);
@@ -467,9 +517,9 @@ main, .main-content {
   }
   
   .league-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .stat-number {
     font-size: 2rem;
   }

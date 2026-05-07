@@ -30,10 +30,15 @@
                     <div class="mb-2">
                         <label for="league-select" class="form-label text-white fw-bold">League:</label>
                         <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all" selected>All (NBA, NHL & NFL)</option>
+                            <option value="all" selected>All Leagues</option>
+                            <option value="mlb">MLB</option>
                             <option value="nba">NBA</option>
-                            <option value="nhl">NHL</option>
                             <option value="nfl">NFL</option>
+                            <option value="nhl">NHL</option>
+                            <option value="mls">MLS</option>
+                            <option value="wnba">WNBA</option>
+                            <option value="ipl">IPL</option>
+                            <option value="mlc">MLC</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -154,6 +159,16 @@
                         <h3 class="league-name">Indian Premier League</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'IPL') | map(attribute='count') | first or 0 }} Teams</p>
                     </a>
+
+                    <!-- MLC -->
+                    <a href="{{ url_for('league_page', league_name='MLC') }}" class="league-card mlc fade-in-up" data-league="MLC">
+                        <div class="league-logo">
+                            <img src="{{ 'MLC' | get_league_logo }}" alt="MLC Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-cricket" style="color: var(--mlc-accent); display: none;"></i>
+                        </div>
+                        <h3 class="league-name">Major League Cricket</h3>
+                        <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'MLC') | map(attribute='count') | first or 0 }} Teams</p>
+                    </a>
                 </div>
             </div>
         </div>
@@ -188,6 +203,8 @@
                 
                 let scheduleData, scoresData;
                 let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
+                let nhlPlayoffSeries = {}; // NHL playoff series records
+                let mlbTeamRecords = {}; // MLB team records from database
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
@@ -219,72 +236,64 @@
                 }
                 
                 if (league === 'all') {
-                    // For "all", fetch NBA, NHL, and NFL separately and combine
-                    const nbaScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nbaScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nba/') + `?tz=${timezone}`;
-                    const nhlScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nhlScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nhl/') + `?tz=${timezone}`;
-                    const nflScheduleProxy = proxyScheduleUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
-                    const nflScoresProxy = proxyScoresUrl.replace(/\/nba\//, '/nfl/') + `?tz=${timezone}`;
-                    
-                    const nbaScheduleDirect = `${API_BASE}/schedule/nba/today?tz=${timezone}`;
-                    const nbaScoresDirect = `${API_BASE}/scores/nba/today?tz=${timezone}`;
-                    const nhlScheduleDirect = `${API_BASE}/schedule/nhl/today?tz=${timezone}`;
-                    const nhlScoresDirect = `${API_BASE}/scores/nhl/today?tz=${timezone}`;
-                    const nflScheduleDirect = `${API_BASE}/schedule/nfl/today?tz=${timezone}`;
-                    const nflScoresDirect = `${API_BASE}/scores/nfl/today?tz=${timezone}`;
-                    
-                    // Fetch NFL team records from Tank01 API
-                    try {
-                        const nflRecordsResponse = await fetch('/api/nfl/team-records');
-                        if (nflRecordsResponse.ok) {
-                            const nflRecordsData = await nflRecordsResponse.json();
-                            nflTeamRecords = nflRecordsData.teams || {};
-                            console.log('Fetched NFL team records:', Object.keys(nflTeamRecords).length, 'teams');
-                        } else {
-                            console.warn('Failed to fetch NFL team records:', nflRecordsResponse.status);
-                        }
-                    } catch (error) {
-                        console.warn('Error fetching NFL team records:', error);
+                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc'];
+
+                    // Show cached data immediately while fetching fresh
+                    const cacheKey = `sportspuff_scores_${timezone}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        try {
+                            const cachedData = JSON.parse(cached);
+                            if (cachedData.timestamp && Date.now() - cachedData.timestamp < 300000) {
+                                scheduleData = cachedData.schedule;
+                                scoresData = cachedData.scores;
+                                nflTeamRecords = cachedData.nflRecords || {};
+                                nhlPlayoffSeries = cachedData.nhlSeries || {};
+                                mlbTeamRecords = cachedData.mlbRecords || {};
+                                // Render cached data immediately, then refresh
+                            }
+                        } catch(e) {}
                     }
-                    
-                    const [nbaSchedule, nbaScores, nhlSchedule, nhlScores, nflSchedule, nflScores] = await Promise.all([
-                        fetchWithFallback(nbaScheduleProxy, nbaScheduleDirect),
-                        fetchWithFallback(nbaScoresProxy, nbaScoresDirect),
-                        fetchWithFallback(nhlScheduleProxy, nhlScheduleDirect),
-                        fetchWithFallback(nhlScoresProxy, nhlScoresDirect),
-                        fetchWithFallback(nflScheduleProxy, nflScheduleDirect),
-                        fetchWithFallback(nflScoresProxy, nflScoresDirect)
+
+                    // Fetch supplemental data and league data in parallel
+                    const [nflRes, nhlRes, mlbRes, allData] = await Promise.all([
+                        fetch('/api/nfl/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/nhl/playoff-series').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/mlb/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch(`/api/proxy/all-scores/today?tz=${timezone}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                     ]);
-                    
-                    // Combine NBA, NHL, and NFL data
-                    // Explicitly set league on each game to ensure it's preserved
-                    const nbaGames = (nbaSchedule.games || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
-                    const nhlGames = (nhlSchedule.games || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
-                    const nflGames = (nflSchedule.games || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
-                    
-                    scheduleData = {
-                        date: nbaSchedule.date || nhlSchedule.date || nflSchedule.date,
-                        games: [...nbaGames, ...nhlGames, ...nflGames]
-                    };
-                    
-                    const nbaScoresList = (nbaScores.scores || []).map(g => ({...g, league: 'nba', sport: 'nba'}));
-                    const nhlScoresList = (nhlScores.scores || []).map(g => ({...g, league: 'nhl', sport: 'nhl'}));
-                    const nflScoresList = (nflScores.scores || []).map(g => ({...g, league: 'nfl', sport: 'nfl'}));
-                    
-                    scoresData = {
-                        date: nbaScores.date || nhlScores.date || nflScores.date,
-                        scores: [...nbaScoresList, ...nhlScoresList, ...nflScoresList]
-                    };
-                    
-                    // Debug logging for NFL
-                    console.log('NFL Schedule games:', nflGames.length);
-                    console.log('NFL Scores games:', nflScoresList.length);
-                    console.log('Total games by league:', {
-                        nba: nbaGames.length,
-                        nhl: nhlGames.length,
-                        nfl: nflGames.length
-                    });
+                    nflTeamRecords = nflRes.teams || {};
+                    nhlPlayoffSeries = nhlRes.series || {};
+                    mlbTeamRecords = mlbRes.teams || {};
+
+                    let allGames = [];
+                    let allScores = [];
+                    let dateStr = '';
+
+                    for (const lg of allLeagues) {
+                        const ld = allData[lg];
+                        if (!ld) continue;
+                        const games = (ld.schedule?.games || []).map(g => ({...g, league: lg, sport: lg}));
+                        const scores = (ld.scores?.scores || []).map(g => ({...g, league: lg, sport: lg}));
+                        allGames.push(...games);
+                        allScores.push(...scores);
+                        if (!dateStr) dateStr = ld.schedule?.date || ld.scores?.date || '';
+                    }
+
+                    scheduleData = { date: dateStr, games: allGames };
+                    scoresData = { date: dateStr, scores: allScores };
+
+                    // Cache for next load
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify({
+                            timestamp: Date.now(),
+                            schedule: scheduleData,
+                            scores: scoresData,
+                            nflRecords: nflTeamRecords,
+                            nhlSeries: nhlPlayoffSeries,
+                            mlbRecords: mlbTeamRecords
+                        }));
+                    } catch(e) {}
                 } else {
                     // For single league
                     // Fetch NFL team records if viewing NFL
@@ -379,9 +388,22 @@
                 }
                 
                 // Helper function to find team data with fuzzy matching
-                function findTeamData(teamName) {
+                function findTeamData(teamName, forLeague) {
                     if (!teamName || !teamColors || Object.keys(teamColors).length === 0) {
                         return null;
+                    }
+
+                    // If league specified and we have league-specific colors, search there first
+                    if (forLeague && validatedAllTeamColors) {
+                        const leagueKey = forLeague.toUpperCase();
+                        const leagueColors = validatedAllTeamColors[leagueKey];
+                        if (leagueColors && typeof leagueColors === 'object') {
+                            const searchName = teamName.trim();
+                            if (leagueColors[searchName]) return leagueColors[searchName];
+                            for (const key in leagueColors) {
+                                if (key.toLowerCase() === searchName.toLowerCase()) return leagueColors[key];
+                            }
+                        }
                     }
                     
                     const searchName = teamName.trim();
@@ -599,47 +621,57 @@
                 
                 // Helper function to render a game row
                 function renderGameRow(game, teamColors, gameLeague) {
-                    const hasScore = game.home_score !== undefined && game.visitor_score !== undefined;
-                    const isFinal = game.is_final || game.game_status === 'final';
-                    const isScheduled = game.game_status === 'scheduled';
-                    
+                    const statusLower = (game.game_status || '').toLowerCase();
+                    const isFinal = game.is_final === true
+                        || statusLower === 'final'
+                        || statusLower === 'completed'
+                        || statusLower === 'finished'
+                        || statusLower === 'off';
+                    const isScheduled = statusLower === 'scheduled' || statusLower === 'upcoming' || statusLower === 'pre';
+                    const isInProgress = statusLower === 'in_progress' || statusLower === 'live' || statusLower === 'active';
+                    const isCricket = gameLeague === 'IPL' || gameLeague === 'MLC';
+                    const hasCricketScore = isCricket && (game.cricket_home_score || game.cricket_away_score);
+                    const hasCricketLive = isCricket && isInProgress && game.cricket_result;
+                    const hasScore = hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
+                        && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0));
+
+                    // Debug: log MLB game status to identify final detection issues
+
+
                     // Get team colors and logos
-                    // Debug logging for NFL teams
-                    if (gameLeague === 'NFL') {
-                        console.log(`\n=== NFL Game Debug ===`);
-                        console.log(`Game: ${game.visitor_team} @ ${game.home_team}`);
-                        console.log(`Total teams in teamColors:`, Object.keys(teamColors).length);
-                        console.log(`NFL teams available:`, Object.keys(teamColors).filter(k => {
-                            const team = teamColors[k];
-                            return team && (team.logo_url && team.logo_url.includes('/nfl/'));
-                        }).slice(0, 10));
-                        console.log(`Looking for visitor: "${game.visitor_team}"`);
-                        const visitorTeam = findTeamData(game.visitor_team);
-                        console.log(`Visitor team found:`, visitorTeam ? 'YES' : 'NO', visitorTeam);
-                        console.log(`Looking for home: "${game.home_team}"`);
-                        const homeTeam = findTeamData(game.home_team);
-                        console.log(`Home team found:`, homeTeam ? 'YES' : 'NO', homeTeam);
-                        console.log(`=== End NFL Debug ===\n`);
-                    }
-                    const visitorColor = getTeamColor(game.visitor_team);
-                    const homeColor = getTeamColor(game.home_team);
+                    // Get team data for full names and abbreviations (league-aware lookup)
+                    const visitorTeamData = findTeamData(game.visitor_team, gameLeague);
+                    const homeTeamData = findTeamData(game.home_team, gameLeague);
+
+                    // Use league-aware team data for colors and logos
+                    const visitorColor = visitorTeamData?.color_1 || '#6c757d';
+                    const homeColor = homeTeamData?.color_1 || '#6c757d';
                     const visitorTextColor = getTextColor(visitorColor);
                     const homeTextColor = getTextColor(homeColor);
-                    const visitorLogo = getTeamLogo(game.visitor_team);
-                    const homeLogo = getTeamLogo(game.home_team);
-                    const visitorLogoBg = getTeamLogoBg(game.visitor_team);
-                    const homeLogoBg = getTeamLogoBg(game.home_team);
-                    
-                    // Get team data for full names and abbreviations (needed early)
-                    const visitorTeamData = findTeamData(game.visitor_team);
-                    const homeTeamData = findTeamData(game.home_team);
+                    const visitorLogo = visitorTeamData?.logo_url || '/static/images/no-logo.png';
+                    const homeLogo = homeTeamData?.logo_url || '/static/images/no-logo.png';
+                    const visitorLogoBg = visitorTeamData?.color_3 || '#FFFFFF';
+                    const homeLogoBg = homeTeamData?.color_3 || '#FFFFFF';
                     
                     // Determine winner
                     let visitorIsWinner = false;
                     let homeIsWinner = false;
                     if (hasScore && isFinal) {
-                        visitorIsWinner = game.visitor_score > game.home_score;
-                        homeIsWinner = game.home_score > game.visitor_score;
+                        if (isCricket && game.cricket_winner) {
+                            const winnerAbbrev = (game.cricket_winner || '').toUpperCase();
+                            const vAbbrev = (game.visitor_team_abbrev || '').toUpperCase();
+                            const hAbbrev = (game.home_team_abbrev || '').toUpperCase();
+                            visitorIsWinner = winnerAbbrev === vAbbrev;
+                            homeIsWinner = winnerAbbrev === hAbbrev;
+                            if (!visitorIsWinner && !homeIsWinner) {
+                                const parseRuns = (s) => parseInt(String(s).split('/')[0]) || 0;
+                                visitorIsWinner = parseRuns(game.visitor_score) > parseRuns(game.home_score);
+                                homeIsWinner = parseRuns(game.home_score) > parseRuns(game.visitor_score);
+                            }
+                        } else {
+                            visitorIsWinner = game.visitor_score > game.home_score;
+                            homeIsWinner = game.home_score > game.visitor_score;
+                        }
                     }
                     
                     // Helper to get short team name
@@ -647,10 +679,21 @@
                         const cityMap = {
                             'Los Angeles': 'LA',
                             'San Francisco': 'SF',
+                            'San Diego': 'SD',
+                            'San Antonio': 'SA',
+                            'San Jose': 'SJ',
                             'New York': 'NY',
                             'New Jersey': 'NJ',
+                            'New England': 'NE',
+                            'New Orleans': 'NO',
                             'Golden State': 'GS',
                             'Oklahoma City': 'OKC',
+                            'Kansas City': 'KC',
+                            'Tampa Bay': 'TB',
+                            'Green Bay': 'GB',
+                            'Las Vegas': 'LV',
+                            'Salt Lake': 'SL',
+                            'St. Louis': 'STL',
                             'Portland': 'POR'
                         };
                         let shortName = teamName;
@@ -659,10 +702,6 @@
                                 shortName = shortName.replace(city, abbrev);
                                 break;
                             }
-                        }
-                        const parts = shortName.split(' ');
-                        if (parts.length > 2 && shortName.length > 15) {
-                            return parts.slice(-2).join(' ');
                         }
                         return shortName;
                     }
@@ -677,87 +716,111 @@
                     // IMPORTANT: Check for scores FIRST - if game has a score, it's not scheduled
                     let statusDisplay = '';
                     if (hasScore && isFinal) {
-                        const period = parseInt(game.current_period) || 4;
-                        if (period > 4) {
-                            const otCount = period - 4;
-                            statusDisplay = otCount === 1 ? 'F/OT' : `F/${otCount}OT`;
-                        } else {
+                        if (isCricket) {
                             statusDisplay = 'F';
+                        } else if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 9;
+                            statusDisplay = inning > 9 ? `F/${inning}` : 'F';
+                        } else {
+                            const period = parseInt(game.current_period) || 4;
+                            if (period > 4) {
+                                const otCount = period - 4;
+                                statusDisplay = otCount === 1 ? 'F/OT' : `F/${otCount}OT`;
+                            } else {
+                                statusDisplay = 'F';
+                            }
                         }
                     } else if (hasScore) {
-                        // Has score but not final - show current period
-                        if (game.current_period && game.time_remaining) {
+                        if (isCricket) {
+                            statusDisplay = game.cricket_result || game.time_remaining || 'Live';
+                        } else if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 1;
+                            const halfRaw = (game.time_remaining || '').toLowerCase();
+                            const half = halfRaw.includes('top') ? 'Top' :
+                                         halfRaw.includes('mid') ? 'Mid' :
+                                         halfRaw.includes('bot') ? 'Bot' :
+                                         halfRaw.includes('end') ? 'End' : halfRaw;
+                            statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
+                        } else if (game.current_period && game.time_remaining) {
                             const period = parseInt(game.current_period);
-                            // Use P for Period in NHL, Q for Quarter in NBA/NFL
                             const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
                             statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
                         } else {
                             statusDisplay = 'Live';
                         }
                     } else if (game.current_period && game.time_remaining) {
-                        // Game in progress but no score yet (shouldn't happen, but handle it)
-                        const period = parseInt(game.current_period);
-                        const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                        let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix}${period}`;
-                        statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        if (gameLeague === 'MLB') {
+                            const inning = parseInt(game.current_period) || 1;
+                            const halfRaw = (game.time_remaining || '').toLowerCase();
+                            const half = halfRaw.includes('top') ? 'Top' :
+                                         halfRaw.includes('mid') ? 'Mid' :
+                                         halfRaw.includes('bot') ? 'Bot' :
+                                         halfRaw.includes('end') ? 'End' : halfRaw;
+                            statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
+                        } else {
+                            const period = parseInt(game.current_period);
+                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
+                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                        }
                     } else if (isScheduled && game.game_time) {
-                        // Parse game time - API should return ISO 8601 format
-                        // If the time appears to be in the past but there's no score, it might be a timezone issue
                         let gameDate;
                         try {
                             gameDate = new Date(game.game_time);
-                            // If parsing fails, try to handle it
                             if (isNaN(gameDate.getTime())) {
-                                console.warn('Invalid game_time:', game.game_time);
-                                statusDisplay = 'Scheduled';
                                 gameDate = null;
                             }
                         } catch (e) {
-                            console.warn('Error parsing game_time:', game.game_time, e);
-                            statusDisplay = 'Scheduled';
                             gameDate = null;
                         }
-                        
+
                         if (gameDate) {
                             const now = new Date();
                             const diffMs = gameDate - now;
                             const gameTimeStr = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-                            
+
                             if (diffMs > 0) {
-                                // Game is in the future
                                 const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                                 const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                                // For NHL and NFL, always show time until game if it's in the future
-                                // For other leagues, show time if less than 24h15m (1455 minutes)
-                                const totalMinutes = Math.floor(diffMs / (1000 * 60));
-                                if (gameLeague === 'NHL' || gameLeague === 'NFL' || totalMinutes < 1455) {
-                                    const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
-                                    statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
-                                } else {
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                }
+                                const timeUntilStr = diffHours > 0 ? `${diffHours}h${diffMins}m` : `${diffMins}m`;
+                                statusDisplay = `${gameTimeStr} - in ${timeUntilStr}`;
                             } else {
-                                // Game time is in the past but no score - likely timezone issue or game hasn't started
-                                // For NFL, if it's more than 3 hours in the past, it's definitely a timezone issue
-                                const hoursPast = Math.abs(diffMs) / (1000 * 60 * 60);
-                                if (hoursPast > 3) {
-                                    // Likely timezone issue - show as scheduled with original time
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                } else {
-                                    // Less than 3 hours past - might be starting soon or just started
-                                    statusDisplay = `${gameTimeStr} - Scheduled`;
-                                }
+                                statusDisplay = `${gameTimeStr}`;
                             }
+                        } else {
+                            statusDisplay = 'Scheduled';
                         }
                     } else {
                         statusDisplay = 'Scheduled';
                     }
                     
                     // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
+                    // During playoffs, show series record instead of regular season records
+                    const isPlayoffGame = game.game_type === 'playoffs';
                     let visitorRecord = '';
                     let homeRecord = '';
-                    if (gameLeague === 'NHL') {
+                    if (isPlayoffGame && gameLeague === 'NHL' && Object.keys(nhlPlayoffSeries).length > 0) {
+                        // Show NHL playoff series record
+                        const visitorAbbr = (visitorTeamData?.abbreviation || game.visitor_team_abbrev || '').toUpperCase();
+                        const homeAbbr = (homeTeamData?.abbreviation || game.home_team_abbrev || '').toUpperCase();
+                        const series = nhlPlayoffSeries[visitorAbbr] || nhlPlayoffSeries[homeAbbr];
+                        if (series) {
+                            const vWins = series.top_seed === visitorAbbr ? series.top_seed_wins : series.bottom_seed_wins;
+                            const hWins = series.top_seed === homeAbbr ? series.top_seed_wins : series.bottom_seed_wins;
+                            visitorRecord = `${vWins}-${hWins}`;
+                            homeRecord = `${hWins}-${vWins}`;
+                        }
+                    } else if (isPlayoffGame && (gameLeague === 'NBA' || gameLeague === 'WNBA')) {
+                        // NBA/WNBA: API returns series record in wins/losses during playoffs
+                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
+                            ? `${game.visitor_wins}-${game.visitor_losses}` : '';
+                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined)
+                            ? `${game.home_wins}-${game.home_losses}` : '';
+                    } else if (isPlayoffGame) {
+                        visitorRecord = '';
+                        homeRecord = '';
+                    } else if (gameLeague === 'NHL') {
                         // NHL format: W-L-OTL
                         // API uses home_otl/visitor_otl (not home_overtime_losses)
                         const visitorOTL = game.visitor_otl !== undefined && game.visitor_otl !== null 
@@ -784,27 +847,63 @@
                         if (game.home_wins !== undefined && game.home_losses !== undefined) {
                             homeRecord = `${game.home_wins}-${game.home_losses}-${homeTies}`;
                         }
+                    } else if (gameLeague === 'MLB') {
+                        // MLB: Use records from database (populated by fetch_standings.py)
+                        const vName = visitorTeamData?.real_team_name || game.visitor_team;
+                        const hName = homeTeamData?.real_team_name || game.home_team;
+                        const vRec = mlbTeamRecords[vName] || mlbTeamRecords[game.visitor_team];
+                        const hRec = mlbTeamRecords[hName] || mlbTeamRecords[game.home_team];
+                        if (vRec && (vRec.wins > 0 || vRec.losses > 0)) {
+                            visitorRecord = `${vRec.wins}-${vRec.losses}`;
+                        } else if (game.visitor_wins && game.visitor_losses) {
+                            visitorRecord = `${game.visitor_wins}-${game.visitor_losses}`;
+                        }
+                        if (hRec && (hRec.wins > 0 || hRec.losses > 0)) {
+                            homeRecord = `${hRec.wins}-${hRec.losses}`;
+                        } else if (game.home_wins && game.home_losses) {
+                            homeRecord = `${game.home_wins}-${game.home_losses}`;
+                        }
                     } else {
                         // Other leagues: W-L
-                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined) 
+                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
                             ? `${game.visitor_wins}-${game.visitor_losses}` : '';
-                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined) 
+                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined)
                             ? `${game.home_wins}-${game.home_losses}` : '';
                     }
                     
                     // Format score
                     let scoreDisplay = '-';
                     if (hasScore) {
-                        if (isFinal) {
-                            if (visitorIsWinner) {
-                                scoreDisplay = `<span class="winner-score">${game.visitor_score}</span> - <span>${game.home_score}</span>`;
-                            } else if (homeIsWinner) {
-                                scoreDisplay = `<span>${game.visitor_score}</span> - <span class="winner-score">${game.home_score}</span>`;
+                        // For cricket, use the formatted score strings (runs/wickets[overs])
+                        const vScore = isCricket ? (game.cricket_away_score || game.visitor_score || '') : game.visitor_score;
+                        const hScore = isCricket ? (game.cricket_home_score || game.home_score || '') : game.home_score;
+
+                        if (isCricket) {
+                            if (isFinal && (vScore || hScore)) {
+                                const vClass = visitorIsWinner ? 'winner-score' : '';
+                                const hClass = homeIsWinner ? 'winner-score' : '';
+                                scoreDisplay = `<span class="${vClass}" style="font-size:0.9rem">${vScore}</span><br><span class="${hClass}" style="font-size:0.9rem">${hScore}</span>`;
+                            } else if (isFinal && game.cricket_winner) {
+                                const winnerAbbr = game.cricket_winner;
+                                const resultText = game.cricket_result || `${winnerAbbr} won`;
+                                scoreDisplay = `<span style="font-size:0.8rem">${resultText}</span>`;
+                            } else if (vScore || hScore) {
+                                scoreDisplay = `<span style="font-size:0.9rem">${vScore || 'batting'}</span><br><span style="font-size:0.9rem">${hScore || 'batting'}</span>`;
+                            } else if (game.cricket_result) {
+                                scoreDisplay = `<span style="font-size:0.8rem">${game.cricket_result}</span>`;
                             } else {
-                                scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                                scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
+                            }
+                        } else if (isFinal) {
+                            if (visitorIsWinner) {
+                                scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>`;
+                            } else if (homeIsWinner) {
+                                scoreDisplay = `<span>${vScore}</span> - <span class="winner-score">${hScore}</span>`;
+                            } else {
+                                scoreDisplay = `${vScore} - ${hScore}`;
                             }
                         } else {
-                            scoreDisplay = `${game.visitor_score} - ${game.home_score}`;
+                            scoreDisplay = `${vScore} - ${hScore}`;
                         }
                     }
                     
@@ -817,12 +916,12 @@
                     const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
                     
                     // Get abbreviation box colors with contrast checking
-                    const visitorAbbrevBg = getTeamColor2(game.visitor_team);
-                    const visitorAbbrevText = getTeamColor3(game.visitor_team);
+                    const visitorAbbrevBg = visitorTeamData?.color_2 || '#FFFFFF';
+                    const visitorAbbrevText = visitorTeamData?.color_3 || '#000000';
                     const visitorAbbrevColors = getAbbrevBoxColors(game.visitor_team, visitorAbbrevBg, visitorAbbrevText);
-                    
-                    const homeAbbrevBg = getTeamColor2(game.home_team);
-                    const homeAbbrevText = getTeamColor3(game.home_team);
+
+                    const homeAbbrevBg = homeTeamData?.color_2 || '#FFFFFF';
+                    const homeAbbrevText = homeTeamData?.color_3 || '#000000';
                     const homeAbbrevColors = getAbbrevBoxColors(game.home_team, homeAbbrevBg, homeAbbrevText);
                     
                     return `
@@ -885,14 +984,19 @@
                         }
                         allGamesMap[game.game_id] = {
                             ...game,
-                            league: gameLeague, // Explicitly preserve league
-                            sport: gameLeague, // Also set sport for compatibility
+                            league: gameLeague,
+                            sport: gameLeague,
                             home_score: scoreData?.home_score,
                             visitor_score: scoreData?.visitor_score,
                             is_final: scoreData?.is_final,
                             game_status: scoreData?.game_status || game.game_status,
                             current_period: scoreData?.current_period,
                             time_remaining: scoreData?.time_remaining,
+                            // Preserve cricket score fields from schedule or scores
+                            cricket_home_score: scoreData?.cricket_home_score || game.cricket_home_score || '',
+                            cricket_away_score: scoreData?.cricket_away_score || game.cricket_away_score || '',
+                            cricket_winner: scoreData?.cricket_winner || game.cricket_winner || '',
+                            cricket_result: scoreData?.cricket_result || game.cricket_result || '',
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
                             // For NFL, try to get records from Tank01 API if not in game data
@@ -1035,6 +1139,10 @@
                                 is_final: scoreGame.is_final,
                                 current_period: scoreGame.current_period,
                                 time_remaining: scoreGame.time_remaining,
+                                cricket_home_score: scoreGame.cricket_home_score || '',
+                                cricket_away_score: scoreGame.cricket_away_score || '',
+                                cricket_winner: scoreGame.cricket_winner || '',
+                                cricket_result: scoreGame.cricket_result || '',
                                 // For NFL, try to get records from Tank01 API if not in score data
                                 home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : 
                                     (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
@@ -1199,7 +1307,7 @@
                 
                 if (league === 'all') {
                     // Render grouped by league
-                    const leagueOrder = ['NBA', 'NHL', 'MLB', 'NFL', 'WNBA', 'MLS'];
+                    const leagueOrder = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
                     Object.keys(gamesByLeague).sort((a, b) => {
                         const aIdx = leagueOrder.indexOf(a.toUpperCase());
                         const bIdx = leagueOrder.indexOf(b.toUpperCase());
@@ -1210,12 +1318,7 @@
                     }).forEach(leagueName => {
                         const leagueGames = gamesByLeague[leagueName];
                         const leagueUpper = leagueName.toUpperCase();
-                        const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
-                                          leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
-                                          leagueUpper === 'MLB' ? '{{ "MLB" | get_league_logo }}' :
-                                          leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
-                                          leagueUpper === 'WNBA' ? '{{ "WNBA" | get_league_logo }}' :
-                                          leagueUpper === 'MLS' ? '{{ "MLS" | get_league_logo }}' : '';
+                        const leagueLogo = `https://www.splitsp.lat/logos/${leagueName.toLowerCase()}/${leagueName.toLowerCase()}_logo.png`;
                         
                         html += `
                             <div class="league-section mb-4">
@@ -1260,10 +1363,7 @@
                     });
                 } else {
                     // Render single league
-                    const leagueLogo = leagueUpper === 'NBA' ? '{{ "NBA" | get_league_logo }}' : 
-                                      leagueUpper === 'NHL' ? '{{ "NHL" | get_league_logo }}' :
-                                      leagueUpper === 'NFL' ? '{{ "NFL" | get_league_logo }}' :
-                                      '{{ "NBA" | get_league_logo }}';
+                    const leagueLogo = `https://www.splitsp.lat/logos/${league}/${league}_logo.png`;
                     html = `
                         <div class="league-header mb-2" style="padding: 0.5rem 0;">
                             <div class="d-flex align-items-center justify-content-center">

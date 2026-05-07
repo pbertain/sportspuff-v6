@@ -56,7 +56,117 @@ CORS(app, resources={r"/api/proxy/*": {"origins": "*"}})
 
 # API configuration - use environment variable or default to production
 API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
+CRICKET_API_BASE_URL = os.getenv('CRICKET_API_BASE_URL', 'https://ipl.cloud-puff.net/api')
 logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
+logger.info(f"CRICKET_API_BASE_URL configured as: {CRICKET_API_BASE_URL}")
+
+@app.context_processor
+def inject_globals():
+    return {'API_BASE_URL': API_BASE_URL}
+
+SEASON_DATES = {
+    'MLB': {
+        'year': 2026,
+        'types': [
+            {'name': 'Spring Training', 'start': '2026-02-20', 'end': '2026-03-25'},
+            {'name': 'Regular Season', 'start': '2026-03-26', 'end': '2026-09-27'},
+            {'name': 'Postseason', 'start': '2026-09-29', 'end': '2026-11-01'},
+        ]
+    },
+    'NBA': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2025-10-05', 'end': '2025-10-17'},
+            {'name': 'Regular Season', 'start': '2025-10-19', 'end': '2026-04-12'},
+            {'name': 'Play-In', 'start': '2026-04-14', 'end': '2026-04-17'},
+            {'name': 'Playoffs', 'start': '2026-04-18', 'end': '2026-06-19'},
+        ]
+    },
+    'NFL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2026-08-06', 'end': '2026-08-28'},
+            {'name': 'Regular Season', 'start': '2026-09-10', 'end': '2027-01-03'},
+            {'name': 'Playoffs', 'start': '2027-01-09', 'end': '2027-01-31'},
+            {'name': 'Super Bowl', 'start': '2027-02-07', 'end': '2027-02-07'},
+        ]
+    },
+    'NHL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Preseason', 'start': '2025-09-21', 'end': '2025-10-03'},
+            {'name': 'Regular Season', 'start': '2025-10-07', 'end': '2026-04-17'},
+            {'name': 'Playoffs', 'start': '2026-04-19', 'end': '2026-06-20'},
+        ]
+    },
+    'MLS': {
+        'year': 2026,
+        'types': [
+            {'name': 'Regular Season', 'start': '2026-02-21', 'end': '2026-10-04'},
+            {'name': 'Playoffs', 'start': '2026-10-20', 'end': '2026-12-13'},
+        ]
+    },
+    'IPL': {
+        'year': 2026,
+        'types': [
+            {'name': 'Group Stage', 'start': '2026-03-22', 'end': '2026-05-18'},
+            {'name': 'Playoffs', 'start': '2026-05-20', 'end': '2026-05-31'},
+        ]
+    },
+    'MLC': {
+        'year': 2026,
+        'types': [
+            {'name': 'Regular Season', 'start': '2026-07-01', 'end': '2026-07-27'},
+            {'name': 'Playoffs', 'start': '2026-07-28', 'end': '2026-08-02'},
+        ]
+    },
+}
+
+@app.route('/api/season-info/<league>')
+def season_info(league):
+    """Return season date info for any league"""
+    league_upper = league.upper()
+    if league_upper == 'WNBA':
+        return redirect(url_for('wnba_season_info'))
+    if league_upper in ('IPL', 'MLC'):
+        try:
+            cache_key = f'cricket_season_info:{league_upper}'
+            cached = get_cached_response(cache_key, 'schedule')
+            if cached:
+                return jsonify(cached)
+            response = requests.get(f'{API_BASE_URL}/api/v1/season-info/{league.lower()}', timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            fmt = lambda d: datetime.strptime(d, '%Y-%m-%d').strftime('%b %-d') if d else ''
+            for st in data.get('season_types', []):
+                st['display'] = f"{st['name']}: {fmt(st.get('start_date',''))} - {fmt(st.get('end_date',''))}"
+            set_cached_response(cache_key, data)
+            return jsonify(data)
+        except Exception as e:
+            logger.error(f"Error fetching cricket season info for {league}: {e}")
+            return jsonify({'year': datetime.now().year, 'season_types': []}), 200
+    data = SEASON_DATES.get(league_upper)
+    if not data:
+        return jsonify({'year': datetime.now().year, 'season_types': []}), 200
+    now = datetime.now().strftime('%Y-%m-%d')
+    current_phase = 'Off Season'
+    season_types = []
+    for t in data['types']:
+        if t['start'] <= now <= t['end']:
+            current_phase = t['name']
+        start_fmt = datetime.strptime(t['start'], '%Y-%m-%d').strftime('%b %-d')
+        end_fmt = datetime.strptime(t['end'], '%Y-%m-%d').strftime('%b %-d')
+        season_types.append({
+            'name': t['name'],
+            'start_date': t['start'],
+            'end_date': t['end'],
+            'display': f"{t['name']}: {start_fmt} - {end_fmt}"
+        })
+    return jsonify({
+        'year': data['year'],
+        'current_phase': current_phase,
+        'season_types': season_types
+    })
 
 # Load logo mapping
 LOGO_MAPPING = {}
@@ -143,7 +253,7 @@ def index():
                    t.logo_filename, t.team_abbreviation, l.league_name, l.league_name_proper
             FROM teams t
             JOIN leagues l ON t.league_id = l.league_id
-            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba')
+            WHERE LOWER(l.league_name_proper) IN ('nba', 'nhl', 'mlb', 'nfl', 'mls', 'wnba', 'ipl', 'mlc')
             AND t.team_color_1 IS NOT NULL
         """)
         all_teams = cursor.fetchall()
@@ -370,7 +480,8 @@ def league_page(league_name):
         teams_query = """
             SELECT t.team_id, t.real_team_name, t.city_name, t.state_name, t.country,
                    t.logo_filename, t.team_color_1, t.team_color_2, t.team_color_3,
-                   s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
+                   t.team_wins, t.team_losses, t.team_ties,
+                   s.stadium_id as s_stadium_id, s.full_stadium_name, s.city_name as stadium_city, s.state_name as stadium_state,
                    c.conference_name, d.division_name,
                    l.league_name_proper as team_league
             FROM teams t
@@ -378,11 +489,11 @@ def league_page(league_name):
             LEFT JOIN leagues l ON t.league_id = l.league_id
             LEFT JOIN conferences c ON t.conference_id = c.conference_id
             LEFT JOIN divisions d ON t.division_id = d.division_id
-            WHERE l.league_name_proper = %s 
+            WHERE l.league_name_proper = %s
             AND t.real_team_name NOT IN (
                 'Major League Baseball', 'National Football League', 'National Basketball Association',
                 'National Hockey League', 'Major League Soccer', 'Women''s National Basketball League',
-                'India Premier League'
+                'India Premier League', 'Major League Cricket'
             )
             ORDER BY COALESCE(c.conference_name, 'No Conference'), COALESCE(d.division_name, 'No Division'), t.real_team_name
         """
@@ -400,8 +511,36 @@ def league_page(league_name):
             if division not in organized_teams[conference]:
                 organized_teams[conference][division] = []
             
+            team['abbreviation'] = get_team_abbreviation(team['real_team_name'], league_name)
             organized_teams[conference][division].append(team)
-        
+
+        # For MLB (and other leagues with standings), sort teams within each division by wins desc
+        # and compute Games Behind (GB)
+        if league_name == 'MLB':
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
+                    if teams_list and teams_list[0].get('team_wins') is not None:
+                        leader_wins = teams_list[0].get('team_wins') or 0
+                        leader_losses = teams_list[0].get('team_losses') or 0
+                        for team in teams_list:
+                            tw = team.get('team_wins') or 0
+                            tl = team.get('team_losses') or 0
+                            gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
+                            team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
+
+        # For MLS, sort teams within each conference by points (3*W + 1*T) desc
+        if league_name == 'MLS':
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    for team in teams_list:
+                        w = team.get('team_wins') or 0
+                        t = team.get('team_ties') or 0
+                        team['mls_points'] = w * 3 + t
+                    teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
+
         # Get league info including champion details
         league_query = """
             SELECT l.league_name_proper, l.league_name, l.logo_filename, l.team_count,
@@ -489,7 +628,42 @@ def get_team_abbreviation(team_name, league):
         'Seattle Mariners': 'SEA', 'St. Louis Cardinals': 'STL', 'Tampa Bay Rays': 'TB',
         'Texas Rangers': 'TEX', 'Toronto Blue Jays': 'TOR', 'Washington Nationals': 'WSH'
     }
-    
+
+    wnba_abbrev_map = {
+        'Atlanta Dream': 'ATL', 'Chicago Sky': 'CHI', 'Connecticut Sun': 'CON',
+        'Dallas Wings': 'DAL', 'Golden State Valkyries': 'GSV', 'Indiana Fever': 'IND',
+        'Las Vegas Aces': 'LV', 'Los Angeles Sparks': 'LA', 'Minnesota Lynx': 'MIN',
+        'New York Liberty': 'NYL', 'Phoenix Mercury': 'PHX', 'Portland Fire': 'POR',
+        'Seattle Storm': 'SEA', 'Toronto Tempo': 'TOR', 'Washington Mystics': 'WAS'
+    }
+
+    ipl_abbrev_map = {
+        'Chennai Super Kings': 'CSK', 'Delhi Capitals': 'DC', 'Gujarat Titans': 'GT',
+        'Kolkata Knight Riders': 'KKR', 'Lucknow Super Giants': 'LSG',
+        'Mumbai Indians': 'MI', 'Punjab Kings': 'PBKS', 'Rajasthan Royals': 'RR',
+        'Royal Challengers Bengaluru': 'RCB', 'Sunrisers Hyderabad': 'SRH'
+    }
+
+    mlc_abbrev_map = {
+        'Los Angeles Knight Riders': 'LAKR', 'MI New York': 'MINY',
+        'San Francisco Unicorns': 'SFU', 'Seattle Orcas': 'SEA',
+        'Texas Super Kings': 'TSK', 'Washington Freedom': 'WSH'
+    }
+
+    mls_abbrev_map = {
+        'Atlanta United FC': 'ATL', 'Austin FC': 'ATX', 'CF Montréal': 'MTL',
+        'Charlotte FC': 'CLT', 'Chicago Fire FC': 'CHI', 'Colorado Rapids': 'COL',
+        'Columbus Crew': 'CLB', 'D.C. United': 'DC', 'FC Cincinnati': 'CIN',
+        'FC Dallas': 'DAL', 'Houston Dynamo FC': 'HOU', 'Inter Miami CF': 'MIA',
+        'Los Angeles FC': 'LAFC', 'Los Angeles Galaxy': 'LA', 'Minnesota United FC': 'MIN',
+        'Nashville SC': 'NSH', 'New England Revolution': 'NE', 'New York City FC': 'NYC',
+        'New York Red Bulls': 'RBNY', 'Orlando City SC': 'ORL', 'Philadelphia Union': 'PHI',
+        'Portland Timbers': 'POR', 'Real Salt Lake': 'RSL', 'San Diego FC': 'SD',
+        'San Jose Earthquakes': 'SJ', 'Seattle Sounders FC': 'SEA',
+        'Sporting Kansas City': 'SKC', 'St. Louis City SC': 'STL',
+        'Toronto FC': 'TOR', 'Vancouver Whitecaps FC': 'VAN'
+    }
+
     # Select the appropriate map based on league
     abbrev_map = {}
     if league.upper() == 'NFL':
@@ -500,6 +674,14 @@ def get_team_abbreviation(team_name, league):
         abbrev_map = nhl_abbrev_map
     elif league.upper() == 'MLB':
         abbrev_map = mlb_abbrev_map
+    elif league.upper() == 'WNBA':
+        abbrev_map = wnba_abbrev_map
+    elif league.upper() == 'IPL':
+        abbrev_map = ipl_abbrev_map
+    elif league.upper() == 'MLC':
+        abbrev_map = mlc_abbrev_map
+    elif league.upper() == 'MLS':
+        abbrev_map = mls_abbrev_map
     
     # Try exact match first
     if team_name in abbrev_map:
@@ -932,28 +1114,57 @@ def get_logo(team_id):
 
 @app.template_filter('get_league_logo')
 def get_league_logo(league):
-    """Template filter to get league logo - try local first, then splitsp.lat"""
+    """Template filter to get league logo from splitsp.lat"""
     if league:
         league_lower = league.lower()
-        # Try local first
-        local_logo = f'/static/images/logos/{league_lower}/{league_lower}_logo.png'
-        # For now, use splitsp.lat as fallback
-        # Use correct acronym-based URLs
-        if league_lower == 'mlb':
-            return 'https://www.splitsp.lat/logos/mlb/mlb_logo.png'
-        elif league_lower == 'nfl':
-            return 'https://www.splitsp.lat/logos/nfl/nfl_logo.png'
-        elif league_lower == 'nba':
-            return '/static/images/logos/nba/nba_logo.png'
-        elif league_lower == 'nhl':
-            return 'https://www.splitsp.lat/logos/nhl/nhl_logo.png'
-        elif league_lower == 'mls':
-            return 'https://www.splitsp.lat/logos/mls/mls_logo.png'
-        elif league_lower == 'wnba':
-            return 'https://www.splitsp.lat/logos/wnba/wnba_logo.png'
-        else:
-            return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
-    return '/static/images/no-logo.png'
+        return f'https://www.splitsp.lat/logos/{league_lower}/{league_lower}_logo.png'
+    return 'https://www.splitsp.lat/logos/sportspuff/sportspuff-logo.png'
+
+@app.route('/api/proxy/all-scores/<date>')
+def proxy_all_scores(date):
+    """Aggregated endpoint: fetch schedule+scores for all leagues in one request."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    tz = request.args.get('tz', 'pst')
+    api_date = 'today' if date.lower() == 'today' else date
+
+    cache_key = f'all_scores:{api_date}:{tz}'
+    cached = get_cached_response(cache_key, 'scores')
+    if cached:
+        return jsonify(cached)
+
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    result = {}
+
+    def fetch_league(lg):
+        api_base = API_BASE_URL
+        schedule_url = f'{api_base}/api/v1/schedule/{lg}/{api_date}?tz={tz}'
+        scores_url = f'{api_base}/api/v1/scores/{lg}/{api_date}?tz={tz}'
+        league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
+        try:
+            r = requests.get(schedule_url, timeout=15)
+            if r.status_code == 200:
+                league_data['schedule'] = r.json()
+        except:
+            pass
+        try:
+            r = requests.get(scores_url, timeout=15)
+            if r.status_code == 200:
+                league_data['scores'] = r.json()
+        except:
+            pass
+        return lg, league_data
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(fetch_league, lg): lg for lg in leagues}
+        for future in as_completed(futures):
+            try:
+                lg, data = future.result()
+                result[lg] = data
+            except:
+                pass
+
+    set_cached_response(cache_key, result)
+    return jsonify(result)
 
 @app.route('/api/proxy/schedule/<league>/<date>')
 def proxy_schedule(league, date):
@@ -961,40 +1172,20 @@ def proxy_schedule(league, date):
     try:
         # Get timezone from query parameter, default to 'pst'
         tz = request.args.get('tz', 'pst')
-        
-        # For "today", use actual date for cache key but pass "today" to API
-        # API only accepts "today" as a keyword, not date strings
+
         if date.lower() == 'today':
-            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'schedule:{league}:{actual_date}:{tz}'
-            api_date = 'today'  # API only accepts "today", not date strings
+            cache_key = f'schedule:{league}:today:{tz}'
+            api_date = 'today'
         else:
             cache_key = f'schedule:{league}:{date}:{tz}'
             api_date = date
-        
-        # Check cache first - but verify it's for today's date
-        # Use cache more aggressively since API can be slow
+
         cached_response = get_cached_response(cache_key, 'schedule')
         if cached_response:
-            # Verify the cached data is for today (check response date field)
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if cached_date == today_date:
-                logger.info(f"Returning cached schedule for {league} from {cached_date}")
-                return jsonify(cached_response)
-            # If cached date doesn't match today, clear it and fetch fresh
+            return jsonify(cached_response)
         
         # Fetch from API with timezone parameter
-        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
-        if not api_base:
-            # Try to get from default API_BASE_URL if defined
-            try:
-                api_base = API_BASE_URL
-            except NameError:
-                api_base = None
-        if not api_base:
-            logger.error("SPORTSPUFF_API_BASE_URL not configured")
-            return jsonify({'error': 'API base URL not configured'}), 500
+        api_base = API_BASE_URL
         url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching schedule from: {url} (timeout=20s)")
         try:
@@ -1165,45 +1356,220 @@ def nfl_team_records():
         # Return empty records instead of 500 - frontend can handle this gracefully
         return jsonify({'teams': {}}), 200
 
+@app.route('/api/wnba/season-info')
+def wnba_season_info():
+    """Fetch WNBA season info (dates for preseason, regular season, postseason) from WNBA API"""
+    try:
+        wnba_api_key = os.getenv('WNBA_API_KEY', '')
+        if not wnba_api_key:
+            logger.warning("WNBA_API_KEY not set")
+            return jsonify({'error': 'WNBA API key not configured'}), 200
+
+        year = request.args.get('year', datetime.now().year)
+        url = f"https://wnba-api.p.rapidapi.com/wnbastandings?year={year}"
+        headers = {
+            "x-rapidapi-key": wnba_api_key,
+            "x-rapidapi-host": "wnba-api.p.rapidapi.com",
+            "Content-Type": "application/json"
+        }
+
+        cache_key = f'wnba_season_info:{year}'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        season_info = {'year': int(year), 'season_types': [], 'standings': []}
+
+        if 'seasons' in data and isinstance(data['seasons'], list):
+            for season in data['seasons']:
+                if season.get('year') == int(year) and 'types' in season:
+                    for stype in season['types']:
+                        season_info['season_types'].append({
+                            'name': stype.get('name', ''),
+                            'abbreviation': stype.get('abbreviation', ''),
+                            'start_date': stype.get('startDate', ''),
+                            'end_date': stype.get('endDate', '')
+                        })
+                    break
+
+        if 'standings' in data and 'entries' in data['standings']:
+            for entry in data['standings']['entries']:
+                team = entry.get('team', {})
+                stats = {s['name']: s.get('displayValue', s.get('value', '')) for s in entry.get('stats', [])}
+                season_info['standings'].append({
+                    'team_name': team.get('displayName', ''),
+                    'abbreviation': team.get('abbreviation', ''),
+                    'wins': stats.get('wins', ''),
+                    'losses': stats.get('losses', ''),
+                    'win_pct': stats.get('winPercent', ''),
+                    'games_behind': stats.get('gamesBehind', ''),
+                    'clincher': stats.get('clincher', '')
+                })
+
+        set_cached_response(cache_key, season_info)
+        return jsonify(season_info)
+
+    except Exception as e:
+        logger.error(f"Error fetching WNBA season info: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 200
+
+@app.route('/api/cricket/standings/<league>')
+def cricket_standings(league):
+    """Fetch cricket standings from CricketPuff API"""
+    league_lower = league.lower()
+    if league_lower not in ('ipl', 'mlc'):
+        return jsonify({'standings': []}), 400
+    try:
+        cache_key = f'cricket_standings:{league_lower}'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get(f'{CRICKET_API_BASE_URL}/v1/standings/{league_lower}', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching {league} standings: {e}")
+        return jsonify({'standings': []}), 200
+
+@app.route('/api/ipl/standings')
+def ipl_standings():
+    """Redirect to generic cricket standings endpoint"""
+    return cricket_standings('ipl')
+
+@app.route('/api/mls/team-records')
+def mls_team_records():
+    """Fetch MLS team records from sportspuff-api standings endpoint"""
+    try:
+        cache_key = 'mls_team_records'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get(f'{API_BASE_URL}/api/v1/standings/mls', timeout=10)
+        if response.status_code != 200:
+            return jsonify({'teams': {}}), 200
+
+        data = response.json()
+        teams = {}
+        for t in data.get('teams', []):
+            abbrev = t.get('abbreviation', '')
+            name = t.get('team_name', abbrev)
+            teams[name] = {
+                'wins': t.get('wins', 0),
+                'losses': t.get('losses', 0),
+                'draws': t.get('draws', 0),
+                'points': t.get('points', 0)
+            }
+            if abbrev:
+                teams[abbrev] = teams[name]
+
+        result = {'teams': teams}
+        set_cached_response(cache_key, result)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching MLS team records: {e}")
+        return jsonify({'teams': {}}), 200
+
+@app.route('/api/mlb/team-records')
+def mlb_team_records():
+    """Fetch MLB team records from database (populated by fetch_standings.py)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'teams': {}}), 200
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT t.real_team_name, t.team_wins, t.team_losses
+            FROM teams t
+            JOIN leagues l ON t.league_id = l.league_id
+            WHERE l.league_name_proper = 'MLB'
+            AND t.team_wins IS NOT NULL
+        """)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        team_records = {}
+        for row in rows:
+            team_records[row['real_team_name']] = {
+                'wins': row['team_wins'] or 0,
+                'losses': row['team_losses'] or 0
+            }
+        return jsonify({'teams': team_records}), 200
+    except Exception as e:
+        logger.error(f"Error fetching MLB team records: {e}")
+        return jsonify({'teams': {}}), 200
+
+@app.route('/api/nhl/playoff-series')
+def nhl_playoff_series():
+    """Fetch NHL playoff series records from NHL API schedule data"""
+    try:
+        cache_key = 'nhl_playoff_series'
+        cached = get_cached_response(cache_key, 'scores')
+        if cached:
+            return jsonify(cached)
+
+        response = requests.get('https://api-web.nhle.com/v1/schedule/now', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        series_map = {}
+        for week in data.get('gameWeek', []):
+            for game in week.get('games', []):
+                series = game.get('seriesStatus', {})
+                if not series:
+                    continue
+                top = series.get('topSeedTeamAbbrev', '')
+                bottom = series.get('bottomSeedTeamAbbrev', '')
+                if top and bottom:
+                    key = f"{min(top,bottom)}-{max(top,bottom)}"
+                    series_map[key] = {
+                        'top_seed': top,
+                        'top_seed_wins': series.get('topSeedWins', 0),
+                        'bottom_seed': bottom,
+                        'bottom_seed_wins': series.get('bottomSeedWins', 0),
+                        'round': series.get('round', 0),
+                        'game_number_of_series': series.get('gameNumberOfSeries', 0),
+                    }
+                    series_map[top] = series_map[key]
+                    series_map[bottom] = series_map[key]
+
+        result = {'series': series_map}
+        set_cached_response(cache_key, result)
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error fetching NHL playoff series: {e}")
+        return jsonify({'series': {}}), 200
+
 @app.route('/api/proxy/scores/<league>/<date>')
 def proxy_scores(league, date):
     """Proxy scores API requests to avoid CORS issues with very short caching"""
     try:
         # Get timezone from query parameter, default to 'pst'
         tz = request.args.get('tz', 'pst')
-        
-        # For "today", use actual date for cache key but pass "today" to API
-        # API only accepts "today" as a keyword, not date strings
+
         if date.lower() == 'today':
-            actual_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            cache_key = f'scores:{league}:{actual_date}:{tz}'
-            api_date = 'today'  # API only accepts "today", not date strings
+            cache_key = f'scores:{league}:today:{tz}'
+            api_date = 'today'
         else:
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
-        
-        # Check cache FIRST - return immediately if available
-        # This prevents hitting the slow API and causing nginx timeouts
+
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:
-            cached_date = cached_response.get('date', '')
-            today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            # Only use cache if it's from today AND within TTL (30 seconds)
-            if cached_date == today_date:
-                logger.info(f"Returning cached scores for {league} from {cached_date}")
-                return jsonify(cached_response)
-        
+            return jsonify(cached_response)
+
         # Only fetch fresh scores if cache is expired or missing
-        api_base = os.getenv('SPORTSPUFF_API_BASE_URL', '')
-        if not api_base:
-            # Try to get from default API_BASE_URL if defined
-            try:
-                api_base = API_BASE_URL
-            except NameError:
-                api_base = None
-        if not api_base:
-            logger.error("SPORTSPUFF_API_BASE_URL not configured")
-            return jsonify({'error': 'API base URL not configured'}), 500
+        api_base = API_BASE_URL
         url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
         logger.info(f"Fetching scores from: {url} (timeout=20s)")
         try:

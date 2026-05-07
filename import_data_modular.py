@@ -177,13 +177,16 @@ def import_stadiums(conn):
 def import_conferences(conn):
     """Import conferences from info-conferences.csv"""
     print("Importing conferences...")
-    
+
     try:
         df = pd.read_csv('info-conferences.csv', encoding='utf-8-sig')  # Handle BOM
         print(f"Importing {len(df)} conferences")
-        
+
         cursor = conn.cursor()
-        
+
+        # Clear existing conferences and re-import (ID scheme may have changed)
+        cursor.execute("DELETE FROM conferences")
+
         for _, row in df.iterrows():
             cursor.execute("""
                 INSERT INTO conferences (conference_id, league_id, conference_name, conference_full_name)
@@ -212,13 +215,16 @@ def import_conferences(conn):
 def import_divisions(conn):
     """Import divisions from info-divisions.csv"""
     print("Importing divisions...")
-    
+
     try:
         df = pd.read_csv('info-divisions.csv', encoding='utf-8-sig')  # Handle BOM
         print(f"Importing {len(df)} divisions")
-        
+
         cursor = conn.cursor()
-        
+
+        # Clear existing divisions and re-import (ID scheme may have changed)
+        cursor.execute("DELETE FROM divisions")
+
         for _, row in df.iterrows():
             cursor.execute("""
                 INSERT INTO divisions (division_id, league_id, division_name, division_full_name)
@@ -250,6 +256,13 @@ def import_teams(conn):
     
     try:
         df = pd.read_csv('info-teams.csv', encoding='utf-8-sig')  # Handle BOM
+
+        # Filter out league placeholder rows (conferences marked as UA/Unaffiliated)
+        league_names = ['Major League Baseball', 'Major League Soccer', 'National Basketball Association',
+                        'National Football League', 'National Hockey League',
+                        "Women's National Basketball League", 'India Premier League', 'Major League Cricket']
+        df = df[~df['real_team_name'].isin(league_names)]
+
         cursor = conn.cursor()
         
         for _, row in df.iterrows():

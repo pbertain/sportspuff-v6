@@ -1,0 +1,23 @@
+[Unit]
+Description=Standings Updater - Fetch MLB W-L records
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_dir }}
+Environment=PATH={{ app_dir }}/venv/bin
+EnvironmentFile={{ app_dir }}/.env
+ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/fetch_standings.py
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ app_dir }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,14 +1,23 @@
-﻿league_id,conference_id,conference_name,conference_full_name
-1,101,AL, American League
-1,102,NL, National League
-2,201,Eastern, Eastern Conference
-2,202,Western, Western Conference
-3,301,Eastern, Eastern Conference
-3,302,Western, Western Conference
-4,401,AFC, American Football Conference
-4,402,NFC, National Football Conference
-5,501,Eastern, Eastern Conference
-5,502,Western, Western Conference
-6,601,Eastern, Eastern Conference
-6,602,Western, Western Conference
-7,701,IPL,India Premier League
+league_id,conference_id,conference_name,conference_full_name
+1,101,UA,Unaffiliated
+1,102,AL, American League
+1,103,NL, National League
+2,104,UA,Unaffiliated
+2,105,Eastern, Eastern Conference
+2,106,Western, Western Conference
+3,107,UA,Unaffiliated
+3,108,Eastern, Eastern Conference
+3,109,Western, Western Conference
+4,110,UA,Unaffiliated
+4,111,AFC, American Football Conference
+4,112,NFC, National Football Conference
+5,113,UA,Unaffiliated
+5,114,Eastern, Eastern Conference
+5,115,Western, Western Conference
+6,116,UA,Unaffiliated
+6,117,Eastern, Eastern Conference
+6,118,Western, Western Conference
+7,119,UA,Unaffiliated
+7,120,All India,All India Conference
+8,121,UA,Unaffiliated
+8,122,All US,North American Conference

@@ -14,6 +14,7 @@ app_group: "root"
 # Secret keys (should be set via ansible-vault or environment)
 secret_key: "{{ vault_secret_key | default('dev-secret-key-change-in-production') }}"
 rapidapi_key: "{{ vault_rapidapi_key | default('') }}"
+wnba_api_key: "{{ vault_wnba_api_key | default('') }}"
 
 # Environment-specific settings
 dev:
