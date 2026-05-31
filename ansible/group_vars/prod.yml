@@ -6,4 +6,4 @@ app_port: 34080
 branch: "main"
 flask_env: "production"
 flask_debug: "False"
-sportspuff_api_base_url: "https://api.sportspuff.org"
+sportspuff_api_base_url: "https://api.sportspuff.net"

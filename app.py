@@ -12,6 +12,9 @@ import os
 import json
 import requests
 import logging
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from functools import wraps
 from dotenv import load_dotenv
@@ -25,28 +28,195 @@ load_dotenv()
 
 # Simple cache for API responses
 _api_cache = {}
+_api_cache_lock = threading.RLock()
+_refresh_locks = {}
 _cache_ttl = {
     'schedule': 300,  # 5 minutes for schedules
-    'scores': 30,     # 30 seconds for scores (increased to reduce API calls since API can be slow)
+    'scores': 61,     # 61 seconds - background thread refreshes every 60s
 }
 
 def get_cached_response(cache_key, cache_type, allow_expired=False):
     """Get cached response if still valid, or expired if allow_expired=True"""
-    if cache_key in _api_cache:
-        cached_data, timestamp = _api_cache[cache_key]
-        ttl = _cache_ttl.get(cache_type, 60)
-        age = (datetime.now(timezone.utc) - timestamp).total_seconds()
-        if age < ttl or allow_expired:
-            return cached_data
+    with _api_cache_lock:
+        if cache_key in _api_cache:
+            cached_data, timestamp = _api_cache[cache_key]
+            ttl = _cache_ttl.get(cache_type, 60)
+            age = (datetime.now(timezone.utc) - timestamp).total_seconds()
+            if age < ttl or allow_expired:
+                return cached_data
     return None
 
 def set_cached_response(cache_key, data):
     """Store response in cache"""
-    _api_cache[cache_key] = (data, datetime.now(timezone.utc))
-    # Clean up old cache entries (keep last 100)
-    if len(_api_cache) > 100:
-        oldest_key = min(_api_cache.keys(), key=lambda k: _api_cache[k][1])
-        del _api_cache[oldest_key]
+    with _api_cache_lock:
+        _api_cache[cache_key] = (data, datetime.now(timezone.utc))
+        # Clean up old cache entries (keep last 100)
+        if len(_api_cache) > 100:
+            oldest_key = min(_api_cache.keys(), key=lambda k: _api_cache[k][1])
+            del _api_cache[oldest_key]
+
+
+def _normalize_timezone(tz):
+    """Keep cache keys stable across old and new timezone aliases."""
+    aliases = {
+        'pst': 'pt',
+        'est': 'et',
+        'cst': 'ct',
+        'mst': 'mt',
+    }
+    return aliases.get((tz or 'pt').lower(), tz)
+
+
+def _empty_all_scores_response():
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    return {
+        lg: {
+            'schedule': {'date': today, 'games': []},
+            'scores': {'date': today, 'scores': []}
+        }
+        for lg in leagues
+    }
+
+
+def _fetch_all_scores_for_tz(api_base_url, tz, api_date='today'):
+    """Fetch all-scores data for a given timezone (no Flask request context needed)."""
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    result = {}
+
+    def fetch_league(lg):
+        schedule_url = f'{api_base_url}/api/v1/schedule/{lg}/{api_date}?tz={tz}'
+        scores_url = f'{api_base_url}/api/v1/scores/{lg}/{api_date}?tz={tz}'
+        league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
+        try:
+            r = requests.get(schedule_url, timeout=15)
+            if r.status_code == 200:
+                league_data['schedule'] = r.json()
+        except Exception:
+            pass
+        try:
+            r = requests.get(scores_url, timeout=15)
+            if r.status_code == 200:
+                league_data['scores'] = r.json()
+        except Exception:
+            pass
+        return lg, league_data
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(fetch_league, lg): lg for lg in leagues}
+        for future in as_completed(futures):
+            try:
+                lg, data = future.result()
+                result[lg] = data
+            except Exception:
+                pass
+
+    return result
+
+
+def _refresh_all_scores_cache(api_base_url, api_date, tz):
+    cache_key = f'all_scores:{api_date}:{tz}'
+    data = _fetch_all_scores_for_tz(api_base_url, tz, api_date)
+    if data:
+        set_cached_response(cache_key, data)
+    return data
+
+
+def _refresh_cache_async(cache_key, refresh_func):
+    """Start one background refresh for a cache key without blocking the request."""
+    with _api_cache_lock:
+        lock = _refresh_locks.setdefault(cache_key, threading.Lock())
+    if not lock.acquire(blocking=False):
+        return
+
+    def refresh_and_release():
+        try:
+            refresh_func()
+        except Exception as e:
+            logger.error(f"Background refresh failed for {cache_key}: {e}", exc_info=True)
+        finally:
+            lock.release()
+
+    threading.Thread(target=refresh_and_release, daemon=True).start()
+
+
+def _fetch_nhl_playoff_series():
+    """Fetch NHL playoff series (no Flask request context needed)."""
+    try:
+        response = requests.get('https://api-web.nhle.com/v1/schedule/now', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        series_map = {}
+        for week in data.get('gameWeek', []):
+            for game in week.get('games', []):
+                series = game.get('seriesStatus', {})
+                if not series:
+                    continue
+                top = series.get('topSeedTeamAbbrev', '')
+                bottom = series.get('bottomSeedTeamAbbrev', '')
+                if top and bottom:
+                    key = f"{min(top,bottom)}-{max(top,bottom)}"
+                    series_map[key] = {
+                        'top_seed': top,
+                        'top_seed_wins': series.get('topSeedWins', 0),
+                        'bottom_seed': bottom,
+                        'bottom_seed_wins': series.get('bottomSeedWins', 0),
+                        'round': series.get('round', 0),
+                        'game_number_of_series': series.get('gameNumberOfSeries', 0),
+                    }
+                    series_map[top] = series_map[key]
+                    series_map[bottom] = series_map[key]
+        return {'series': series_map}
+    except Exception:
+        return None
+
+
+def _fetch_mls_standings(api_base_url):
+    """Fetch MLS standings (no Flask request context needed)."""
+    try:
+        response = requests.get(f'{api_base_url}/api/v1/standings/mls', timeout=10)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        teams = {}
+        for t in data.get('teams', []):
+            abbrev = t.get('abbreviation', '')
+            name = t.get('team_name', abbrev)
+            teams[name] = {
+                'wins': t.get('wins', 0),
+                'losses': t.get('losses', 0),
+                'draws': t.get('draws', 0),
+                'points': t.get('points', 0)
+            }
+            if abbrev:
+                teams[abbrev] = teams[name]
+        return {'teams': teams}
+    except Exception:
+        return None
+
+
+def _background_cache_refresh(api_base_url):
+    """Background thread: refresh cache every 60 seconds."""
+    timezones = ['pt', 'et', 'ct', 'mt']
+    while True:
+        try:
+            for tz in timezones:
+                _refresh_all_scores_cache(api_base_url, 'today', tz)
+
+            nhl_data = _fetch_nhl_playoff_series()
+            if nhl_data:
+                set_cached_response('nhl_playoff_series', nhl_data)
+
+            mls_data = _fetch_mls_standings(api_base_url)
+            if mls_data:
+                set_cached_response('mls_team_records', mls_data)
+
+            logger.info("Background cache refresh complete")
+        except Exception as e:
+            logger.error(f"Background cache refresh error: {e}")
+
+        time.sleep(60)
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -55,10 +225,16 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app, resources={r"/api/proxy/*": {"origins": "*"}})
 
 # API configuration - use environment variable or default to production
-API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.org')
-CRICKET_API_BASE_URL = os.getenv('CRICKET_API_BASE_URL', 'https://ipl.cloud-puff.net/api')
+API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.net')
 logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
-logger.info(f"CRICKET_API_BASE_URL configured as: {CRICKET_API_BASE_URL}")
+
+# Start background cache refresh thread (avoid duplicate in Flask reloader)
+if os.getenv('DISABLE_BACKGROUND_CACHE_REFRESH') != '1' and (
+    not os.environ.get('WERKZEUG_RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
+):
+    _cache_thread = threading.Thread(target=_background_cache_refresh, args=(API_BASE_URL,), daemon=True)
+    _cache_thread.start()
+    logger.info("Background cache refresh thread started (60s interval)")
 
 @app.context_processor
 def inject_globals():
@@ -1123,14 +1299,29 @@ def get_league_logo(league):
 @app.route('/api/proxy/all-scores/<date>')
 def proxy_all_scores(date):
     """Aggregated endpoint: fetch schedule+scores for all leagues in one request."""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    tz = request.args.get('tz', 'pst')
+    tz = _normalize_timezone(request.args.get('tz', 'pt'))
     api_date = 'today' if date.lower() == 'today' else date
 
     cache_key = f'all_scores:{api_date}:{tz}'
     cached = get_cached_response(cache_key, 'scores')
     if cached:
         return jsonify(cached)
+
+    expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
+    if expired_cache:
+        _refresh_cache_async(
+            cache_key,
+            lambda: _refresh_all_scores_cache(API_BASE_URL, api_date, tz)
+        )
+        return jsonify(expired_cache)
+
+    if api_date == 'today':
+        _refresh_cache_async(
+            cache_key,
+            lambda: _refresh_all_scores_cache(API_BASE_URL, api_date, tz)
+        )
+        logger.warning(f"No all-scores cache available for {tz}; warming asynchronously")
+        return jsonify(_empty_all_scores_response()), 200
 
     leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
     result = {}
@@ -1170,8 +1361,8 @@ def proxy_all_scores(date):
 def proxy_schedule(league, date):
     """Proxy schedule API requests to avoid CORS issues with caching"""
     try:
-        # Get timezone from query parameter, default to 'pst'
-        tz = request.args.get('tz', 'pst')
+        # Get timezone from query parameter, default to 'pt'
+        tz = _normalize_timezone(request.args.get('tz', 'pt'))
 
         if date.lower() == 'today':
             cache_key = f'schedule:{league}:today:{tz}'
@@ -1284,6 +1475,11 @@ def proxy_schedule(league, date):
 def nfl_team_records():
     """Fetch NFL team records from Tank01 API"""
     try:
+        cache_key = 'nfl_team_records'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached), 200
+
         rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
         if not rapidapi_key:
             logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
@@ -1340,8 +1536,10 @@ def nfl_team_records():
                         'ties': tie
                     }
             
+            result = {'teams': team_records}
+            set_cached_response(cache_key, result)
             logger.info(f"Fetched records for {len(team_records)} NFL teams")
-            return jsonify({'teams': team_records}), 200
+            return jsonify(result), 200
         else:
             logger.error(f"Unexpected API response: {data}")
             # Return empty records instead of 500 - frontend can handle this gracefully
@@ -1419,7 +1617,7 @@ def wnba_season_info():
 
 @app.route('/api/cricket/standings/<league>')
 def cricket_standings(league):
-    """Fetch cricket standings from CricketPuff API"""
+    """Fetch cricket standings from Sportspuff API"""
     league_lower = league.lower()
     if league_lower not in ('ipl', 'mlc'):
         return jsonify({'standings': []}), 400
@@ -1429,7 +1627,7 @@ def cricket_standings(league):
         if cached:
             return jsonify(cached)
 
-        response = requests.get(f'{CRICKET_API_BASE_URL}/v1/standings/{league_lower}', timeout=10)
+        response = requests.get(f'{API_BASE_URL}/api/v1/standings/{league_lower}', timeout=10)
         response.raise_for_status()
         data = response.json()
 
@@ -1554,8 +1752,8 @@ def nhl_playoff_series():
 def proxy_scores(league, date):
     """Proxy scores API requests to avoid CORS issues with very short caching"""
     try:
-        # Get timezone from query parameter, default to 'pst'
-        tz = request.args.get('tz', 'pst')
+        # Get timezone from query parameter, default to 'pt'
+        tz = _normalize_timezone(request.args.get('tz', 'pt'))
 
         if date.lower() == 'today':
             cache_key = f'scores:{league}:today:{tz}'
