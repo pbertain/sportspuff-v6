@@ -1631,12 +1631,17 @@ def cricket_standings(league):
         response.raise_for_status()
         data = response.json()
 
+        # API returns rows under 'teams'; frontend expects 'standings'
+        if 'standings' not in data:
+            data['standings'] = data.get('teams', [])
+        data.setdefault('available', bool(data['standings']))
+
         set_cached_response(cache_key, data)
         return jsonify(data)
 
     except Exception as e:
         logger.error(f"Error fetching {league} standings: {e}")
-        return jsonify({'standings': []}), 200
+        return jsonify({'standings': [], 'available': False}), 200
 
 @app.route('/api/ipl/standings')
 def ipl_standings():
