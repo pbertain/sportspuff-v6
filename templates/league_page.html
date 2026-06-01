@@ -295,11 +295,12 @@
                     })
                     .then(data => {
                         console.log('IPL standings data:', data);
+                        const cardsContainer = document.getElementById('ipl-cards-container');
                         if (!data.standings || data.standings.length === 0) {
                             console.warn('No IPL standings data returned');
+                            cardsContainer.innerHTML = '<div class="text-center text-muted py-4">Standings are currently unavailable. Please check back later.</div>';
                             return;
                         }
-                        const cardsContainer = document.getElementById('ipl-cards-container');
 
                         const teamLookup = {};
                         {% for conference_name, divisions in organized_teams.items() %}
