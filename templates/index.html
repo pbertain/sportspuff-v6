@@ -191,7 +191,30 @@
             const league = leagueSelect.value;
             const timezone = timezoneSelect.value;
             const leagueUpper = league.toUpperCase();
-            
+
+            // MLS pauses for the FIFA World Cup; show a banner where its scores would be
+            function isMlsWorldCupBreak() {
+                const today = new Date().toISOString().slice(0, 10);
+                return today >= '2026-05-25' && today <= '2026-07-15';
+            }
+            function mlsWcBreakAlert() {
+                return `
+                    <div class="alert alert-info text-center" role="alert">
+                        <i class="fas fa-futbol me-2"></i>
+                        <strong>MLS is on break for the FIFA World Cup.</strong>
+                        No matches May 25 &ndash; July 15, 2026. Regular season resumes July 16.
+                    </div>`;
+            }
+            function mlsBreakHeaderHtml() {
+                return `
+                    <div class="league-header mb-2" style="padding: 0.5rem 0;">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <img src="https://www.splitsp.lat/logos/mls/mls_logo.png" alt="MLS" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
+                            <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">MLS</span>
+                        </div>
+                    </div>`;
+            }
+
             try {
                 // Call API via proxy - proxy will handle CORS via Flask-CORS
                 // The proxy makes server-side requests, so CORS doesn't apply
@@ -1238,6 +1261,10 @@
                 });
                 
                 if (games.length === 0) {
+                    if (league === 'mls' && isMlsWorldCupBreak()) {
+                        container.innerHTML = mlsBreakHeaderHtml() + mlsWcBreakAlert();
+                        return;
+                    }
                     container.innerHTML = `
                         <div class="text-center">
                             <div class="alert alert-info">
@@ -1308,6 +1335,10 @@
                 if (league === 'all') {
                     // Render grouped by league
                     const leagueOrder = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
+                    // During the World Cup break MLS has no games; still show its banner in place
+                    if (isMlsWorldCupBreak() && !gamesByLeague['MLS']) {
+                        gamesByLeague['MLS'] = [];
+                    }
                     Object.keys(gamesByLeague).sort((a, b) => {
                         const aIdx = leagueOrder.indexOf(a.toUpperCase());
                         const bIdx = leagueOrder.indexOf(b.toUpperCase());
@@ -1319,7 +1350,16 @@
                         const leagueGames = gamesByLeague[leagueName];
                         const leagueUpper = leagueName.toUpperCase();
                         const leagueLogo = `https://www.splitsp.lat/logos/${leagueName.toLowerCase()}/${leagueName.toLowerCase()}_logo.png`;
-                        
+
+                        if (leagueUpper === 'MLS' && leagueGames.length === 0 && isMlsWorldCupBreak()) {
+                            html += `
+                                <div class="league-section mb-4">
+                                    ${mlsBreakHeaderHtml()}
+                                    ${mlsWcBreakAlert()}
+                                </div>`;
+                            return;
+                        }
+
                         html += `
                             <div class="league-section mb-4">
                                 <div class="league-header mb-2" style="padding: 0.5rem 0;">
