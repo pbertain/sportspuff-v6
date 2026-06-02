@@ -195,6 +195,28 @@ def _fetch_mls_standings(api_base_url):
         return None
 
 
+def _fetch_wnba_standings(api_base_url):
+    """Fetch WNBA standings from sportspuff-api keyed by team name."""
+    try:
+        response = requests.get(f'{api_base_url}/api/v1/standings/wnba', timeout=10)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        records = {}
+        for t in data.get('teams', []):
+            name = t.get('team_name')
+            if not name:
+                continue
+            records[name] = {
+                'wins': t.get('wins', 0),
+                'losses': t.get('losses', 0),
+                'games_back': t.get('games_back', '-'),
+            }
+        return records
+    except Exception:
+        return None
+
+
 def _background_cache_refresh(api_base_url):
     """Background thread: refresh cache every 60 seconds."""
     timezones = ['pt', 'et', 'ct', 'mt']
@@ -716,6 +738,20 @@ def league_page(league_name):
                         t = team.get('team_ties') or 0
                         team['mls_points'] = w * 3 + t
                     teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
+
+        # For WNBA, fetch live records from sportspuff-api and sort by wins desc
+        if league_name == 'WNBA':
+            wnba_records = _fetch_wnba_standings(API_BASE_URL) or {}
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    for team in teams_list:
+                        rec = wnba_records.get(team['real_team_name'])
+                        if rec:
+                            team['team_wins'] = rec['wins']
+                            team['team_losses'] = rec['losses']
+                            team['games_behind'] = rec['games_back']
+                    teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
 
         # Get league info including champion details
         league_query = """
