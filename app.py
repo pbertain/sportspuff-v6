@@ -1682,6 +1682,77 @@ def mls_team_records():
         logger.error(f"Error fetching MLS team records: {e}")
         return jsonify({'teams': {}}), 200
 
+# --- API status / health check ------------------------------------------------
+STATUS_LEAGUES = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+STATUS_RESULT_KEYS = ('teams', 'standings', 'scores', 'games', 'season_types', 'matches')
+
+def _count_results(data):
+    """Count list-shaped results in a sportspuff-api response."""
+    if isinstance(data, list):
+        return len(data)
+    if isinstance(data, dict):
+        for key in STATUS_RESULT_KEYS:
+            if isinstance(data.get(key), list):
+                return len(data[key])
+    return 0
+
+def _probe_endpoint(name, url):
+    """Hit one sportspuff-api endpoint and classify the result."""
+    result = {'name': name, 'url': url, 'status_code': None, 'count': None}
+    try:
+        resp = requests.get(url, timeout=8)
+        result['status_code'] = resp.status_code
+        if resp.status_code != 200:
+            result['category'] = 'error'
+            result['detail'] = f'HTTP {resp.status_code}'
+            return result
+        try:
+            data = resp.json()
+        except ValueError:
+            result['category'] = 'error'
+            result['detail'] = 'Invalid JSON'
+            return result
+        count = _count_results(data)
+        result['count'] = count
+        result['category'] = 'ok' if count > 0 else 'warning'
+        result['detail'] = f'{count} result' + ('' if count == 1 else 's')
+    except requests.exceptions.RequestException as e:
+        result['category'] = 'error'
+        result['detail'] = type(e).__name__
+    return result
+
+@app.route('/api/status-check')
+def api_status_check():
+    """Probe sportspuff-api endpoints and report failures or empty responses."""
+    checks = []
+    for lg in STATUS_LEAGUES:
+        u = lg.upper()
+        checks.append((f'{u} standings', f'{API_BASE_URL}/api/v1/standings/{lg}'))
+        checks.append((f'{u} season-info', f'{API_BASE_URL}/api/v1/season-info/{lg}'))
+        checks.append((f'{u} scores (today)', f'{API_BASE_URL}/api/v1/scores/{lg}/today'))
+        checks.append((f'{u} schedule (today)', f'{API_BASE_URL}/api/v1/schedule/{lg}/today'))
+
+    results = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(_probe_endpoint, name, url) for name, url in checks]
+        for future in as_completed(futures):
+            results.append(future.result())
+
+    order = {'error': 0, 'warning': 1, 'ok': 2}
+    results.sort(key=lambda r: (order.get(r['category'], 3), r['name']))
+    summary = {cat: sum(1 for r in results if r['category'] == cat) for cat in ('error', 'warning', 'ok')}
+    return jsonify({
+        'api_base_url': API_BASE_URL,
+        'checked_at': datetime.now(timezone.utc).isoformat(),
+        'summary': summary,
+        'results': results,
+    })
+
+@app.route('/api-status')
+def api_status():
+    """Status page showing the health of the sportspuff-api endpoints."""
+    return render_template('api_status.html', API_BASE_URL=API_BASE_URL)
+
 @app.route('/api/mlb/team-records')
 def mlb_team_records():
     """Fetch MLB team records from database (populated by fetch_standings.py)"""
