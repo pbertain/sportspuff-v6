@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Status - Sportspuff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+</head>
+<body>
+    {% include 'shared_header.html' %}
+
+    <div class="container my-4">
+        <div class="row mb-3">
+            <div class="col-12 text-center">
+                <h1 class="display-5 mb-2"><i class="fas fa-heart-pulse me-3"></i>API Status</h1>
+                <p class="lead mb-1">Health of <code>{{ API_BASE_URL }}</code></p>
+                <p class="text-muted small">"No data" is expected for scores/schedule on days with no games.</p>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-12 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                <span id="summary-badges"></span>
+                <button id="refresh-btn" class="btn btn-outline-primary"><i class="fas fa-rotate me-2"></i>Refresh</button>
+                <span id="checked-at" class="text-muted small"></span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div id="status-loading" class="text-center my-5">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2 text-muted">Checking endpoints...</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="status-table" style="display: none;">
+                        <thead>
+                            <tr><th>Endpoint</th><th>Status</th><th>HTTP</th><th>Detail</th></tr>
+                        </thead>
+                        <tbody id="status-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'shared_footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const CAT = {
+            error:   { badge: 'bg-danger',           icon: 'fa-circle-xmark',         label: 'Error' },
+            warning: { badge: 'bg-warning text-dark', icon: 'fa-triangle-exclamation', label: 'No data' },
+            ok:      { badge: 'bg-success',          icon: 'fa-circle-check',         label: 'OK' },
+        };
+        async function loadStatus() {
+            const loading = document.getElementById('status-loading');
+            const table = document.getElementById('status-table');
+            const body = document.getElementById('status-body');
+            const badges = document.getElementById('summary-badges');
+            loading.style.display = '';
+            table.style.display = 'none';
+            body.innerHTML = '';
+            badges.innerHTML = '';
+            try {
+                const res = await fetch('/api/status-check');
+                const data = await res.json();
+                const s = data.summary || {};
+                badges.innerHTML =
+                    `<span class="badge bg-danger me-1">${s.error || 0} errors</span>` +
+                    `<span class="badge bg-warning text-dark me-1">${s.warning || 0} no data</span>` +
+                    `<span class="badge bg-success">${s.ok || 0} ok</span>`;
+                document.getElementById('checked-at').textContent =
+                    data.checked_at ? 'Checked ' + new Date(data.checked_at).toLocaleString() : '';
+                (data.results || []).forEach(r => {
+                    const c = CAT[r.category] || CAT.warning;
+                    const path = r.url.replace(/^https?:\/\/[^/]+/, '');
+                    body.innerHTML += `<tr>
+                        <td><code>${path}</code><br><span class="text-muted small">${r.name}</span></td>
+                        <td><span class="badge ${c.badge}"><i class="fas ${c.icon} me-1"></i>${c.label}</span></td>
+                        <td>${r.status_code != null ? r.status_code : '-'}</td>
+                        <td>${r.detail || ''}</td>
+                    </tr>`;
+                });
+                loading.style.display = 'none';
+                table.style.display = '';
+            } catch (e) {
+                loading.innerHTML = '<div class="alert alert-danger">Failed to run status check: ' + e.message + '</div>';
+            }
+        }
+        document.getElementById('refresh-btn').addEventListener('click', loadStatus);
+        loadStatus();
+    </script>
+</body>
+</html>
