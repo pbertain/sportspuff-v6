@@ -6,6 +6,7 @@
     <title>Sportspuff - Sports Teams & Stadiums</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -40,6 +41,13 @@
                             <option value="ipl">IPL</option>
                             <option value="mlc">MLC</option>
                         </select>
+                    </div>
+                    <div class="mb-2">
+                        <label for="date-picker" class="form-label text-white fw-bold">Date:</label>
+                        <div class="input-group" style="min-width: 200px;">
+                            <input type="text" id="date-picker" class="form-control" placeholder="Select date" readonly>
+                            <button id="today-btn" class="btn btn-outline-light" type="button" title="Jump to today">Today</button>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label for="timezone-select" class="form-label text-white fw-bold">Timezone:</label>
@@ -177,6 +185,7 @@
     {% include 'shared_footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
     <script>
         // Team colors from database (passed from server) - includes NBA and NHL
@@ -187,15 +196,22 @@
             const container = document.getElementById('scores-schedules-container');
             const leagueSelect = document.getElementById('league-select');
             const timezoneSelect = document.getElementById('timezone-select');
-            
+            const datePicker = document.getElementById('date-picker');
+
             const league = leagueSelect.value;
             const timezone = timezoneSelect.value;
             const leagueUpper = league.toUpperCase();
 
+            // 'today' string maps to the API's special-cased date and is the default;
+            // otherwise the picker holds a YYYY-MM-DD string.
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const pickedDate = datePicker && datePicker.value ? datePicker.value : todayStr;
+            const isToday = pickedDate === todayStr;
+            const apiDate = isToday ? 'today' : pickedDate;
+
             // MLS pauses for the FIFA World Cup; show a banner where its scores would be
             function isMlsWorldCupBreak() {
-                const today = new Date().toISOString().slice(0, 10);
-                return today >= '2026-05-25' && today <= '2026-07-15';
+                return pickedDate >= '2026-05-25' && pickedDate <= '2026-07-15';
             }
             function mlsWcBreakAlert() {
                 return `
@@ -220,9 +236,9 @@
                 // The proxy makes server-side requests, so CORS doesn't apply
                 // Only try direct API call if proxy completely fails (shouldn't happen)
                 const API_BASE = '{{ API_BASE_URL }}/api/v1';
-                // Build proxy URLs - these will be modified per league/date
-                const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}';
-                const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}';
+                // Build proxy URLs - replace the date segment per selection
+                const proxyScheduleUrl = '{{ url_for("proxy_schedule", league="nba", date="today") }}'.replace(/\/today$/, `/${apiDate}`);
+                const proxyScoresUrl = '{{ url_for("proxy_scores", league="nba", date="today") }}'.replace(/\/today$/, `/${apiDate}`);
                 
                 let scheduleData, scoresData;
                 let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
@@ -262,7 +278,7 @@
                     const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc'];
 
                     // Show cached data immediately while fetching fresh
-                    const cacheKey = `sportspuff_scores_${timezone}`;
+                    const cacheKey = `sportspuff_scores_${timezone}_${apiDate}`;
                     const cached = localStorage.getItem(cacheKey);
                     if (cached) {
                         try {
@@ -283,7 +299,7 @@
                         fetch('/api/nfl/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch('/api/nhl/playoff-series').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch('/api/mlb/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-                        fetch(`/api/proxy/all-scores/today?tz=${timezone}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+                        fetch(`/api/proxy/all-scores/${apiDate}?tz=${timezone}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                     ]);
                     nflTeamRecords = nflRes.teams || {};
                     nhlPlayoffSeries = nhlRes.series || {};
@@ -337,8 +353,8 @@
                     
                     const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
                     const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
-                    const scheduleDirect = `${API_BASE}/schedule/${league}/today?tz=${timezone}`;
-                    const scoresDirect = `${API_BASE}/scores/${league}/today?tz=${timezone}`;
+                    const scheduleDirect = `${API_BASE}/schedule/${league}/${apiDate}?tz=${timezone}`;
+                    const scoresDirect = `${API_BASE}/scores/${league}/${apiDate}?tz=${timezone}`;
                     
                     [scheduleData, scoresData] = await Promise.all([
                         fetchWithFallback(scheduleProxy, scheduleDirect),
@@ -1269,7 +1285,7 @@
                         <div class="text-center">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                No games scheduled for today.
+                                No games scheduled for ${isToday ? 'today' : pickedDate}.
                             </div>
                         </div>
                     `;
@@ -1459,19 +1475,32 @@
             }
         }
         
-        // Load on page load and when dropdowns change
+        // Load on page load and when controls change
         document.addEventListener('DOMContentLoaded', function() {
+            const datePickerEl = document.getElementById('date-picker');
+            const todayBtn = document.getElementById('today-btn');
+            const fp = flatpickr(datePickerEl, {
+                defaultDate: 'today',
+                dateFormat: 'Y-m-d',
+                allowInput: false,
+                onChange: function() { loadScoresAndSchedules(); }
+            });
+            todayBtn.addEventListener('click', function() {
+                fp.setDate('today', true); // true triggers onChange
+            });
+
             loadScoresAndSchedules();
-            
+
             // Reload when league or timezone changes
             document.getElementById('league-select').addEventListener('change', loadScoresAndSchedules);
             document.getElementById('timezone-select').addEventListener('change', loadScoresAndSchedules);
-            
-            // Auto-refresh every 60 seconds if page is visible
+
+            // Auto-refresh every 60 seconds if page is visible AND viewing today
             setInterval(() => {
-                if (!document.hidden) {
-                    loadScoresAndSchedules();
-                }
+                if (document.hidden) return;
+                const todayStr = new Date().toISOString().slice(0, 10);
+                if (datePickerEl.value && datePickerEl.value !== todayStr) return;
+                loadScoresAndSchedules();
             }, 60000);
         });
     </script>
