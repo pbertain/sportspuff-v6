@@ -16,7 +16,7 @@
             <div class="col-12 text-center">
                 <h1 class="display-5 mb-2"><i class="fas fa-heart-pulse me-3"></i>API Status</h1>
                 <p class="lead mb-1">Health of <code>{{ API_BASE_URL }}</code></p>
-                <p class="text-muted small">"No data" is expected for scores/schedule on days with no games.</p>
+                <p class="text-muted small">"No data" is expected for scores/schedule on days with no games. "Stale" means served from cache past its TTL.</p>
             </div>
         </div>
 
@@ -28,16 +28,40 @@
             </div>
         </div>
 
+        <div id="unreachable-banner" class="row mb-3" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-danger mb-0">
+                    <i class="fas fa-plug-circle-xmark me-2"></i>
+                    <strong>API unreachable.</strong>
+                    <span id="unreachable-detail"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="upstreams-section" class="row mb-4" style="display: none;">
+            <div class="col-12">
+                <h2 class="h5 mb-2"><i class="fas fa-server me-2"></i>Upstream sources</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead>
+                            <tr><th>Source</th><th>Status</th><th>Last success</th><th>Age</th><th>Detail</th></tr>
+                        </thead>
+                        <tbody id="upstreams-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-12">
                 <div id="status-loading" class="text-center my-5">
                     <div class="spinner-border" role="status"></div>
-                    <p class="mt-2 text-muted">Checking endpoints...</p>
+                    <p class="mt-2 text-muted">Loading status...</p>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle" id="status-table" style="display: none;">
                         <thead>
-                            <tr><th>Endpoint</th><th>Status</th><th>HTTP</th><th>Detail</th></tr>
+                            <tr><th>Endpoint</th><th>Status</th><th>HTTP</th><th>Source</th><th>Detail</th></tr>
                         </thead>
                         <tbody id="status-body"></tbody>
                     </table>
@@ -55,18 +79,78 @@
             warning: { badge: 'bg-warning text-dark', icon: 'fa-triangle-exclamation', label: 'No data' },
             ok:      { badge: 'bg-success',          icon: 'fa-circle-check',         label: 'OK' },
         };
+        const SOURCE_BADGE = {
+            live:  'bg-success',
+            cache: 'bg-secondary',
+            db:    'bg-info text-dark',
+        };
+        function fmtAge(seconds) {
+            if (seconds == null) return '';
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+            if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+            return `${Math.round(seconds / 86400)}d`;
+        }
+        function renderSourceCell(meta) {
+            if (!meta) return '<span class="text-muted">-</span>';
+            const src = meta.source || 'live';
+            const badge = SOURCE_BADGE[src] || 'bg-secondary';
+            const age = fmtAge(meta.age_seconds);
+            const stale = meta.stale
+                ? ' <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Stale</span>'
+                : '';
+            return `<span class="badge ${badge}">${src}</span>` +
+                   (age ? ` <span class="text-muted small">${age}</span>` : '') +
+                   stale;
+        }
+        function renderUpstreams(upstreams) {
+            const section = document.getElementById('upstreams-section');
+            const body = document.getElementById('upstreams-body');
+            body.innerHTML = '';
+            if (!upstreams || !upstreams.length) {
+                section.style.display = 'none';
+                return;
+            }
+            upstreams.forEach(u => {
+                const c = CAT[u.category] || CAT.warning;
+                const last = u.last_success_at
+                    ? new Date(u.last_success_at).toLocaleString()
+                    : '<span class="text-muted">never</span>';
+                const stale = u.stale
+                    ? ' <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Stale</span>'
+                    : '';
+                body.innerHTML += `<tr>
+                    <td><strong>${u.name}</strong></td>
+                    <td><span class="badge ${c.badge}"><i class="fas ${c.icon} me-1"></i>${c.label}</span>${stale}</td>
+                    <td>${last}</td>
+                    <td>${fmtAge(u.age_seconds)}</td>
+                    <td>${u.detail || ''}</td>
+                </tr>`;
+            });
+            section.style.display = '';
+        }
         async function loadStatus() {
             const loading = document.getElementById('status-loading');
             const table = document.getElementById('status-table');
             const body = document.getElementById('status-body');
             const badges = document.getElementById('summary-badges');
+            const banner = document.getElementById('unreachable-banner');
             loading.style.display = '';
             table.style.display = 'none';
+            banner.style.display = 'none';
             body.innerHTML = '';
             badges.innerHTML = '';
             try {
                 const res = await fetch('/api/status-check');
                 const data = await res.json();
+                if (data.unreachable) {
+                    document.getElementById('unreachable-detail').textContent =
+                        data.error ? ` (${data.error})` : '';
+                    banner.style.display = '';
+                    loading.style.display = 'none';
+                    renderUpstreams([]);
+                    return;
+                }
                 const s = data.summary || {};
                 badges.innerHTML =
                     `<span class="badge bg-danger me-1">${s.error || 0} errors</span>` +
@@ -74,13 +158,15 @@
                     `<span class="badge bg-success">${s.ok || 0} ok</span>`;
                 document.getElementById('checked-at').textContent =
                     data.checked_at ? 'Checked ' + new Date(data.checked_at).toLocaleString() : '';
+                renderUpstreams(data.upstreams);
                 (data.results || []).forEach(r => {
                     const c = CAT[r.category] || CAT.warning;
-                    const path = r.url.replace(/^https?:\/\/[^/]+/, '');
+                    const path = r.url ? r.url.replace(/^https?:\/\/[^/]+/, '') : '';
                     body.innerHTML += `<tr>
                         <td><code>${path}</code><br><span class="text-muted small">${r.name}</span></td>
                         <td><span class="badge ${c.badge}"><i class="fas ${c.icon} me-1"></i>${c.label}</span></td>
                         <td>${r.status_code != null ? r.status_code : '-'}</td>
+                        <td>${renderSourceCell(r.meta)}</td>
                         <td>${r.detail || ''}</td>
                     </tr>`;
                 });
