@@ -272,10 +272,9 @@
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
             const upper = leagueLower.toUpperCase();
             const logo = LEAGUE_LOGOS[upper] || '';
-            const extraClass = isWcBreak ? 'league-empty-highlight' : '';
             const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';
             return `
-                <div class="league-empty-banner league-empty-${leagueLower} ${extraClass}">
+                <div class="league-empty-banner league-empty-${leagueLower}">
                     ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${upper}" onerror="this.style.display='none';">` : ''}
                     <div class="league-empty-name">${upper}</div>
                     <div class="league-empty-sep">&middot;</div>
@@ -1591,14 +1590,15 @@
             width: 99%;
         }
 
-        /* Per-league empty-state banner (no games / offseason) */
+        /* Per-league empty-state banner (no games / offseason).
+           Each league gets a tinted background derived from its accent color so
+           the bands read as that league's territory. White text works on all of them. */
         .league-empty-banner {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 10px 16px;
             margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-left: 4px solid #888;
             border-radius: 8px;
@@ -1622,40 +1622,31 @@
             text-transform: uppercase;
         }
         .league-empty-sep {
-            color: rgba(255, 255, 255, 0.35);
+            color: rgba(255, 255, 255, 0.4);
             font-weight: 700;
             font-size: 1.1rem;
             margin: 0 2px;
         }
         .league-empty-message {
             font-size: 0.98rem;
-            color: rgba(255, 255, 255, 0.82);
+            color: rgba(255, 255, 255, 0.88);
         }
         .league-empty-icon {
-            color: rgba(255, 255, 255, 0.85);
+            color: rgba(255, 255, 255, 0.9);
             font-size: 1rem;
         }
-        .league-empty-mlb  { border-left-color: #0E4C92; }
-        .league-empty-nba  { border-left-color: #7028E4; }
-        .league-empty-nfl  { border-left-color: #B3001B; }
-        .league-empty-nhl  { border-left-color: #BFC9CA; }
-        .league-empty-mls  { border-left-color: #2BAE66; }
-        .league-empty-wnba { border-left-color: #FF6F00; }
-        .league-empty-ipl  { border-left-color: #FF6B35; }
-        .league-empty-mlc  { border-left-color: #1A5276; }
-        /* MLS FIFA World Cup break: prominent light-blue alert-style highlight.
-           Keep these AFTER the per-league rules so the highlight border wins. */
-        .league-empty-highlight {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            border-left: 4px solid #0c5460;
-            color: #0c5460;
-        }
-        .league-empty-highlight .league-empty-name { color: #0c5460; }
-        .league-empty-highlight .league-empty-message { color: #0c5460; opacity: 0.92; font-weight: 500; }
-        .league-empty-highlight .league-empty-sep { color: rgba(12, 84, 96, 0.4); }
-        .league-empty-highlight .league-empty-icon { color: #0c5460; }
-        .league-empty-highlight .league-empty-logo { background: #fff; }
+
+        /* League-tinted variants. Background is a translucent tint of the league
+           accent so each banner reads as that league's color while staying readable
+           against the page's purple gradient. */
+        .league-empty-mlb  { background: rgba( 14,  76, 146, 0.32); border-color: rgba( 14,  76, 146, 0.55); border-left-color: #0E4C92; }
+        .league-empty-nba  { background: rgba(112,  40, 228, 0.32); border-color: rgba(112,  40, 228, 0.55); border-left-color: #7028E4; }
+        .league-empty-nfl  { background: rgba(179,   0,  27, 0.32); border-color: rgba(179,   0,  27, 0.55); border-left-color: #B3001B; }
+        .league-empty-nhl  { background: rgba( 60,  60,  70, 0.55); border-color: rgba(191, 201, 202, 0.55); border-left-color: #BFC9CA; }
+        .league-empty-mls  { background: rgba( 43, 174, 102, 0.32); border-color: rgba( 43, 174, 102, 0.55); border-left-color: #2BAE66; }
+        .league-empty-wnba { background: rgba(255, 111,   0, 0.32); border-color: rgba(255, 111,   0, 0.55); border-left-color: #FF6F00; }
+        .league-empty-ipl  { background: rgba(255, 107,  53, 0.32); border-color: rgba(255, 107,  53, 0.55); border-left-color: #FF6B35; }
+        .league-empty-mlc  { background: rgba( 26,  82, 118, 0.42); border-color: rgba( 26,  82, 118, 0.65); border-left-color: #1A5276; }
 
         /* Orbital league-logo loading spinner */
         .orbit-loader {
