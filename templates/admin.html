@@ -7,6 +7,103 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <style>
+        /* Admin Panel — lavender theme */
+        .admin-stat-card {
+            background: linear-gradient(135deg, #E8DFF7 0%, #C9B8E6 100%);
+            border: 2px solid #9B7EDC;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: var(--deep-purple);
+        }
+        .admin-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 28px rgba(112, 40, 228, 0.35);
+            border-color: #7028E4;
+        }
+        .admin-stat-card .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #7028E4 0%, #FF3B30 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .admin-stat-card h3 {
+            color: var(--deep-purple);
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+        .admin-stat-card p {
+            color: #5A4A7C;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        .admin-stat-card .btn-primary {
+            background: linear-gradient(135deg, #7028E4 0%, #4A1A9C 100%);
+            border: none;
+            font-weight: 600;
+        }
+        .admin-stat-card .btn-primary:hover {
+            background: linear-gradient(135deg, #4A1A9C 0%, #2D1B69 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(112, 40, 228, 0.4);
+        }
+        .admin-stat-card .btn-outline-primary {
+            color: var(--deep-purple);
+            border: 2px solid #7028E4;
+            background: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+        .admin-stat-card .btn-outline-primary:hover {
+            background: #7028E4;
+            color: #fff;
+        }
+
+        /* Management Actions panel */
+        .admin-actions-card {
+            background: linear-gradient(135deg, #E8DFF7 0%, #D4C4ED 100%);
+            border: 2px solid #9B7EDC;
+            border-radius: 20px;
+            color: var(--deep-purple);
+        }
+        .admin-actions-card .card-header {
+            background: rgba(112, 40, 228, 0.15);
+            border-bottom: 2px solid rgba(112, 40, 228, 0.35);
+            border-radius: 18px 18px 0 0;
+            color: var(--deep-purple);
+        }
+        .admin-actions-card .card-header h3 {
+            color: var(--deep-purple);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        /* Action buttons */
+        .btn-admin-action {
+            border: none;
+            color: #fff !important;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: all 0.25s ease;
+        }
+        .btn-admin-action:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+        }
+        .btn-admin-endpoints {
+            background: linear-gradient(135deg, #7028E4 0%, #4A1A9C 100%);
+        }
+        .btn-admin-home {
+            background: linear-gradient(135deg, #2D1B69 0%, #4A2D8E 100%);
+        }
+        .btn-admin-status {
+            background: linear-gradient(135deg, #FF6F00 0%, #FF3B30 100%);
+        }
+    </style>
 </head>
 <body>
     {% include 'shared_header.html' %}
@@ -24,7 +121,7 @@
         <!-- Statistics Cards -->
         <div class="row mb-5">
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="stat-card">
+                <div class="admin-stat-card">
                     <div class="stat-number">{{ team_count }}</div>
                     <h3>Teams</h3>
                     <p>Across all leagues</p>
@@ -33,9 +130,9 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="stat-card">
+                <div class="admin-stat-card">
                     <div class="stat-number">{{ stadium_count }}</div>
                     <h3>Stadiums</h3>
                     <p>Sports venues</p>
@@ -44,9 +141,9 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="stat-card">
+                <div class="admin-stat-card">
                     <div class="stat-number">{{ linked_count }}</div>
                     <h3>Linked</h3>
                     <p>Teams with stadiums</p>
@@ -60,26 +157,26 @@
         <!-- Management Actions -->
         <div class="row">
             <div class="col-12">
-                <div class="card">
+                <div class="card admin-actions-card">
                     <div class="card-header">
                         <h3><i class="fas fa-tools me-2"></i>Management Actions</h3>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <a href="{{ url_for('api_teams') }}" target="_blank" class="btn btn-outline-primary btn-lg w-100">
+                                <a href="{{ url_for('api_teams') }}" target="_blank" class="btn btn-lg w-100 btn-admin-action btn-admin-endpoints">
                                     <i class="fas fa-code me-2"></i>View API Endpoints
                                 </a>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg w-100">
+                                <a href="{{ url_for('index') }}" class="btn btn-lg w-100 btn-admin-action btn-admin-home">
                                     <i class="fas fa-home me-2"></i>Return to Home
                                 </a>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <a href="{{ url_for('api_status') }}" class="btn btn-outline-info btn-lg w-100">
+                                <a href="{{ url_for('api_status') }}" class="btn btn-lg w-100 btn-admin-action btn-admin-status">
                                     <i class="fas fa-heart-pulse me-2"></i>API Status
                                 </a>
                             </div>
