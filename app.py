@@ -324,11 +324,9 @@ SEASON_DATES = {
 def season_info(league):
     """Return season date info for any league"""
     league_upper = league.upper()
-    if league_upper == 'WNBA':
-        return redirect(url_for('wnba_season_info'))
-    if league_upper in ('IPL', 'MLC'):
+    if league_upper in ('IPL', 'MLC', 'WNBA'):
         try:
-            cache_key = f'cricket_season_info:{league_upper}'
+            cache_key = f'season_info:{league_upper}'
             cached = get_cached_response(cache_key, 'schedule')
             if cached:
                 return jsonify(cached)
@@ -341,7 +339,7 @@ def season_info(league):
             set_cached_response(cache_key, data)
             return jsonify(data)
         except Exception as e:
-            logger.error(f"Error fetching cricket season info for {league}: {e}")
+            logger.error(f"Error fetching season info for {league}: {e}")
             return jsonify({'year': datetime.now().year, 'season_types': []}), 200
     data = SEASON_DATES.get(league_upper)
     if not data:
@@ -1509,143 +1507,58 @@ def proxy_schedule(league, date):
 
 @app.route('/api/nfl/team-records')
 def nfl_team_records():
-    """Fetch NFL team records from Tank01 API"""
+    """Fetch NFL team records from sportspuff-api standings, keyed by full name and abbreviation."""
     try:
         cache_key = 'nfl_team_records'
         cached = get_cached_response(cache_key, 'schedule')
         if cached:
             return jsonify(cached), 200
 
-        rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
-        if not rapidapi_key:
-            logger.warning("RAPIDAPI_KEY not set, cannot fetch NFL team records")
-            # Return empty records instead of 500 - frontend can handle this gracefully
-            return jsonify({'teams': {}}), 200
-        
-        url = "https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams"
-        querystring = {
-            "sortBy": "standings",
-            "rosters": "false",
-            "schedules": "false",
-            "topPerformers": "true",
-            "teamStats": "true",
-            "teamStatsSeason": "2024"
-        }
-        headers = {
-            "x-rapidapi-key": rapidapi_key,
-            "x-rapidapi-host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
-        }
-        
-        logger.info("Fetching NFL team records from Tank01 API")
-        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        response = requests.get(f'{API_BASE_URL}/api/v1/standings/nfl', timeout=10)
         response.raise_for_status()
         data = response.json()
-        
-        if data.get('statusCode') == 200 and 'body' in data:
-            teams = data['body']
-            # Create a mapping of team name to record
-            # Team name format: teamCity + " " + teamName (e.g., "New England Patriots")
-            team_records = {}
-            for team in teams:
-                team_city = team.get('teamCity', '')
-                team_name = team.get('teamName', '')
-                full_team_name = f"{team_city} {team_name}".strip()
-                
-                # Get record values (API returns as strings)
-                wins = int(team.get('wins', 0)) if team.get('wins') else 0
-                loss = int(team.get('loss', 0)) if team.get('loss') else 0
-                tie = int(team.get('tie', 0)) if team.get('tie') else 0
-                
-                # Store by full team name
-                team_records[full_team_name] = {
-                    'wins': wins,
-                    'losses': loss,
-                    'ties': tie
-                }
-                
-                # Also store by abbreviation if available
-                team_abv = team.get('teamAbv', '').strip()
-                if team_abv:
-                    team_records[team_abv] = {
-                        'wins': wins,
-                        'losses': loss,
-                        'ties': tie
-                    }
-            
-            result = {'teams': team_records}
-            set_cached_response(cache_key, result)
-            logger.info(f"Fetched records for {len(team_records)} NFL teams")
-            return jsonify(result), 200
-        else:
-            logger.error(f"Unexpected API response: {data}")
-            # Return empty records instead of 500 - frontend can handle this gracefully
-            return jsonify({'teams': {}}), 200
-            
+
+        team_records = {}
+        for team in data.get('teams', []):
+            name = team.get('team_name', '').strip()
+            abv = team.get('abbreviation', '').strip()
+            record = {
+                'wins': int(team.get('wins') or 0),
+                'losses': int(team.get('losses') or 0),
+                'ties': int(team.get('ties') or 0),
+            }
+            if name:
+                team_records[name] = record
+            if abv:
+                team_records[abv] = record
+
+        result = {'teams': team_records}
+        set_cached_response(cache_key, result)
+        logger.info(f"Fetched records for {len(data.get('teams', []))} NFL teams from sportspuff-api")
+        return jsonify(result), 200
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching NFL team records: {e}")
-        # Return empty records instead of 500 - frontend can handle this gracefully
         return jsonify({'teams': {}}), 200
     except Exception as e:
         logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
-        # Return empty records instead of 500 - frontend can handle this gracefully
         return jsonify({'teams': {}}), 200
 
 @app.route('/api/wnba/season-info')
 def wnba_season_info():
-    """Fetch WNBA season info (dates for preseason, regular season, postseason) from WNBA API"""
+    """Fetch WNBA season info (dates for preseason, regular season, postseason) from sportspuff-api."""
     try:
-        wnba_api_key = os.getenv('WNBA_API_KEY', '')
-        if not wnba_api_key:
-            logger.warning("WNBA_API_KEY not set")
-            return jsonify({'error': 'WNBA API key not configured'}), 200
-
         year = request.args.get('year', datetime.now().year)
-        url = f"https://wnba-api.p.rapidapi.com/wnbastandings?year={year}"
-        headers = {
-            "x-rapidapi-key": wnba_api_key,
-            "x-rapidapi-host": "wnba-api.p.rapidapi.com",
-            "Content-Type": "application/json"
-        }
-
         cache_key = f'wnba_season_info:{year}'
         cached = get_cached_response(cache_key, 'schedule')
         if cached:
             return jsonify(cached)
 
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(f'{API_BASE_URL}/api/v1/season-info/wnba', timeout=10)
         response.raise_for_status()
         data = response.json()
-
-        season_info = {'year': int(year), 'season_types': [], 'standings': []}
-
-        if 'seasons' in data and isinstance(data['seasons'], list):
-            for season in data['seasons']:
-                if season.get('year') == int(year) and 'types' in season:
-                    for stype in season['types']:
-                        season_info['season_types'].append({
-                            'name': stype.get('name', ''),
-                            'abbreviation': stype.get('abbreviation', ''),
-                            'start_date': stype.get('startDate', ''),
-                            'end_date': stype.get('endDate', '')
-                        })
-                    break
-
-        if 'standings' in data and 'entries' in data['standings']:
-            for entry in data['standings']['entries']:
-                team = entry.get('team', {})
-                stats = {s['name']: s.get('displayValue', s.get('value', '')) for s in entry.get('stats', [])}
-                season_info['standings'].append({
-                    'team_name': team.get('displayName', ''),
-                    'abbreviation': team.get('abbreviation', ''),
-                    'wins': stats.get('wins', ''),
-                    'losses': stats.get('losses', ''),
-                    'win_pct': stats.get('winPercent', ''),
-                    'games_behind': stats.get('gamesBehind', ''),
-                    'clincher': stats.get('clincher', '')
-                })
-
-        set_cached_response(cache_key, season_info)
-        return jsonify(season_info)
+        set_cached_response(cache_key, data)
+        return jsonify(data)
 
     except Exception as e:
         logger.error(f"Error fetching WNBA season info: {e}", exc_info=True)
