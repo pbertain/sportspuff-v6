@@ -190,13 +190,46 @@
     <script>
         // Team colors from database (passed from server) - includes NBA and NHL
         const allTeamColors = {{ team_colors | tojson | safe }};
-        
+
+        // League logo URLs for the orbital loading spinner
+        const LEAGUE_LOGOS = {
+            MLB:  "{{ 'MLB'  | get_league_logo }}",
+            NBA:  "{{ 'NBA'  | get_league_logo }}",
+            NFL:  "{{ 'NFL'  | get_league_logo }}",
+            NHL:  "{{ 'NHL'  | get_league_logo }}",
+            MLS:  "{{ 'MLS'  | get_league_logo }}",
+            WNBA: "{{ 'WNBA' | get_league_logo }}",
+            IPL:  "{{ 'IPL'  | get_league_logo }}",
+            MLC:  "{{ 'MLC'  | get_league_logo }}"
+        };
+        const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC'];
+        function orbitalLoaderHtml(label) {
+            const R = 110;
+            const slots = ORBIT_LEAGUES.map((lg, i) => {
+                const a = i * (Math.PI / 4); // 45deg increments
+                const x = Math.round(R * Math.sin(a));
+                const y = Math.round(-R * Math.cos(a));
+                return `<div class="orbit-pos" style="transform: translate(${x}px, ${y}px);">
+                    <div class="orbit-logo"><img src="${LEAGUE_LOGOS[lg]}" alt="${lg}"></div>
+                </div>`;
+            }).join('');
+            return `<div class="orbit-loader">
+                <div class="orbit-ring">${slots}</div>
+                <div class="orbit-center">${label || 'Loading scores...'}</div>
+            </div>`;
+        }
+
         // Fetch and display scores and schedules
-        async function loadScoresAndSchedules() {
+        async function loadScoresAndSchedules(opts) {
+            opts = opts || {};
             const container = document.getElementById('scores-schedules-container');
             const leagueSelect = document.getElementById('league-select');
             const timezoneSelect = document.getElementById('timezone-select');
             const datePicker = document.getElementById('date-picker');
+
+            if (opts.showLoading !== false) {
+                container.innerHTML = orbitalLoaderHtml();
+            }
 
             const league = leagueSelect.value;
             const timezone = timezoneSelect.value;
@@ -1500,7 +1533,7 @@
                 if (document.hidden) return;
                 const todayStr = new Date().toISOString().slice(0, 10);
                 if (datePickerEl.value && datePickerEl.value !== todayStr) return;
-                loadScoresAndSchedules();
+                loadScoresAndSchedules({ showLoading: false });
             }, 60000);
         });
     </script>
@@ -1513,6 +1546,67 @@
             margin: 0 auto;
             max-width: 99%;
             width: 99%;
+        }
+
+        /* Orbital league-logo loading spinner */
+        .orbit-loader {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 30px auto;
+        }
+        .orbit-ring {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            animation: orbit-rotate 9s linear infinite;
+        }
+        .orbit-pos {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+        }
+        .orbit-logo {
+            width: 56px;
+            height: 56px;
+            transform: translate(-50%, -50%);
+            animation: orbit-counter 9s linear infinite;
+        }
+        .orbit-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+        }
+        .orbit-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+            z-index: 1;
+        }
+        @keyframes orbit-rotate {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        @keyframes orbit-counter {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to   { transform: translate(-50%, -50%) rotate(-360deg); }
+        }
+        @media (max-width: 480px) {
+            .orbit-loader { width: 220px; height: 220px; }
+            .orbit-logo   { width: 40px; height: 40px; }
         }
         #scores-schedules-container .table-responsive-scores {
             overflow-x: auto;
