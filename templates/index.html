@@ -29,18 +29,28 @@
                 </div>
                 <div class="d-flex justify-content-center gap-3 mb-3 flex-wrap">
                     <div class="mb-2">
-                        <label for="league-select" class="form-label text-white fw-bold">League:</label>
-                        <select id="league-select" class="form-select" style="min-width: 120px;">
-                            <option value="all" selected>All Leagues</option>
-                            <option value="mlb">MLB</option>
-                            <option value="nba">NBA</option>
-                            <option value="nfl">NFL</option>
-                            <option value="nhl">NHL</option>
-                            <option value="mls">MLS</option>
-                            <option value="wnba">WNBA</option>
-                            <option value="ipl">IPL</option>
-                            <option value="mlc">MLC</option>
-                        </select>
+                        <label class="form-label text-white fw-bold">Leagues:</label>
+                        <div class="dropdown">
+                            <button id="leagues-btn" class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" style="min-width: 180px;">
+                                All 8 leagues
+                            </button>
+                            <div id="leagues-menu" class="dropdown-menu p-3" style="min-width: 220px;">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="leagues-select-all">Select all</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="leagues-clear">Clear</button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="ipl"  id="lg-ipl"  checked><label class="form-check-label" for="lg-ipl">IPL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlb"  id="lg-mlb"  checked><label class="form-check-label" for="lg-mlb">MLB</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlc"  id="lg-mlc"  checked><label class="form-check-label" for="lg-mlc">MLC</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mls"  id="lg-mls"  checked><label class="form-check-label" for="lg-mls">MLS</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nba"  id="lg-nba"  checked><label class="form-check-label" for="lg-nba">NBA</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nfl"  id="lg-nfl"  checked><label class="form-check-label" for="lg-nfl">NFL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nhl"  id="lg-nhl"  checked><label class="form-check-label" for="lg-nhl">NHL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="wnba" id="lg-wnba" checked><label class="form-check-label" for="lg-wnba">WNBA</label></div></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label for="date-picker" class="form-label text-white fw-bold">Date:</label>
@@ -191,6 +201,86 @@
         // Team colors from database (passed from server) - includes NBA and NHL
         const allTeamColors = {{ team_colors | tojson | safe }};
 
+        const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC'];
+        // Canonical render order on the homepage (alphabetical, matches header dropdown).
+        const RENDER_ORDER = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
+
+        function getActiveLeagues() {
+            const set = new Set();
+            document.querySelectorAll('.league-checkbox:checked').forEach(cb => set.add(cb.value));
+            return set;
+        }
+        function updateLeaguesButtonLabel() {
+            const btn = document.getElementById('leagues-btn');
+            if (!btn) return;
+            const active = getActiveLeagues();
+            const total = document.querySelectorAll('.league-checkbox').length;
+            if (active.size === total) btn.textContent = `All ${total} leagues`;
+            else if (active.size === 0)  btn.textContent = `No leagues`;
+            else if (active.size === 1) {
+                const lg = [...active][0].toUpperCase();
+                btn.textContent = `${lg} only`;
+            } else btn.textContent = `${active.size} of ${total} leagues`;
+        }
+
+        // Season-info cache: { league: { year, season_types: [{name,start_date,end_date}] } }
+        const seasonInfoCache = {};
+        async function ensureSeasonInfo() {
+            const missing = ORBIT_LEAGUES.filter(lg => !(lg.toLowerCase() in seasonInfoCache));
+            if (!missing.length) return;
+            const results = await Promise.all(missing.map(lg =>
+                fetch(`/api/season-info/${lg}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+            ));
+            missing.forEach((lg, i) => { seasonInfoCache[lg.toLowerCase()] = results[i] || {}; });
+        }
+        function phaseForDate(seasonInfo, date) {
+            for (const t of (seasonInfo.season_types || [])) {
+                if (t.start_date && t.end_date && date >= t.start_date && date <= t.end_date) return t.name;
+            }
+            return 'Off Season';
+        }
+        function nextRegularSeasonStart(seasonInfo, fromDate) {
+            const upcoming = (seasonInfo.season_types || [])
+                .filter(t => t.name === 'Regular Season' && t.start_date && t.start_date > fromDate)
+                .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+            return upcoming ? upcoming.start_date : null;
+        }
+        function fmtPrettyDate(yyyymmdd) {
+            if (!yyyymmdd) return '';
+            const d = new Date(yyyymmdd + 'T12:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        function isMlsWorldCupBreak(date) {
+            return date >= '2026-05-25' && date <= '2026-07-15';
+        }
+        function emptyBannerMessage(leagueLower, pickedDate, isToday) {
+            // Special-case: MLS during FIFA World Cup window — even if season-info says in-season.
+            if (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate)) {
+                return 'On break for FIFA World Cup — resumes Jul 16';
+            }
+            const info = seasonInfoCache[leagueLower];
+            const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
+            if (phase === 'Off Season') {
+                const next = nextRegularSeasonStart(info, pickedDate);
+                return next ? `Offseason — Regular season starts ${fmtPrettyDate(next)}` : 'Offseason';
+            }
+            if (isToday) return 'No games scheduled tonight';
+            return `No games on ${fmtPrettyDate(pickedDate)}`;
+        }
+        function emptyBannerHtml(leagueLower, pickedDate, isToday) {
+            const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
+            const upper = leagueLower.toUpperCase();
+            const logo = LEAGUE_LOGOS[upper] || '';
+            return `
+                <div class="league-empty-banner league-empty-${leagueLower}">
+                    ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${upper}" onerror="this.style.display='none';">` : ''}
+                    <div class="league-empty-text">
+                        <div class="league-empty-title">${upper}</div>
+                        <div class="league-empty-message">${message}</div>
+                    </div>
+                </div>`;
+        }
+
         // League logo URLs for the orbital loading spinner
         const LEAGUE_LOGOS = {
             MLB:  "{{ 'MLB'  | get_league_logo }}",
@@ -202,7 +292,6 @@
             IPL:  "{{ 'IPL'  | get_league_logo }}",
             MLC:  "{{ 'MLC'  | get_league_logo }}"
         };
-        const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC'];
         function orbitalLoaderHtml(label) {
             const R = 110;
             const slots = ORBIT_LEAGUES.map((lg, i) => {
@@ -223,7 +312,6 @@
         async function loadScoresAndSchedules(opts) {
             opts = opts || {};
             const container = document.getElementById('scores-schedules-container');
-            const leagueSelect = document.getElementById('league-select');
             const timezoneSelect = document.getElementById('timezone-select');
             const datePicker = document.getElementById('date-picker');
 
@@ -231,7 +319,15 @@
                 container.innerHTML = orbitalLoaderHtml();
             }
 
-            const league = leagueSelect.value;
+            const activeLeagues = getActiveLeagues();
+            updateLeaguesButtonLabel();
+            if (activeLeagues.size === 0) {
+                container.innerHTML = '<div class="alert alert-warning text-center mb-0">Pick at least one league.</div>';
+                return;
+            }
+            // size 1 -> that league (uses single-league fetch path);
+            // otherwise 'all' (uses /api/proxy/all-scores and filters at render).
+            const league = activeLeagues.size === 1 ? [...activeLeagues][0] : 'all';
             const timezone = timezoneSelect.value;
             const leagueUpper = league.toUpperCase();
 
@@ -242,27 +338,8 @@
             const isToday = pickedDate === todayStr;
             const apiDate = isToday ? 'today' : pickedDate;
 
-            // MLS pauses for the FIFA World Cup; show a banner where its scores would be
-            function isMlsWorldCupBreak() {
-                return pickedDate >= '2026-05-25' && pickedDate <= '2026-07-15';
-            }
-            function mlsWcBreakAlert() {
-                return `
-                    <div class="alert alert-info text-center" role="alert">
-                        <i class="fas fa-futbol me-2"></i>
-                        <strong>MLS is on break for the FIFA World Cup.</strong>
-                        No matches May 25 &ndash; July 15, 2026. Regular season resumes July 16.
-                    </div>`;
-            }
-            function mlsBreakHeaderHtml() {
-                return `
-                    <div class="league-header mb-2" style="padding: 0.5rem 0;">
-                        <div class="d-flex align-items-center justify-content-center">
-                            <img src="https://www.splitsp.lat/logos/mls/mls_logo.png" alt="MLS" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
-                            <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">MLS</span>
-                        </div>
-                    </div>`;
-            }
+            // Kick off season-info fetch in parallel; banner rendering needs it.
+            const seasonInfoReady = ensureSeasonInfo();
 
             try {
                 // Call API via proxy - proxy will handle CORS via Flask-CORS
@@ -1310,19 +1387,8 @@
                 });
                 
                 if (games.length === 0) {
-                    if (league === 'mls' && isMlsWorldCupBreak()) {
-                        container.innerHTML = mlsBreakHeaderHtml() + mlsWcBreakAlert();
-                        return;
-                    }
-                    container.innerHTML = `
-                        <div class="text-center">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                No games scheduled for ${isToday ? 'today' : pickedDate}.
-                            </div>
-                        </div>
-                    `;
-                    return;
+                    // Fall through to the per-league render so every active league still
+                    // gets a banner; gamesByLeague will be empty so each emits an empty banner.
                 }
                 
                 // Group games by league if "all" is selected
@@ -1380,110 +1446,67 @@
                 
                 // Render games in table format with team colors
                 let html = '';
-                
-                if (league === 'all') {
-                    // Render grouped by league
-                    const leagueOrder = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
-                    // During the World Cup break MLS has no games; still show its banner in place
-                    if (isMlsWorldCupBreak() && !gamesByLeague['MLS']) {
-                        gamesByLeague['MLS'] = [];
-                    }
-                    Object.keys(gamesByLeague).sort((a, b) => {
-                        const aIdx = leagueOrder.indexOf(a.toUpperCase());
-                        const bIdx = leagueOrder.indexOf(b.toUpperCase());
-                        if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
-                        if (aIdx === -1) return 1;
-                        if (bIdx === -1) return -1;
-                        return aIdx - bIdx;
-                    }).forEach(leagueName => {
-                        const leagueGames = gamesByLeague[leagueName];
-                        const leagueUpper = leagueName.toUpperCase();
-                        const leagueLogo = `https://www.splitsp.lat/logos/${leagueName.toLowerCase()}/${leagueName.toLowerCase()}_logo.png`;
 
-                        if (leagueUpper === 'MLS' && leagueGames.length === 0 && isMlsWorldCupBreak()) {
-                            html += `
-                                <div class="league-section mb-4">
-                                    ${mlsBreakHeaderHtml()}
-                                    ${mlsWcBreakAlert()}
-                                </div>`;
-                            return;
-                        }
+                // Wait for season-info so we can show offseason banners with accurate dates.
+                await seasonInfoReady;
 
-                        html += `
-                            <div class="league-section mb-4">
-                                <div class="league-header mb-2" style="padding: 0.5rem 0;">
-                                    <div class="d-flex align-items-center justify-content-center">
-                                        ${leagueLogo ? `<img src="${leagueLogo}" alt="${leagueUpper}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">` : ''}
-                                        <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
-                                    </div>
-                                </div>
-                                <div class="table-responsive-scores">
-                                    <table class="table table-hover align-middle mb-0 scores-table" style="table-layout: auto; width: 100%;">
-                                        <thead>
-                                            <tr>
-                                                <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Visitor</th>
-                                                <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Score</th>
-                                                <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Home</th>
-                                                <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                        `;
-                        
-                        // Render games for this league
-                        leagueGames.forEach(game => {
-                            // Ensure game has league set
-                            const gameLeague = (game.league || game.sport || leagueUpper).toUpperCase();
-                            if (!game.league) game.league = gameLeague.toLowerCase();
-                            if (!game.sport) game.sport = gameLeague.toLowerCase();
-                            
-                            // For "all" view, we need to get team colors specific to this league
-                            // since teamColors is merged from all leagues
-                            // The merged teamColors should already have all teams, so we can use it as-is
-                            html += renderGameRow(game, teamColors, gameLeague);
-                        });
-                        
-                        html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        `;
-                    });
-                } else {
-                    // Render single league
-                    const leagueLogo = `https://www.splitsp.lat/logos/${league}/${league}_logo.png`;
-                    html = `
-                        <div class="league-header mb-2" style="padding: 0.5rem 0;">
-                            <div class="d-flex align-items-center justify-content-center">
-                                <img src="${leagueLogo}" alt="${leagueUpper}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
-                                <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueUpper}</span>
-                            </div>
-                        </div>
-                        <div class="table-responsive-scores">
-                            <table class="table table-hover align-middle mb-0 scores-table" style="table-layout: auto; width: 100%;">
-                                <thead>
-                                    <tr>
-                                        <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Visitor</th>
-                                        <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Score</th>
-                                        <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Home</th>
-                                        <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    games.forEach(game => {
-                        html += renderGameRow(game, teamColors, leagueUpper);
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+                // Single render path: walk the canonical league order, render games or
+                // an empty-state banner depending on what we got back. Filter by activeLeagues.
+                // (When league mode === 'all', gamesByLeague is keyed by .league per game;
+                // when single-league fetch, we slot the games under that one league key.)
+                if (league !== 'all' && !gamesByLeague[leagueUpper]) {
+                    gamesByLeague[leagueUpper] = games;
                 }
-                
+
+                RENDER_ORDER.forEach(leagueName => {
+                    const lower = leagueName.toLowerCase();
+                    if (!activeLeagues.has(lower)) return;
+                    const leagueGames = gamesByLeague[leagueName] || [];
+                    const leagueLogo = `https://www.splitsp.lat/logos/${lower}/${lower}_logo.png`;
+
+                    // MLS during World Cup window is handled inside emptyBannerMessage()
+                    // — it picks the right copy. We just need to detect "no games for this league".
+                    if (leagueGames.length === 0) {
+                        html += emptyBannerHtml(lower, pickedDate, isToday);
+                        return;
+                    }
+
+                    html += `
+                        <div class="league-section mb-4">
+                            <div class="league-header mb-2" style="padding: 0.5rem 0;">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <img src="${leagueLogo}" alt="${leagueName}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
+                                    <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueName}</span>
+                                </div>
+                            </div>
+                            <div class="table-responsive-scores">
+                                <table class="table table-hover align-middle mb-0 scores-table" style="table-layout: auto; width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Visitor</th>
+                                            <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Score</th>
+                                            <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Home</th>
+                                            <th style="text-align: center; white-space: nowrap; padding: 12px 8px;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    leagueGames.forEach(game => {
+                        const gameLeague = (game.league || game.sport || leagueName).toUpperCase();
+                        if (!game.league) game.league = gameLeague.toLowerCase();
+                        if (!game.sport)  game.sport  = gameLeague.toLowerCase();
+                        html += renderGameRow(game, teamColors, gameLeague);
+                    });
+
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                });
+
                 container.innerHTML = html;
                 
             } catch (error) {
@@ -1522,10 +1545,27 @@
                 fp.setDate('today', true); // true triggers onChange
             });
 
+            // Multi-select league checkboxes + Select all / Clear
+            updateLeaguesButtonLabel();
+            document.querySelectorAll('.league-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    updateLeaguesButtonLabel();
+                    loadScoresAndSchedules();
+                });
+            });
+            document.getElementById('leagues-select-all').addEventListener('click', () => {
+                document.querySelectorAll('.league-checkbox').forEach(cb => { cb.checked = true; });
+                updateLeaguesButtonLabel();
+                loadScoresAndSchedules();
+            });
+            document.getElementById('leagues-clear').addEventListener('click', () => {
+                document.querySelectorAll('.league-checkbox').forEach(cb => { cb.checked = false; });
+                updateLeaguesButtonLabel();
+                loadScoresAndSchedules();
+            });
+
             loadScoresAndSchedules();
 
-            // Reload when league or timezone changes
-            document.getElementById('league-select').addEventListener('change', loadScoresAndSchedules);
             document.getElementById('timezone-select').addEventListener('change', loadScoresAndSchedules);
 
             // Auto-refresh every 60 seconds if page is visible AND viewing today
@@ -1547,6 +1587,50 @@
             max-width: 99%;
             width: 99%;
         }
+
+        /* Per-league empty-state banner (no games / offseason) */
+        .league-empty-banner {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 16px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-left: 4px solid #888;
+            border-radius: 8px;
+            color: #fff;
+        }
+        .league-empty-logo {
+            height: 32px;
+            width: 32px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 6px;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+        .league-empty-text { line-height: 1.25; }
+        .league-empty-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.95);
+            text-transform: uppercase;
+        }
+        .league-empty-message {
+            font-size: 0.92rem;
+            color: rgba(255, 255, 255, 0.78);
+            margin-top: 2px;
+        }
+        .league-empty-mlb  { border-left-color: #0E4C92; }
+        .league-empty-nba  { border-left-color: #7028E4; }
+        .league-empty-nfl  { border-left-color: #B3001B; }
+        .league-empty-nhl  { border-left-color: #BFC9CA; }
+        .league-empty-mls  { border-left-color: #2BAE66; }
+        .league-empty-wnba { border-left-color: #FF6F00; }
+        .league-empty-ipl  { border-left-color: #FF6B35; }
+        .league-empty-mlc  { border-left-color: #1A5276; }
 
         /* Orbital league-logo loading spinner */
         .orbit-loader {
