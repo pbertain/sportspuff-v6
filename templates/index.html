@@ -268,16 +268,19 @@
             return `No games on ${fmtPrettyDate(pickedDate)}`;
         }
         function emptyBannerHtml(leagueLower, pickedDate, isToday) {
+            const isWcBreak = (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate));
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
             const upper = leagueLower.toUpperCase();
             const logo = LEAGUE_LOGOS[upper] || '';
+            const extraClass = isWcBreak ? 'league-empty-highlight' : '';
+            const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';
             return `
-                <div class="league-empty-banner league-empty-${leagueLower}">
+                <div class="league-empty-banner league-empty-${leagueLower} ${extraClass}">
                     ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${upper}" onerror="this.style.display='none';">` : ''}
-                    <div class="league-empty-text">
-                        <div class="league-empty-title">${upper}</div>
-                        <div class="league-empty-message">${message}</div>
-                    </div>
+                    <div class="league-empty-name">${upper}</div>
+                    <div class="league-empty-sep">&middot;</div>
+                    ${icon}
+                    <div class="league-empty-message">${message}</div>
                 </div>`;
         }
 
@@ -1592,7 +1595,7 @@
         .league-empty-banner {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             padding: 10px 16px;
             margin-bottom: 8px;
             background: rgba(255, 255, 255, 0.08);
@@ -1600,28 +1603,37 @@
             border-left: 4px solid #888;
             border-radius: 8px;
             color: #fff;
+            flex-wrap: wrap;
         }
         .league-empty-logo {
-            height: 32px;
-            width: 32px;
+            height: 36px;
+            width: 36px;
             object-fit: contain;
             background: rgba(255, 255, 255, 0.92);
             border-radius: 6px;
             padding: 3px;
             flex-shrink: 0;
         }
-        .league-empty-text { line-height: 1.25; }
-        .league-empty-title {
+        .league-empty-name {
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 1.25rem;
             letter-spacing: 0.5px;
-            color: rgba(255, 255, 255, 0.95);
+            color: rgba(255, 255, 255, 0.97);
             text-transform: uppercase;
         }
+        .league-empty-sep {
+            color: rgba(255, 255, 255, 0.35);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 0 2px;
+        }
         .league-empty-message {
-            font-size: 0.92rem;
-            color: rgba(255, 255, 255, 0.78);
-            margin-top: 2px;
+            font-size: 0.98rem;
+            color: rgba(255, 255, 255, 0.82);
+        }
+        .league-empty-icon {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1rem;
         }
         .league-empty-mlb  { border-left-color: #0E4C92; }
         .league-empty-nba  { border-left-color: #7028E4; }
@@ -1631,6 +1643,19 @@
         .league-empty-wnba { border-left-color: #FF6F00; }
         .league-empty-ipl  { border-left-color: #FF6B35; }
         .league-empty-mlc  { border-left-color: #1A5276; }
+        /* MLS FIFA World Cup break: prominent light-blue alert-style highlight.
+           Keep these AFTER the per-league rules so the highlight border wins. */
+        .league-empty-highlight {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-left: 4px solid #0c5460;
+            color: #0c5460;
+        }
+        .league-empty-highlight .league-empty-name { color: #0c5460; }
+        .league-empty-highlight .league-empty-message { color: #0c5460; opacity: 0.92; font-weight: 500; }
+        .league-empty-highlight .league-empty-sep { color: rgba(12, 84, 96, 0.4); }
+        .league-empty-highlight .league-empty-icon { color: #0c5460; }
+        .league-empty-highlight .league-empty-logo { background: #fff; }
 
         /* Orbital league-logo loading spinner */
         .orbit-loader {
