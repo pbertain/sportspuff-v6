@@ -4,7 +4,7 @@ Sportspuff-v6 Web Application
 Flask-based CRUD interface for managing teams and stadiums
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, Response
 from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -1266,14 +1266,312 @@ def api_stadiums():
         """)
         
         stadiums = cursor.fetchall()
-        
+
         cursor.close()
         conn.close()
-        
+
         return jsonify([dict(stadium) for stadium in stadiums])
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# --- /api/v1/ — versioned, envelope-shaped local data endpoints ---------------
+def _clamp_limit(raw, default=200, hard_max=500):
+    try:
+        n = int(raw) if raw is not None else default
+    except (TypeError, ValueError):
+        n = default
+    return max(1, min(n, hard_max))
+
+def _clamp_offset(raw):
+    try:
+        n = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        n = 0
+    return max(0, n)
+
+
+@app.route('/api/v1/teams')
+def api_v1_teams():
+    """Versioned teams endpoint with envelope + filters.
+
+    Query params: league, linked (true/false), search, limit, offset.
+    """
+    league = request.args.get('league', '').strip()
+    linked = request.args.get('linked', '').strip().lower()
+    search = request.args.get('search', '').strip()
+    limit = _clamp_limit(request.args.get('limit'))
+    offset = _clamp_offset(request.args.get('offset'))
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        wheres, params = [], []
+        if league:
+            wheres.append("LOWER(l.league_name_proper) = LOWER(%s)")
+            params.append(league)
+        if linked == 'true':
+            wheres.append("t.stadium_id IS NOT NULL")
+        elif linked == 'false':
+            wheres.append("t.stadium_id IS NULL")
+        if search:
+            wheres.append("(t.real_team_name ILIKE %s OR t.city_name ILIKE %s)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+
+        cursor.execute(f"""
+            SELECT COUNT(*) AS total
+            FROM teams t
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            {where_clause}
+        """, params)
+        total = cursor.fetchone()['total']
+
+        cursor.execute(f"""
+            SELECT t.team_id, t.real_team_name, t.team_abbreviation,
+                   l.league_name_proper AS league,
+                   t.city_name, t.state_name, t.country,
+                   t.team_wins, t.team_losses, t.team_ties,
+                   t.stadium_id, s.full_stadium_name AS stadium_name,
+                   s.city_name AS stadium_city, s.state_name AS stadium_state
+            FROM teams t
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            {where_clause}
+            ORDER BY l.league_name_proper, t.real_team_name
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+        rows = [dict(r) for r in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+        return jsonify({
+            'count': len(rows),
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'filters': {'league': league or None, 'linked': linked or None, 'search': search or None},
+            'teams': rows,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v1/stadiums')
+def api_v1_stadiums():
+    """Versioned stadiums endpoint with envelope + filters.
+
+    Query params: city, has_teams (true/false), search, limit, offset.
+    """
+    city = request.args.get('city', '').strip()
+    has_teams = request.args.get('has_teams', '').strip().lower()
+    search = request.args.get('search', '').strip()
+    limit = _clamp_limit(request.args.get('limit'))
+    offset = _clamp_offset(request.args.get('offset'))
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        wheres, params = [], []
+        if city:
+            wheres.append("s.city_name ILIKE %s")
+            params.append(f'%{city}%')
+        if search:
+            wheres.append("(s.full_stadium_name ILIKE %s OR s.city_name ILIKE %s)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+
+        having_clause = ""
+        if has_teams == 'true':
+            having_clause = "HAVING COUNT(t.team_id) > 0"
+        elif has_teams == 'false':
+            having_clause = "HAVING COUNT(t.team_id) = 0"
+
+        cursor.execute(f"""
+            SELECT COUNT(*) AS total FROM (
+                SELECT s.stadium_id
+                FROM stadiums s
+                LEFT JOIN teams t ON s.stadium_id = t.stadium_id
+                {where_clause}
+                GROUP BY s.stadium_id
+                {having_clause}
+            ) sub
+        """, params)
+        total = cursor.fetchone()['total']
+
+        cursor.execute(f"""
+            SELECT s.stadium_id, s.full_stadium_name, s.city_name, s.state_name, s.country,
+                   COUNT(t.team_id) AS team_count
+            FROM stadiums s
+            LEFT JOIN teams t ON s.stadium_id = t.stadium_id
+            {where_clause}
+            GROUP BY s.stadium_id
+            {having_clause}
+            ORDER BY s.full_stadium_name
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+        rows = [dict(r) for r in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+        return jsonify({
+            'count': len(rows),
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'filters': {'city': city or None, 'has_teams': has_teams or None, 'search': search or None},
+            'stadiums': rows,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# --- /curl/v1/ — terminal-friendly text variants of the v1 endpoints ----------
+def _truncate(s, n):
+    s = (s or '')
+    return s if len(s) <= n else s[:n - 1] + '…'
+
+def _text_response(body):
+    return Response(body, mimetype='text/plain; charset=utf-8')
+
+
+@app.route('/api')
+def api_docs():
+    """Docs page listing v6-owned API endpoints."""
+    return render_template('api_docs.html')
+
+
+@app.route('/curl/v1/teams')
+def curl_v1_teams():
+    """Plain-text columnar listing of teams. Same filters as /api/v1/teams."""
+    league = request.args.get('league', '').strip()
+    linked = request.args.get('linked', '').strip().lower()
+    search = request.args.get('search', '').strip()
+    limit = _clamp_limit(request.args.get('limit'))
+    offset = _clamp_offset(request.args.get('offset'))
+
+    conn = get_db_connection()
+    if not conn:
+        return _text_response('error: database connection failed\n'), 500
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        wheres, params = [], []
+        if league:
+            wheres.append("LOWER(l.league_name_proper) = LOWER(%s)")
+            params.append(league)
+        if linked == 'true':
+            wheres.append("t.stadium_id IS NOT NULL")
+        elif linked == 'false':
+            wheres.append("t.stadium_id IS NULL")
+        if search:
+            wheres.append("(t.real_team_name ILIKE %s OR t.city_name ILIKE %s)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+
+        cursor.execute(f"""
+            SELECT l.league_name_proper AS league,
+                   t.team_abbreviation AS abbr,
+                   t.real_team_name AS team,
+                   t.city_name AS city,
+                   COALESCE(s.full_stadium_name, '-') AS stadium
+            FROM teams t
+            LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+            LEFT JOIN leagues l ON t.league_id = l.league_id
+            {where_clause}
+            ORDER BY l.league_name_proper, t.real_team_name
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        out = ['{:<6} {:<6} {:<32} {:<22} {}'.format('LEAGUE', 'ABBR', 'TEAM', 'CITY', 'STADIUM')]
+        out.append('-' * 100)
+        for r in rows:
+            out.append('{:<6} {:<6} {:<32} {:<22} {}'.format(
+                _truncate(r['league'], 6),
+                _truncate(r['abbr'] or '-', 6),
+                _truncate(r['team'], 32),
+                _truncate(r['city'] or '-', 22),
+                _truncate(r['stadium'], 40),
+            ))
+        out.append('')
+        out.append(f'{len(rows)} teams (limit={limit}, offset={offset})')
+        return _text_response('\n'.join(out) + '\n')
+    except Exception as e:
+        return _text_response(f'error: {e}\n'), 500
+
+
+@app.route('/curl/v1/stadiums')
+def curl_v1_stadiums():
+    """Plain-text columnar listing of stadiums. Same filters as /api/v1/stadiums."""
+    city = request.args.get('city', '').strip()
+    has_teams = request.args.get('has_teams', '').strip().lower()
+    search = request.args.get('search', '').strip()
+    limit = _clamp_limit(request.args.get('limit'))
+    offset = _clamp_offset(request.args.get('offset'))
+
+    conn = get_db_connection()
+    if not conn:
+        return _text_response('error: database connection failed\n'), 500
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        wheres, params = [], []
+        if city:
+            wheres.append("s.city_name ILIKE %s")
+            params.append(f'%{city}%')
+        if search:
+            wheres.append("(s.full_stadium_name ILIKE %s OR s.city_name ILIKE %s)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+
+        having_clause = ""
+        if has_teams == 'true':
+            having_clause = "HAVING COUNT(t.team_id) > 0"
+        elif has_teams == 'false':
+            having_clause = "HAVING COUNT(t.team_id) = 0"
+
+        cursor.execute(f"""
+            SELECT s.stadium_id AS id, s.full_stadium_name AS stadium,
+                   s.city_name AS city, s.state_name AS state,
+                   COUNT(t.team_id) AS teams
+            FROM stadiums s
+            LEFT JOIN teams t ON s.stadium_id = t.stadium_id
+            {where_clause}
+            GROUP BY s.stadium_id
+            {having_clause}
+            ORDER BY s.full_stadium_name
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        out = ['{:<5} {:<40} {:<22} {:<6} {}'.format('ID', 'STADIUM', 'CITY', 'STATE', 'TEAMS')]
+        out.append('-' * 88)
+        for r in rows:
+            out.append('{:<5} {:<40} {:<22} {:<6} {}'.format(
+                r['id'],
+                _truncate(r['stadium'], 40),
+                _truncate(r['city'] or '-', 22),
+                _truncate((r['state'] or '-').upper(), 6),
+                r['teams'],
+            ))
+        out.append('')
+        out.append(f'{len(rows)} stadiums (limit={limit}, offset={offset})')
+        return _text_response('\n'.join(out) + '\n')
+    except Exception as e:
+        return _text_response(f'error: {e}\n'), 500
+
 
 @app.route('/stadiums/<path:filename>')
 def serve_stadium_image(filename):

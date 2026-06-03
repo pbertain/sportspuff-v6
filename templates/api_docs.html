@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Docs - Sportspuff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <style>
+        .docs-card {
+            background: linear-gradient(135deg, #E8DFF7 0%, #D4C4ED 100%);
+            border: 2px solid #9B7EDC;
+            border-radius: 16px;
+            color: var(--deep-purple);
+            margin-bottom: 1.5rem;
+        }
+        .docs-card .card-header {
+            background: rgba(112, 40, 228, 0.15);
+            border-bottom: 2px solid rgba(112, 40, 228, 0.35);
+            border-radius: 14px 14px 0 0;
+            color: var(--deep-purple);
+            font-weight: 700;
+        }
+        .docs-card .card-header h3 { color: var(--deep-purple); margin: 0; font-weight: 700; }
+        .docs-endpoint {
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(112, 40, 228, 0.25);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .docs-method {
+            display: inline-block;
+            background: #2BAE66;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        .docs-path {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 600;
+            color: #2D1B69;
+            font-size: 1.02rem;
+        }
+        .docs-path a { color: #4A1A9C; text-decoration: none; }
+        .docs-path a:hover { text-decoration: underline; }
+        .docs-desc { color: #5A4A7C; margin: 0.4rem 0 0.6rem 0; }
+        .docs-params {
+            margin: 0.25rem 0 0 0;
+            padding: 0;
+            list-style: none;
+            font-size: 0.92rem;
+        }
+        .docs-params li { margin: 0.15rem 0; color: #4A3B7C; }
+        .docs-params code {
+            background: rgba(112, 40, 228, 0.12);
+            color: #4A1A9C;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .docs-example {
+            display: block;
+            margin-top: 0.5rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.85rem;
+            color: #2D1B69;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(112, 40, 228, 0.2);
+            word-break: break-all;
+        }
+        .docs-example a { color: #4A1A9C; text-decoration: none; }
+        .docs-example a:hover { text-decoration: underline; }
+        .docs-section-note {
+            color: #5A4A7C;
+            margin-bottom: 1rem;
+        }
+        .legacy-note {
+            font-size: 0.85rem;
+            color: #8B7CA8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    {% include 'shared_header.html' %}
+
+    <div class="container my-4">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="display-5 mb-2"><i class="fas fa-code me-3"></i>API Endpoints</h1>
+                <p class="lead text-muted mb-0">Local data served by sportspuff-v6 (teams, stadiums, etc.).</p>
+                <p class="text-muted small">For live game data (scores, schedules, standings) call <code>sportspuff-api</code> directly.</p>
+            </div>
+        </div>
+
+        <!-- /api/v1/ JSON endpoints -->
+        <div class="card docs-card">
+            <div class="card-header"><h3><i class="fas fa-brackets-curly me-2"></i>JSON  &nbsp;&middot;&nbsp; <code style="color: var(--deep-purple);">/api/v1/</code></h3></div>
+            <div class="card-body">
+                <p class="docs-section-note">Versioned, envelope-shaped JSON. All responses include <code>count</code>, <code>total</code>, <code>limit</code>, <code>offset</code>, and a <code>filters</code> echo.</p>
+
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/api/v1/teams</span></div>
+                    <p class="docs-desc">All teams with their league, city, abbreviation, win/loss record, and linked stadium.</p>
+                    <ul class="docs-params">
+                        <li><code>league=mlb</code> — filter by league (case-insensitive)</li>
+                        <li><code>linked=true|false</code> — only teams with / without a stadium</li>
+                        <li><code>search=yankee</code> — match team name or city</li>
+                        <li><code>limit=N</code> (max 500, default 200), <code>offset=N</code></li>
+                    </ul>
+                    <div class="docs-example"><a href="/api/v1/teams?league=mlb&limit=5">/api/v1/teams?league=mlb&amp;limit=5</a></div>
+                </div>
+
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/api/v1/stadiums</span></div>
+                    <p class="docs-desc">All stadiums with city/state/country and the count of teams that play there.</p>
+                    <ul class="docs-params">
+                        <li><code>city=chicago</code> — substring match on city</li>
+                        <li><code>has_teams=true|false</code> — only stadiums with / without linked teams</li>
+                        <li><code>search=...</code> — match stadium name or city</li>
+                        <li><code>limit=N</code>, <code>offset=N</code></li>
+                    </ul>
+                    <div class="docs-example"><a href="/api/v1/stadiums?has_teams=true&limit=5">/api/v1/stadiums?has_teams=true&amp;limit=5</a></div>
+                </div>
+
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/api/status-check</span></div>
+                    <p class="docs-desc">Proxies <code>sportspuff-api /api/v1/status</code>; returns upstream health + per-endpoint freshness. Renders at <a href="{{ url_for('api_status') }}">/api-status</a>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- /curl/v1/ text endpoints -->
+        <div class="card docs-card">
+            <div class="card-header"><h3><i class="fas fa-terminal me-2"></i>Terminal &nbsp;&middot;&nbsp; <code style="color: var(--deep-purple);">/curl/v1/</code></h3></div>
+            <div class="card-body">
+                <p class="docs-section-note">Plain-text columnar output, intended for <code>curl</code> from a shell. Same query params as the JSON variants above.</p>
+
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/curl/v1/teams</span></div>
+                    <p class="docs-desc">Aligned columns: <code>LEAGUE  ABBR  TEAM  CITY  STADIUM</code></p>
+                    <div class="docs-example">$ curl '<a href="/curl/v1/teams?league=nfl">{{ request.host_url.rstrip('/') }}/curl/v1/teams?league=nfl</a>'</div>
+                </div>
+
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/curl/v1/stadiums</span></div>
+                    <p class="docs-desc">Aligned columns: <code>ID  STADIUM  CITY  STATE  TEAMS</code></p>
+                    <div class="docs-example">$ curl '<a href="/curl/v1/stadiums?has_teams=false">{{ request.host_url.rstrip('/') }}/curl/v1/stadiums?has_teams=false</a>'</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legacy -->
+        <div class="card docs-card">
+            <div class="card-header"><h3><i class="fas fa-clock-rotate-left me-2"></i>Legacy</h3></div>
+            <div class="card-body">
+                <p class="docs-section-note">Pre-versioned endpoints. Still functional; prefer the <code>/api/v1/</code> equivalents above for new use.</p>
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/api/teams</span></div>
+                    <p class="docs-desc legacy-note">Bare JSON array of teams. No envelope, no filters.</p>
+                </div>
+                <div class="docs-endpoint">
+                    <div><span class="docs-method">GET</span><span class="docs-path">/api/stadiums</span></div>
+                    <p class="docs-desc legacy-note">Bare JSON array of stadiums. No envelope, no filters.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'shared_footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
