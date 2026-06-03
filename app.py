@@ -921,33 +921,39 @@ def teams():
     per_page = 20
     league_filter = request.args.get('league', '')
     search = request.args.get('search', '')
-    
+    linked_filter = request.args.get('linked', '').lower()
+
     conn = get_db_connection()
     if not conn:
         # Return empty teams list when database is not available
-        return render_template('teams.html', 
+        return render_template('teams.html',
                              teams=[],
                              pagination=None,
                              league_filter=league_filter,
                              search=search,
                              logo_mapping=LOGO_MAPPING,
                              db_available=False)
-    
+
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         # Build query with filters
         where_conditions = []
         params = []
-        
+
         if league_filter:
             where_conditions.append("l.league_name_proper = %s")
             params.append(league_filter)
-        
+
         if search:
             where_conditions.append("(t.real_team_name ILIKE %s OR t.city_name ILIKE %s)")
             params.extend([f'%{search}%', f'%{search}%'])
-        
+
+        if linked_filter == 'true':
+            where_conditions.append("t.stadium_id IS NOT NULL")
+        elif linked_filter == 'false':
+            where_conditions.append("t.stadium_id IS NULL")
+
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
         
         # Get total count

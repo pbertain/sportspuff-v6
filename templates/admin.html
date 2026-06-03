@@ -146,10 +146,17 @@
                 <div class="admin-stat-card">
                     <div class="stat-number">{{ linked_count }}</div>
                     <h3>Linked</h3>
-                    <p>Teams with stadiums</p>
-                    <a href="{{ url_for('teams') }}?linked=true" class="btn btn-outline-primary">
-                        <i class="fas fa-link me-2"></i>View Details
-                    </a>
+                    <p>{% if linked_count < team_count %}<strong>{{ team_count - linked_count }}</strong> missing a stadium{% else %}All teams have stadiums{% endif %}</p>
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <a href="{{ url_for('teams') }}?linked=true" class="btn btn-outline-primary">
+                            <i class="fas fa-link me-2"></i>Linked
+                        </a>
+                        {% if linked_count < team_count %}
+                        <a href="{{ url_for('teams') }}?linked=false" class="btn btn-primary">
+                            <i class="fas fa-unlink me-2"></i>Unlinked
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
