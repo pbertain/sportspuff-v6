@@ -17,6 +17,7 @@
       - postgresql-contrib
       - git
       - nginx
+      - acl
     state: present
 
 # Create application directory
