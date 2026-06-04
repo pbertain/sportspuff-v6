@@ -58,36 +58,15 @@
   args:
     creates: "{{ app_dir }}/venv/bin/pip"
 
-# Install requirements in smaller chunks to avoid timeouts
-- name: Install core Flask requirements
+# Install Python requirements from requirements.txt (single source of truth).
+# Long async timeout because pandas wheels can take a while to land on ARM.
+- name: Install requirements.txt
   pip:
-    name:
-      - Flask==2.3.3
-      - Werkzeug==2.3.7
-      - python-dotenv==1.0.0
-    virtualenv: "{{ app_dir }}/venv"
-    virtualenv_command: "{{ app_dir }}/venv/bin/python"
-  async: 300
-  poll: 30
-
-- name: Install database requirements
-  pip:
-    name:
-      - psycopg2-binary==2.9.9
-    virtualenv: "{{ app_dir }}/venv"
-    virtualenv_command: "{{ app_dir }}/venv/bin/python"
-  async: 300
-  poll: 30
-
-- name: Install data processing requirements
-  pip:
-    name:
-      - pandas>=2.0
-      - openpyxl>=3.1
+    requirements: "{{ app_dir }}/requirements.txt"
     virtualenv: "{{ app_dir }}/venv"
     virtualenv_command: "{{ app_dir }}/venv/bin/python"
     extra_args: "--timeout 300 --retries 3 --prefer-binary"
-  async: 1200
+  async: 1800
   poll: 60
 
 # Create environment file
