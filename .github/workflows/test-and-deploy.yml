@@ -59,14 +59,14 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY_DEV }}" > ~/.ssh/nirdclub_id_ed25519
         chmod 600 ~/.ssh/nirdclub_id_ed25519
-        ssh-keyscan -H host74.nird.club >> ~/.ssh/known_hosts
-        echo "Host host74.nird.club" >> ~/.ssh/config
+        ssh-keyscan -H host78.nird.club >> ~/.ssh/known_hosts
+        echo "Host host78.nird.club" >> ~/.ssh/config
         echo "  ServerAliveInterval 60" >> ~/.ssh/config
         echo "  ServerAliveCountMax 10" >> ~/.ssh/config
         echo "  TCPKeepAlive yes" >> ~/.ssh/config
         echo "SSH key created at: ~/.ssh/nirdclub_id_ed25519"
         ls -la ~/.ssh/nirdclub_id_ed25519
-        
+
     - name: Deploy to development
       run: |
         ansible-playbook \

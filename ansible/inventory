@@ -1,6 +1,6 @@
 # Ansible inventory for sportspuff-v6
 [dev]
-host74.nird.club
+host78.nird.club
 
 [prod]
 host74.nird.club
