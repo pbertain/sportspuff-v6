@@ -18,14 +18,14 @@ wnba_api_key: "{{ vault_wnba_api_key | default('') }}"
 
 # Environment-specific settings
 dev:
-  app_dir: "/opt/sportspuff-v6-dev"
+  app_dir: "/opt/dev/sportspuff-v6"
   service_name: "sportspuff-v6-dev"
   port: 34181
   branch: "dev"
   environment: "development"
 
 prod:
-  app_dir: "/opt/sportspuff-v6-prod"
+  app_dir: "/opt/prod/sportspuff-v6"
   service_name: "sportspuff-v6-prod"
   port: 34180
   branch: "main"

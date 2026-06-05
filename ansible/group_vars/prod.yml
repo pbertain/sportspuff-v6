@@ -1,6 +1,6 @@
 # Production environment variables
 env_name: "prod"
-app_dir: "/opt/sportspuff-v6-prod"
+app_dir: "/opt/prod/sportspuff-v6"
 service_name: "sportspuff-v6-prod"
 app_port: 34080
 branch: "main"

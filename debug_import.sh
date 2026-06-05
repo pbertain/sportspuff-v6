@@ -83,5 +83,5 @@ except Exception as e:
 # Try to run the import script with verbose output
 echo ""
 echo "Attempting to run import script..."
-cd /opt/sportspuff-v6-prod
-/opt/sportspuff-v6-prod/venv/bin/python import_data_modular.py
+cd /opt/prod/sportspuff-v6
+/opt/prod/sportspuff-v6/venv/bin/python import_data_modular.py

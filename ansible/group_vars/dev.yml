@@ -1,6 +1,6 @@
 # Development environment variables
 env_name: "dev"
-app_dir: "/opt/sportspuff-v6-dev"
+app_dir: "/opt/dev/sportspuff-v6"
 service_name: "sportspuff-v6-dev"
 app_port: 34081
 branch: "dev"

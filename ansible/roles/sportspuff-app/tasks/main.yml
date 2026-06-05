@@ -121,14 +121,22 @@
     -f {{ app_dir }}/database_schema_modular.sql
   when: teams_table_check.stdout != "1"
 
-# Run database migrations
+# Run database migrations (idempotent — every file uses IF NOT EXISTS guards).
+# migrate_remove_mlc_placeholder.sql is intentionally NOT in this list — it's a
+# one-shot data fix that would fail (its safety check) on a fresh DB where the
+# placeholder never existed.
 - name: Run database migrations
   shell: >
     PGPASSWORD="{{ db_password }}"
     psql -h {{ db_host }} -U {{ db_user }} -d {{ db_name }}
-    -f {{ app_dir }}/migrate_add_team_record_columns.sql
+    -f {{ app_dir }}/{{ item }}
+  loop:
+    - migrate_add_team_record_columns.sql
+    - migrate_add_team_abbreviation.sql
+    - migrate_add_external_team_id.sql
+    - migrate_stadiums_add_columns.sql
   register: migration_result
-  changed_when: "'Added' in migration_result.stderr"
+  changed_when: "'Added' in migration_result.stderr or 'CREATE' in migration_result.stderr"
   failed_when: migration_result.rc != 0
 
 # Import data from CSV files into PostgreSQL
