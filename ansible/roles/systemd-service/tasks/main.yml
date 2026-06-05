@@ -11,8 +11,8 @@
   systemd:
     daemon_reload: yes
 
-- name: Enable and start service
+- name: Enable service and (re)start to pick up code/unit changes
   systemd:
     name: "{{ service_name }}"
     enabled: yes
-    state: started
+    state: restarted
