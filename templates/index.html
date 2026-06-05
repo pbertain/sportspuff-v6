@@ -947,8 +947,10 @@
                     }
                     
                     // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
-                    // During playoffs, show series record instead of regular season records
-                    const isPlayoffGame = game.game_type === 'playoffs';
+                    // During playoffs, show series record instead of regular season records.
+                    // is_playoff is the new (2026-06-04+) authoritative field; game_type === 'playoffs'
+                    // is the legacy fallback for older API responses.
+                    const isPlayoffGame = game.is_playoff === true || game.game_type === 'playoffs';
                     let visitorRecord = '';
                     let homeRecord = '';
                     if (isPlayoffGame && gameLeague === 'NHL' && Object.keys(nhlPlayoffSeries).length > 0) {
@@ -963,11 +965,14 @@
                             homeRecord = `${hWins}-${vWins}`;
                         }
                     } else if (isPlayoffGame && (gameLeague === 'NBA' || gameLeague === 'WNBA')) {
-                        // NBA/WNBA: API returns series record in wins/losses during playoffs
-                        visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
-                            ? `${game.visitor_wins}-${game.visitor_losses}` : '';
-                        homeRecord = (game.home_wins !== undefined && game.home_losses !== undefined)
-                            ? `${game.home_wins}-${game.home_losses}` : '';
+                        // Prefer the explicit series fields when the API provides them; fall back to
+                        // wins/losses (older API behavior repurposed those during playoffs).
+                        const vSeriesW = game.visitor_series_wins   ?? game.visitor_wins;
+                        const vSeriesL = game.visitor_series_losses ?? game.visitor_losses;
+                        const hSeriesW = game.home_series_wins      ?? game.home_wins;
+                        const hSeriesL = game.home_series_losses    ?? game.home_losses;
+                        visitorRecord = (vSeriesW !== undefined && vSeriesL !== undefined) ? `${vSeriesW}-${vSeriesL}` : '';
+                        homeRecord    = (hSeriesW !== undefined && hSeriesL !== undefined) ? `${hSeriesW}-${hSeriesL}` : '';
                     } else if (isPlayoffGame) {
                         visitorRecord = '';
                         homeRecord = '';
@@ -1090,6 +1095,7 @@
                             </td>
                             <td style="text-align: center; font-weight: 700; font-size: 1.3rem; padding: 10px 8px; position: relative; white-space: nowrap; min-width: 80px;">
                                 ${scoreDisplay}
+                                ${(isPlayoffGame && (game.series_round || game.series_summary)) ? `<div style="font-size: 0.72rem; font-weight: 500; color: rgba(255,255,255,0.75); margin-top: 3px; white-space: normal; line-height: 1.2;">${game.series_round || game.series_summary}${game.series_total ? ` &middot; Best of ${game.series_total}` : ''}</div>` : ''}
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
@@ -1252,7 +1258,17 @@
                                 : (game.visitor_otl !== undefined && game.visitor_otl !== null ? game.visitor_otl : 0),
                             // Abbreviations will be looked up from teamColors when rendering
                             home_team_abbrev: game.home_team_abbrev || '',
-                            visitor_team_abbrev: game.visitor_team_abbrev || ''
+                            visitor_team_abbrev: game.visitor_team_abbrev || '',
+                            // Playoff series fields (sportspuff-api 2026-06-04+)
+                            is_playoff: scoreData?.is_playoff ?? game.is_playoff,
+                            series_summary: scoreData?.series_summary ?? game.series_summary,
+                            series_round: scoreData?.series_round ?? game.series_round,
+                            series_total: scoreData?.series_total ?? game.series_total,
+                            series_completed: scoreData?.series_completed ?? game.series_completed,
+                            home_series_wins: scoreData?.home_series_wins ?? game.home_series_wins,
+                            home_series_losses: scoreData?.home_series_losses ?? game.home_series_losses,
+                            visitor_series_wins: scoreData?.visitor_series_wins ?? game.visitor_series_wins,
+                            visitor_series_losses: scoreData?.visitor_series_losses ?? game.visitor_series_losses
                         };
                     });
                 }
@@ -1311,7 +1327,17 @@
                                 visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
                                 // Also keep old field names for backward compatibility
                                 home_overtime_losses: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
-                                visitor_overtime_losses: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null
+                                visitor_overtime_losses: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
+                                // Playoff series fields (sportspuff-api 2026-06-04+)
+                                is_playoff: scoreGame.is_playoff,
+                                series_summary: scoreGame.series_summary,
+                                series_round: scoreGame.series_round,
+                                series_total: scoreGame.series_total,
+                                series_completed: scoreGame.series_completed,
+                                home_series_wins: scoreGame.home_series_wins,
+                                home_series_losses: scoreGame.home_series_losses,
+                                visitor_series_wins: scoreGame.visitor_series_wins,
+                                visitor_series_losses: scoreGame.visitor_series_losses
                             };
                         } else {
                             // Update existing game with latest score data
@@ -1331,6 +1357,16 @@
                             existing.game_status = scoreGame.game_status;
                             existing.current_period = scoreGame.current_period;
                             existing.time_remaining = scoreGame.time_remaining;
+                            // Playoff series fields (sportspuff-api 2026-06-04+) — score response is authoritative
+                            if (scoreGame.is_playoff !== undefined) existing.is_playoff = scoreGame.is_playoff;
+                            if (scoreGame.series_summary !== undefined) existing.series_summary = scoreGame.series_summary;
+                            if (scoreGame.series_round !== undefined) existing.series_round = scoreGame.series_round;
+                            if (scoreGame.series_total !== undefined) existing.series_total = scoreGame.series_total;
+                            if (scoreGame.series_completed !== undefined) existing.series_completed = scoreGame.series_completed;
+                            if (scoreGame.home_series_wins !== undefined) existing.home_series_wins = scoreGame.home_series_wins;
+                            if (scoreGame.home_series_losses !== undefined) existing.home_series_losses = scoreGame.home_series_losses;
+                            if (scoreGame.visitor_series_wins !== undefined) existing.visitor_series_wins = scoreGame.visitor_series_wins;
+                            if (scoreGame.visitor_series_losses !== undefined) existing.visitor_series_losses = scoreGame.visitor_series_losses;
                             // Update wins/losses from scores if available
                             if (scoreGame.home_wins !== undefined) {
                                 existing.home_wins = scoreGame.home_wins;
