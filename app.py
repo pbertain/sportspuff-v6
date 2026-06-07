@@ -68,7 +68,7 @@ def _normalize_timezone(tz):
 
 
 def _empty_all_scores_response():
-    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     return {
         lg: {
@@ -81,7 +81,7 @@ def _empty_all_scores_response():
 
 def _fetch_all_scores_for_tz(api_base_url, tz, api_date='today'):
     """Fetch all-scores data for a given timezone (no Flask request context needed)."""
-    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     result = {}
 
     def fetch_league(lg):
@@ -1661,7 +1661,7 @@ def proxy_all_scores(date):
         logger.warning(f"No all-scores cache available for {tz}; warming asynchronously")
         return jsonify(_empty_all_scores_response()), 200
 
-    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc']
+    leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     result = {}
 
     def fetch_league(lg):
