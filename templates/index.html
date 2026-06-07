@@ -32,7 +32,7 @@
                         <label class="form-label text-white fw-bold">Leagues:</label>
                         <div class="dropdown">
                             <button id="leagues-btn" class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" style="min-width: 180px;">
-                                All 8 leagues
+                                All 12 leagues
                             </button>
                             <div id="leagues-menu" class="dropdown-menu p-3" style="min-width: 220px;">
                                 <div class="d-flex justify-content-between mb-2">
@@ -40,14 +40,18 @@
                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="leagues-clear">Clear</button>
                                 </div>
                                 <div class="row g-2">
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="ipl"  id="lg-ipl"  checked><label class="form-check-label" for="lg-ipl">IPL</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlb"  id="lg-mlb"  checked><label class="form-check-label" for="lg-mlb">MLB</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlc"  id="lg-mlc"  checked><label class="form-check-label" for="lg-mlc">MLC</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mls"  id="lg-mls"  checked><label class="form-check-label" for="lg-mls">MLS</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nba"  id="lg-nba"  checked><label class="form-check-label" for="lg-nba">NBA</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nfl"  id="lg-nfl"  checked><label class="form-check-label" for="lg-nfl">NFL</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nhl"  id="lg-nhl"  checked><label class="form-check-label" for="lg-nhl">NHL</label></div></div>
-                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="wnba" id="lg-wnba" checked><label class="form-check-label" for="lg-wnba">WNBA</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="atp"     id="lg-atp"     checked><label class="form-check-label" for="lg-atp">ATP</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="cycling" id="lg-cycling" checked><label class="form-check-label" for="lg-cycling">Cycling</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="ipl"     id="lg-ipl"     checked><label class="form-check-label" for="lg-ipl">IPL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlb"     id="lg-mlb"     checked><label class="form-check-label" for="lg-mlb">MLB</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mlc"     id="lg-mlc"     checked><label class="form-check-label" for="lg-mlc">MLC</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="mls"     id="lg-mls"     checked><label class="form-check-label" for="lg-mls">MLS</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nba"     id="lg-nba"     checked><label class="form-check-label" for="lg-nba">NBA</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nfl"     id="lg-nfl"     checked><label class="form-check-label" for="lg-nfl">NFL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="nhl"     id="lg-nhl"     checked><label class="form-check-label" for="lg-nhl">NHL</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="wc"      id="lg-wc"      checked><label class="form-check-label" for="lg-wc">WC</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="wnba"    id="lg-wnba"    checked><label class="form-check-label" for="lg-wnba">WNBA</label></div></div>
+                                    <div class="col-6"><div class="form-check"><input class="form-check-input league-checkbox" type="checkbox" value="wta"     id="lg-wta"     checked><label class="form-check-label" for="lg-wta">WTA</label></div></div>
                                 </div>
                             </div>
                         </div>
@@ -203,7 +207,7 @@
 
         const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC'];
         // Canonical render order on the homepage (alphabetical, matches header dropdown).
-        const RENDER_ORDER = ['IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WNBA'];
+        const RENDER_ORDER = ['ATP', 'CYCLING', 'IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WC', 'WNBA', 'WTA'];
 
         function getActiveLeagues() {
             const set = new Set();
@@ -226,7 +230,7 @@
         // Season-info cache: { league: { year, season_types: [{name,start_date,end_date}] } }
         const seasonInfoCache = {};
         async function ensureSeasonInfo() {
-            const missing = ORBIT_LEAGUES.filter(lg => !(lg.toLowerCase() in seasonInfoCache));
+            const missing = RENDER_ORDER.filter(lg => !(lg.toLowerCase() in seasonInfoCache));
             if (!missing.length) return;
             const results = await Promise.all(missing.map(lg =>
                 fetch(`/api/season-info/${lg}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
@@ -260,9 +264,25 @@
             }
             const info = seasonInfoCache[leagueLower];
             const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
+            // Off-season: prefer 'last X won the YYYY <league>' if the API gave us a champion;
+            // otherwise fall back to 'Regular season starts <date>'.
             if (phase === 'Off Season') {
+                const champion = info && info.last_champion;
+                if (champion && champion.year && (champion.abbreviation || champion.team)) {
+                    const who = champion.abbreviation || champion.team;
+                    return `Offseason — ${who} won the ${champion.year} ${leagueLower.toUpperCase()}`;
+                }
                 const next = nextRegularSeasonStart(info, pickedDate);
                 return next ? `Offseason — Regular season starts ${fmtPrettyDate(next)}` : 'Offseason';
+            }
+            // Tour-style sports (ATP/WTA/Cycling): when an event is active, current_phase
+            // is the tournament/race name (e.g. 'Wimbledon', 'Tour de France'). When idle:
+            // 'Off Tour' (handled above) or just no event today.
+            if ((leagueLower === 'atp' || leagueLower === 'wta') && phase && phase !== 'Off Tour' && phase !== 'Regular Season') {
+                return isToday ? `${phase} — no matches today` : `${phase} — no matches on ${fmtPrettyDate(pickedDate)}`;
+            }
+            if (leagueLower === 'cycling' && phase && phase !== 'Off Tour' && phase !== 'Regular Season') {
+                return isToday ? `${phase} — no stage today` : `${phase} — no stage on ${fmtPrettyDate(pickedDate)}`;
             }
             if (isToday) return 'No games scheduled tonight';
             return `No games on ${fmtPrettyDate(pickedDate)}`;
@@ -283,16 +303,22 @@
                 </div>`;
         }
 
-        // League logo URLs for the orbital loading spinner
+        // League logo URLs for the orbital loading spinner and empty banners.
+        // Tour-level entries (ATP, WTA, CYCLING, WC) added 2026-06-06; events like
+        // Wimbledon/TdF live under tennis/cycling subpaths and are surfaced contextually.
         const LEAGUE_LOGOS = {
-            MLB:  "{{ 'MLB'  | get_league_logo }}",
-            NBA:  "{{ 'NBA'  | get_league_logo }}",
-            NFL:  "{{ 'NFL'  | get_league_logo }}",
-            NHL:  "{{ 'NHL'  | get_league_logo }}",
-            MLS:  "{{ 'MLS'  | get_league_logo }}",
-            WNBA: "{{ 'WNBA' | get_league_logo }}",
-            IPL:  "{{ 'IPL'  | get_league_logo }}",
-            MLC:  "{{ 'MLC'  | get_league_logo }}"
+            MLB:     "{{ 'MLB'  | get_league_logo }}",
+            NBA:     "{{ 'NBA'  | get_league_logo }}",
+            NFL:     "{{ 'NFL'  | get_league_logo }}",
+            NHL:     "{{ 'NHL'  | get_league_logo }}",
+            MLS:     "{{ 'MLS'  | get_league_logo }}",
+            WNBA:    "{{ 'WNBA' | get_league_logo }}",
+            IPL:     "{{ 'IPL'  | get_league_logo }}",
+            MLC:     "{{ 'MLC'  | get_league_logo }}",
+            WC:      "https://www.splitsp.lat/logos/wc/wc-logo.png",
+            ATP:     "https://www.splitsp.lat/logos/atp/atp-logo.png",
+            WTA:     "https://www.splitsp.lat/logos/wta/wta-logo.png",
+            CYCLING: "https://www.splitsp.lat/logos/cycling/cycling-logo.png"
         };
         function orbitalLoaderHtml(label) {
             const R = 110;
@@ -387,7 +413,7 @@
                 }
                 
                 if (league === 'all') {
-                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc'];
+                    const allLeagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling'];
 
                     // Show cached data immediately while fetching fresh
                     const cacheKey = `sportspuff_scores_${timezone}_${apiDate}`;
@@ -781,10 +807,37 @@
                     const isScheduled = statusLower === 'scheduled' || statusLower === 'upcoming' || statusLower === 'pre';
                     const isInProgress = statusLower === 'in_progress' || statusLower === 'live' || statusLower === 'active';
                     const isCricket = gameLeague === 'IPL' || gameLeague === 'MLC';
+                    const isTennis = gameLeague === 'ATP' || gameLeague === 'WTA';
+                    const isCyclingEvent = gameLeague === 'CYCLING';
                     const hasCricketScore = isCricket && (game.cricket_home_score || game.cricket_away_score);
                     const hasCricketLive = isCricket && isInProgress && game.cricket_result;
-                    const hasScore = hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
-                        && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0));
+                    const hasScore = !isTennis && !isCyclingEvent && (
+                        hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
+                        && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0)));
+
+                    // Cycling: events are calendar entries, not matchups. Render as a single
+                    // colspan banner with race + stage + status. Skip the team-vs-team layout.
+                    if (isCyclingEvent) {
+                        const race = game.cycling_race || game.home_team || '';
+                        const stage = game.cycling_stage_label || game.visitor_team || '';
+                        const country = game.cycling_country || '';
+                        const eventLabel = game.cycling_event_label || (stage ? `${race} · ${stage}` : race);
+                        const statusText = isFinal ? 'Final' : (isInProgress ? 'Live' : (isScheduled ? 'Scheduled' : ''));
+                        const logo = game.league_badge || LEAGUE_LOGOS.CYCLING;
+                        return `
+                            <tr>
+                                <td colspan="4" style="padding: 10px 14px; background-color: rgba(255, 107, 53, 0.18); border-radius: 4px;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        ${logo ? `<img src="${logo}" alt="cycling" style="width: 32px; height: 32px; object-fit: contain; background: rgba(255,255,255,0.92); border-radius: 4px; padding: 2px;" onerror="this.style.display='none';">` : ''}
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${eventLabel}</div>
+                                            ${country ? `<div style="font-size: 0.8rem; opacity: 0.75;">${country}</div>` : ''}
+                                        </div>
+                                        ${statusText ? `<div style="font-size: 0.85rem; opacity: 0.85; white-space: nowrap;">${statusText}</div>` : ''}
+                                    </div>
+                                </td>
+                            </tr>`;
+                    }
 
                     // Debug: log MLB game status to identify final detection issues
 
@@ -1029,7 +1082,14 @@
                     
                     // Format score
                     let scoreDisplay = '-';
-                    if (hasScore) {
+                    // Tennis: TheSportsDB doesn't expose set scores via this path, so the
+                    // home_score/visitor_score are always 0. Render the matchup state instead
+                    // of a fake 0-0 scoreline.
+                    if (isTennis) {
+                        if (isFinal)        scoreDisplay = `<span style="font-size:0.9rem; opacity:0.85;">Final</span>`;
+                        else if (isInProgress) scoreDisplay = `<span style="font-size:0.9rem;">Live</span>`;
+                        else                scoreDisplay = `<span style="font-size:0.95rem; opacity:0.7;">vs</span>`;
+                    } else if (hasScore) {
                         // For cricket, use the formatted score strings (runs/wickets[overs])
                         const vScore = isCricket ? (game.cricket_away_score || game.visitor_score || '') : game.visitor_score;
                         const hScore = isCricket ? (game.cricket_home_score || game.home_score || '') : game.home_score;
@@ -1095,7 +1155,19 @@
                             </td>
                             <td style="text-align: center; font-weight: 700; font-size: 1.3rem; padding: 10px 8px; position: relative; white-space: nowrap; min-width: 80px;">
                                 ${scoreDisplay}
-                                ${(isPlayoffGame && (game.series_round || game.series_summary)) ? `<div style="font-size: 0.72rem; font-weight: 500; color: rgba(255,255,255,0.75); margin-top: 3px; white-space: normal; line-height: 1.2;">${game.series_round || game.series_summary}${game.series_total ? ` &middot; Best of ${game.series_total}` : ''}</div>` : ''}
+                                ${(() => {
+                                    // Subtitle line under the score: playoff series, tennis tournament, or WC round.
+                                    let line = '';
+                                    if (isPlayoffGame && (game.series_round || game.series_summary)) {
+                                        line = (game.series_round || game.series_summary)
+                                             + (game.series_total ? ` &middot; Best of ${game.series_total}` : '');
+                                    } else if (isTennis && game.tennis_tournament) {
+                                        line = game.tennis_tournament + (game.tennis_round ? ` &middot; R${game.tennis_round}` : '');
+                                    } else if (gameLeague === 'WC' && game.wc_round_label) {
+                                        line = game.wc_round_label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                    }
+                                    return line ? `<div style="font-size: 0.72rem; font-weight: 500; color: rgba(255,255,255,0.75); margin-top: 3px; white-space: normal; line-height: 1.2;">${line}</div>` : '';
+                                })()}
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
@@ -1675,14 +1747,19 @@
         /* League-tinted variants. Background is a translucent tint of the league
            accent so each banner reads as that league's color while staying readable
            against the page's purple gradient. */
-        .league-empty-mlb  { background: rgba( 14,  76, 146, 0.32); border-color: rgba( 14,  76, 146, 0.55); border-left-color: #0E4C92; }
-        .league-empty-nba  { background: rgba(112,  40, 228, 0.32); border-color: rgba(112,  40, 228, 0.55); border-left-color: #7028E4; }
-        .league-empty-nfl  { background: rgba(179,   0,  27, 0.32); border-color: rgba(179,   0,  27, 0.55); border-left-color: #B3001B; }
-        .league-empty-nhl  { background: rgba( 60,  60,  70, 0.55); border-color: rgba(191, 201, 202, 0.55); border-left-color: #BFC9CA; }
-        .league-empty-mls  { background: rgba( 43, 174, 102, 0.32); border-color: rgba( 43, 174, 102, 0.55); border-left-color: #2BAE66; }
-        .league-empty-wnba { background: rgba(255, 111,   0, 0.32); border-color: rgba(255, 111,   0, 0.55); border-left-color: #FF6F00; }
-        .league-empty-ipl  { background: rgba(255, 107,  53, 0.32); border-color: rgba(255, 107,  53, 0.55); border-left-color: #FF6B35; }
-        .league-empty-mlc  { background: rgba( 26,  82, 118, 0.42); border-color: rgba( 26,  82, 118, 0.65); border-left-color: #1A5276; }
+        .league-empty-mlb     { background: rgba( 14,  76, 146, 0.32); border-color: rgba( 14,  76, 146, 0.55); border-left-color: #0E4C92; }
+        .league-empty-nba     { background: rgba(112,  40, 228, 0.32); border-color: rgba(112,  40, 228, 0.55); border-left-color: #7028E4; }
+        .league-empty-nfl     { background: rgba(179,   0,  27, 0.32); border-color: rgba(179,   0,  27, 0.55); border-left-color: #B3001B; }
+        .league-empty-nhl     { background: rgba( 60,  60,  70, 0.55); border-color: rgba(191, 201, 202, 0.55); border-left-color: #BFC9CA; }
+        .league-empty-mls     { background: rgba( 43, 174, 102, 0.32); border-color: rgba( 43, 174, 102, 0.55); border-left-color: #2BAE66; }
+        .league-empty-wnba    { background: rgba(255, 111,   0, 0.32); border-color: rgba(255, 111,   0, 0.55); border-left-color: #FF6F00; }
+        .league-empty-ipl     { background: rgba(255, 107,  53, 0.32); border-color: rgba(255, 107,  53, 0.55); border-left-color: #FF6B35; }
+        .league-empty-mlc     { background: rgba( 26,  82, 118, 0.42); border-color: rgba( 26,  82, 118, 0.65); border-left-color: #1A5276; }
+        /* New (2026-06-06): four tour-level sports. */
+        .league-empty-wc      { background: rgba(  0,  82,  46, 0.40); border-color: rgba(  0, 130,  73, 0.55); border-left-color: #00824A; } /* FIFA green */
+        .league-empty-atp     { background: rgba(  0,  35, 102, 0.40); border-color: rgba(  0,  72, 184, 0.55); border-left-color: #003DA5; } /* ATP navy */
+        .league-empty-wta     { background: rgba(160,  20, 105, 0.32); border-color: rgba(160,  20, 105, 0.55); border-left-color: #A01469; } /* WTA magenta */
+        .league-empty-cycling { background: rgba(245, 232,  20, 0.20); border-color: rgba(245, 232,  20, 0.45); border-left-color: #F5E814; } /* maillot jaune */
 
         /* Orbital league-logo loading spinner */
         .orbit-loader {
