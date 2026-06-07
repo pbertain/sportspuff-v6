@@ -665,7 +665,46 @@ def admin_panel():
 
 @app.route('/league/<league_name>')
 def league_page(league_name):
-    """League page showing teams organized by divisions"""
+    """League page showing teams or event/tour schedules."""
+    league_upper = league_name.upper()
+    event_leagues = {
+        'WC': {
+            'display_name': 'World Cup',
+            'subtitle': 'Tournament fixtures, groups, and knockout rounds',
+            'logo_url': 'https://www.splitsp.lat/logos/wc/wc-logo.png',
+            'accent': '#00824A',
+            'mode': 'world-cup',
+        },
+        'ATP': {
+            'display_name': 'ATP Tour',
+            'subtitle': 'Men\'s tour matches and active tournaments',
+            'logo_url': 'https://www.splitsp.lat/logos/atp/atp-logo.png',
+            'accent': '#003DA5',
+            'mode': 'tennis',
+        },
+        'WTA': {
+            'display_name': 'WTA Tour',
+            'subtitle': 'Women\'s tour matches and active tournaments',
+            'logo_url': 'https://www.splitsp.lat/logos/wta/wta-logo.png',
+            'accent': '#A01469',
+            'mode': 'tennis',
+        },
+        'CYCLING': {
+            'display_name': 'Cycling',
+            'subtitle': 'Race calendar, stages, and daily events',
+            'logo_url': 'https://www.splitsp.lat/logos/cycling/cycling-logo.png',
+            'accent': '#F5E814',
+            'mode': 'cycling',
+        },
+    }
+    if league_upper in event_leagues:
+        return render_template(
+            'event_league_page.html',
+            league_name=league_upper,
+            league_config=event_leagues[league_upper],
+            API_BASE_URL=API_BASE_URL,
+        )
+
     conn = get_db_connection()
     if not conn:
         return render_template('error.html', message='Database connection failed')

@@ -80,6 +80,16 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"API Endpoints", response.data)
         self.assertIn(b"/api/v1/teams", response.data)
 
+    def test_event_league_pages_load_without_database(self):
+        for league, title in [("WC", "World Cup"), ("ATP", "ATP Tour"), ("WTA", "WTA Tour"), ("CYCLING", "Cycling")]:
+            with self.subTest(league=league), patch("app.get_db_connection") as db:
+                response = self.client.get(f"/league/{league}")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(title.encode(), response.data)
+            self.assertIn(b"id=\"event-date-picker\"", response.data)
+            db.assert_not_called()
+
     def test_static_logo_route_redirects_to_splitsp_lat(self):
         response = self.client.get("/static/logos/mlb/mlb_logo.png")
 
@@ -234,6 +244,12 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         for theme in ["atp", "wta", "wimbledon", "roland-garros", "us-open", "australian-open"]:
             self.assertIn(f'value="{theme}"', header)
+
+    def test_shared_header_links_to_event_leagues(self):
+        header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
+
+        for league in ["ATP", "CYCLING", "WC", "WTA"]:
+            self.assertIn(f"league_name='{league}'", header)
 
 
 class TestDatabaseAndConfig(unittest.TestCase):

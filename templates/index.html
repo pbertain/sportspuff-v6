@@ -112,6 +112,26 @@
                 </h2>
                 
                 <div class="league-grid">
+                    <!-- ATP -->
+                    <a href="{{ url_for('league_page', league_name='ATP') }}" class="league-card atp fade-in-up" data-league="ATP">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/atp/atp-logo.png" alt="ATP Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-table-tennis" style="color: #003DA5; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">ATP Tour</h3>
+                        <p class="league-count">Matches</p>
+                    </a>
+
+                    <!-- Cycling -->
+                    <a href="{{ url_for('league_page', league_name='CYCLING') }}" class="league-card cycling fade-in-up" data-league="CYCLING">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/cycling/cycling-logo.png" alt="Cycling Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-bicycle" style="color: #F5E814; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">Cycling</h3>
+                        <p class="league-count">Stages</p>
+                    </a>
+
                     <!-- IPL -->
                     <a href="{{ url_for('league_page', league_name='IPL') }}" class="league-card ipl fade-in-up" data-league="IPL">
                         <div class="league-logo">
@@ -190,6 +210,26 @@
                         </div>
                         <h3 class="league-name">Women's National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'WNBA') | map(attribute='count') | first or 0 }} Teams</p>
+                    </a>
+
+                    <!-- WC -->
+                    <a href="{{ url_for('league_page', league_name='WC') }}" class="league-card wc fade-in-up" data-league="WC">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/wc/wc-logo.png" alt="WC Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-futbol" style="color: #00824A; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">World Cup</h3>
+                        <p class="league-count">Fixtures</p>
+                    </a>
+
+                    <!-- WTA -->
+                    <a href="{{ url_for('league_page', league_name='WTA') }}" class="league-card wta fade-in-up" data-league="WTA">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/wta/wta-logo.png" alt="WTA Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-table-tennis" style="color: #A01469; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">WTA Tour</h3>
+                        <p class="league-count">Matches</p>
                     </a>
                 </div>
             </div>

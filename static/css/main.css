@@ -480,7 +480,7 @@ main, .main-content {
 /* League Grid */
 .league-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 1rem;
   margin: 2rem 0;
 }
@@ -531,6 +531,71 @@ main, .main-content {
 .league-card.mls::before { background: var(--mls-accent); }
 .league-card.ipl::before { background: var(--ipl-accent); }
 .league-card.mlc::before { background: var(--mlc-accent); }
+.league-card.wc::before { background: #00824A; }
+.league-card.atp::before { background: #003DA5; }
+.league-card.wta::before { background: #A01469; }
+.league-card.cycling::before { background: #F5E814; }
+
+.event-league-shell {
+  max-width: 1180px;
+}
+
+.event-league-hero {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-left: 5px solid var(--event-accent, var(--golden-yellow));
+  border-radius: 10px;
+  background: rgba(20, 10, 40, 0.64);
+  padding: 18px;
+}
+
+.event-league-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 7px;
+}
+
+.event-league-card {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 4px solid var(--event-accent, var(--golden-yellow));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 14px 16px;
+  color: var(--warm-white);
+}
+
+.event-league-card + .event-league-card {
+  margin-top: 10px;
+}
+
+.event-league-meta {
+  color: rgba(245, 245, 245, 0.74);
+  font-size: 0.88rem;
+}
+
+.event-league-title {
+  color: var(--warm-white);
+  font-weight: 750;
+  margin: 0;
+}
+
+.event-league-score {
+  color: var(--event-accent, var(--golden-yellow));
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.event-league-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  padding: 2px 9px;
+  font-size: 0.78rem;
+}
 
 /* Conference boxes with floating logos */
 .conf-box {
