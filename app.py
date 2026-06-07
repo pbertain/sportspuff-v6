@@ -412,6 +412,7 @@ def index():
                              league_stats=[],
                              logo_mapping=LOGO_MAPPING,
                              nba_team_colors={},
+                             team_colors={},
                              API_BASE_URL=API_BASE_URL,
                              db_available=False)
     
