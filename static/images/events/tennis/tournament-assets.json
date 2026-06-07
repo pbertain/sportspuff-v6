@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "base_path": "/static/images/events/tennis",
+  "tournaments": [
+    {
+      "id": "atp",
+      "label": "ATP",
+      "theme": "atp",
+      "ball": "balls/tennis-ball-atp-navy.png",
+      "accent": "#0b214a",
+      "available": true
+    },
+    {
+      "id": "wta",
+      "label": "WTA",
+      "theme": "wta",
+      "ball": "balls/tennis-ball-wta-purple.png",
+      "accent": "#6f35ff",
+      "available": true
+    },
+    {
+      "id": "wimbledon",
+      "label": "Wimbledon",
+      "theme": "wimbledon",
+      "ball": "balls/tennis-ball-wimbledon-green.png",
+      "accent": "#1f7a3a",
+      "available": true
+    },
+    {
+      "id": "roland-garros",
+      "label": "Roland Garros",
+      "theme": "roland-garros",
+      "ball": "balls/tennis-ball-roland-garros-clay.png",
+      "accent": "#d96b2b",
+      "available": true
+    },
+    {
+      "id": "us-open",
+      "label": "US Open",
+      "theme": "us-open",
+      "ball": null,
+      "accent": "#002f6c",
+      "available": false
+    },
+    {
+      "id": "australian-open",
+      "label": "Australian Open",
+      "theme": "australian-open",
+      "ball": null,
+      "accent": "#00a3e0",
+      "available": false
+    }
+  ]
+}

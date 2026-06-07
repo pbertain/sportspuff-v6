@@ -13,6 +13,18 @@
             <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
             <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
             <a class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a>
+            <div class="nav-item tournament-theme-control">
+                <label class="visually-hidden" for="tournament-theme-select">Tournament theme</label>
+                <select id="tournament-theme-select" class="form-select form-select-sm" aria-label="Tournament theme">
+                    <option value="">Sportspuff theme</option>
+                    <option value="atp">ATP</option>
+                    <option value="wta">WTA</option>
+                    <option value="wimbledon">Wimbledon</option>
+                    <option value="roland-garros">Roland Garros</option>
+                    <option value="us-open">US Open</option>
+                    <option value="australian-open">Australian Open</option>
+                </select>
+            </div>
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                     Leagues
@@ -32,4 +44,3 @@
         </div>
     </div>
 </nav>
-

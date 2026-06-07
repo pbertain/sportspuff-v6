@@ -32,6 +32,16 @@
   /* MLC Colors */
   --mlc-accent: #1A5276;      /* Deep Teal */
   --mlc-accent-dark: #0E3A54;
+
+  /* Tournament theme tokens */
+  --tennis-atp-navy: #0b214a;
+  --tennis-wta-purple: #6f35ff;
+  --tennis-wimbledon-green: #1f7a3a;
+  --tennis-french-clay: #d96b2b;
+  --tennis-us-open-navy: #002f6c;
+  --tennis-australian-open-blue: #00a3e0;
+  --tennis-theme-accent: var(--golden-yellow);
+  --tennis-theme-accent-contrast: #140a28;
   
   /* Gradients */
   --primary-gradient: linear-gradient(135deg, var(--deep-purple) 0%, var(--electric-red) 100%);
@@ -51,6 +61,98 @@ body {
   background: var(--main-bg);
   color: var(--warm-white);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body[data-tournament-theme="atp"] {
+  --main-bg: linear-gradient(135deg, #07152f 0%, var(--tennis-atp-navy) 58%, #163a76 100%);
+  --primary-gradient: linear-gradient(135deg, var(--tennis-atp-navy) 0%, #2878d8 100%);
+  --card-bg: rgba(11, 33, 74, 0.84);
+  --container-bg: rgba(5, 17, 39, 0.9);
+  --tennis-theme-accent: #78b7ff;
+  --tennis-theme-accent-contrast: #061326;
+}
+
+body[data-tournament-theme="wta"] {
+  --main-bg: linear-gradient(135deg, #261146 0%, var(--tennis-wta-purple) 62%, #b24dff 100%);
+  --primary-gradient: linear-gradient(135deg, #3e1c7a 0%, var(--tennis-wta-purple) 100%);
+  --card-bg: rgba(75, 34, 133, 0.84);
+  --container-bg: rgba(35, 14, 69, 0.9);
+  --tennis-theme-accent: #ffb3ed;
+  --tennis-theme-accent-contrast: #2a103f;
+}
+
+body[data-tournament-theme="wimbledon"] {
+  --main-bg: linear-gradient(135deg, #102b18 0%, var(--tennis-wimbledon-green) 55%, #5b2b78 100%);
+  --primary-gradient: linear-gradient(135deg, var(--tennis-wimbledon-green) 0%, #5b2b78 100%);
+  --card-bg: rgba(31, 122, 58, 0.76);
+  --container-bg: rgba(13, 42, 23, 0.91);
+  --tennis-theme-accent: #f0d35a;
+  --tennis-theme-accent-contrast: #132716;
+}
+
+body[data-tournament-theme="roland-garros"] {
+  --main-bg: linear-gradient(135deg, #35180d 0%, var(--tennis-french-clay) 54%, #25446e 100%);
+  --primary-gradient: linear-gradient(135deg, var(--tennis-french-clay) 0%, #25446e 100%);
+  --card-bg: rgba(150, 66, 30, 0.78);
+  --container-bg: rgba(46, 20, 10, 0.9);
+  --tennis-theme-accent: #ffe1b8;
+  --tennis-theme-accent-contrast: #32170a;
+}
+
+body[data-tournament-theme="us-open"] {
+  --main-bg: linear-gradient(135deg, #061a3e 0%, var(--tennis-us-open-navy) 58%, #c5223a 100%);
+  --primary-gradient: linear-gradient(135deg, var(--tennis-us-open-navy) 0%, #c5223a 100%);
+  --card-bg: rgba(0, 47, 108, 0.82);
+  --container-bg: rgba(4, 21, 50, 0.91);
+  --tennis-theme-accent: #ffffff;
+  --tennis-theme-accent-contrast: #061a3e;
+}
+
+body[data-tournament-theme="australian-open"] {
+  --main-bg: linear-gradient(135deg, #063147 0%, var(--tennis-australian-open-blue) 58%, #f26d3d 100%);
+  --primary-gradient: linear-gradient(135deg, var(--tennis-australian-open-blue) 0%, #f26d3d 100%);
+  --card-bg: rgba(0, 112, 154, 0.78);
+  --container-bg: rgba(5, 43, 61, 0.9);
+  --tennis-theme-accent: #ffffff;
+  --tennis-theme-accent-contrast: #063147;
+}
+
+body[data-tournament-theme] .navbar {
+  border-bottom: 3px solid var(--tennis-theme-accent);
+}
+
+body[data-tournament-theme] .league-card::before {
+  background: var(--tennis-theme-accent);
+}
+
+body[data-tournament-theme] .stat-card:hover {
+  border-color: var(--tennis-theme-accent);
+}
+
+.tournament-theme-control {
+  display: flex;
+  align-items: center;
+  margin: 0 0.5rem;
+}
+
+.tournament-theme-control .form-select {
+  min-width: 170px;
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #1a0b3d;
+  font-weight: 600;
+}
+
+body[data-tournament-theme] .tournament-theme-control .form-select {
+  border-color: var(--tennis-theme-accent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+@media (max-width: 991px) {
+  .tournament-theme-control {
+    align-items: flex-start;
+    margin: 0.5rem 0;
+  }
 }
 
 /* Main Content Area - Softer Purple Background */
