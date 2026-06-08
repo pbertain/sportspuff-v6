@@ -88,6 +88,31 @@
             return game.game_status || 'Scheduled';
         }
 
+        function firstValue(...values) {
+            return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+        }
+
+        function tournamentName(game) {
+            return firstValue(
+                game.tennis_tournament,
+                game.tournament_name,
+                game.tournament,
+                game.event_name,
+                game.competition_name,
+                game.league_name
+            );
+        }
+
+        function tennisPlayerName(game, side) {
+            const name = side === 'home'
+                ? firstValue(game.home_player, game.player1, game.player_1, game.player_one, game.home_competitor, game.home_team, game.strHomeTeam)
+                : firstValue(game.visitor_player, game.away_player, game.player2, game.player_2, game.player_two, game.away_competitor, game.visitor_team, game.away_team, game.strAwayTeam);
+            if (!name) return 'TBD';
+            const clean = String(name).replace(/\s+/g, ' ').trim();
+            const parts = clean.split(' ');
+            return parts.length > 1 ? parts[parts.length - 1] : clean;
+        }
+
         function scoreText(game) {
             if (EVENT_MODE === 'cycling') return statusText(game);
             const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
@@ -98,7 +123,7 @@
 
         function detailLine(game) {
             if (EVENT_MODE === 'tennis') {
-                return [game.tennis_tournament, game.tennis_round ? `R${game.tennis_round}` : ''].filter(Boolean).join(' · ');
+                return [tournamentName(game), game.tennis_round || game.round ? `R${game.tennis_round || game.round}` : ''].filter(Boolean).join(' · ');
             }
             if (EVENT_MODE === 'cycling') {
                 return [game.cycling_race || game.home_team, game.cycling_stage_label || game.visitor_team, game.cycling_country].filter(Boolean).join(' · ');
@@ -126,19 +151,22 @@
             }
 
             const details = detailLine(game);
+            const visitorName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'visitor') : (game.visitor_team || 'TBD');
+            const homeName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'home') : (game.home_team || 'TBD');
+            const sideLabel = EVENT_MODE === 'tennis' ? 'Player' : 'Team';
             return `<div class="event-league-card">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div style="min-width: 180px;">
-                        <h3 class="event-league-title fs-5">${escapeHtml(game.visitor_team || 'TBD')}</h3>
-                        <div class="event-league-meta">Visitor</div>
+                        <h3 class="event-league-title fs-5">${escapeHtml(visitorName)}</h3>
+                        <div class="event-league-meta">${escapeHtml(sideLabel)}</div>
                     </div>
                     <div class="text-center">
                         <div class="event-league-score fs-4">${escapeHtml(scoreText(game))}</div>
                         <div class="event-league-meta">${escapeHtml(statusText(game))}</div>
                     </div>
                     <div class="text-end" style="min-width: 180px;">
-                        <h3 class="event-league-title fs-5">${escapeHtml(game.home_team || 'TBD')}</h3>
-                        <div class="event-league-meta">Home</div>
+                        <h3 class="event-league-title fs-5">${escapeHtml(homeName)}</h3>
+                        <div class="event-league-meta">${escapeHtml(sideLabel)}</div>
                     </div>
                 </div>
                 ${details ? `<div class="event-league-meta mt-2">${escapeHtml(details)}</div>` : ''}

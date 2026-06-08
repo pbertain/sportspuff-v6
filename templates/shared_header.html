@@ -9,6 +9,25 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <div class="navbar-nav ms-auto">
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    Leagues
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='ATP') }}">ATP</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='CYCLING') }}">Cycling</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLC') }}">MLC</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WC') }}">WC</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WTA') }}">WTA</a></li>
+                </ul>
+            </div>
             <a class="nav-link {% if request.endpoint == 'teams' %}active{% endif %}" href="{{ url_for('teams') }}">Teams</a>
             <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
             <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
@@ -24,25 +43,6 @@
                     <option value="us-open">US Open</option>
                     <option value="australian-open">Australian Open</option>
                 </select>
-            </div>
-            <div class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    Leagues
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='ATP') }}">ATP</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='CYCLING') }}">Cycling</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLC') }}">MLC</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WC') }}">WC</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WTA') }}">WTA</a></li>
-                </ul>
             </div>
             </div>
         </div>

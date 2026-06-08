@@ -251,6 +251,28 @@ class TestTournamentThemeAssets(unittest.TestCase):
         for league in ["ATP", "CYCLING", "WC", "WTA"]:
             self.assertIn(f"league_name='{league}'", header)
 
+    def test_shared_header_league_dropdown_is_alphabetical(self):
+        header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
+        expected = ["ATP", "CYCLING", "IPL", "MLB", "MLC", "MLS", "NBA", "NFL", "NHL", "WC", "WNBA", "WTA"]
+
+        positions = [header.index(f"league_name='{league}'") for league in expected]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_tennis_renderers_accept_api_player_and_tournament_fields(self):
+        event_template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        for snippet in ["home_player", "away_player", "player1", "player2", "tournament_name", "competition_name"]:
+            self.assertIn(snippet, event_template)
+            self.assertIn(snippet, index_template)
+
+    def test_ipl_standings_accounts_for_no_results(self):
+        template = (PROJECT_ROOT / "templates/league_page.html").read_text()
+
+        self.assertIn("no_result ?? t.no_results ?? t.nr ?? t.noResult", template)
+        self.assertIn("wins * 2 + noResults", template)
+        self.assertIn("NR", template)
+
 
 class TestDatabaseAndConfig(unittest.TestCase):
     def test_database_connection_config_has_required_keys(self):

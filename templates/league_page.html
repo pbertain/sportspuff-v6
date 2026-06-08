@@ -384,9 +384,13 @@
 
                         data.standings.forEach((t, idx) => {
                             const nrrClass = parseFloat(t.nrr) >= 0 ? 'text-success' : 'text-danger';
+                            const wins = Number(t.wins || 0);
+                            const losses = Number(t.losses || 0);
+                            const noResults = Number(t.no_result ?? t.no_results ?? t.nr ?? t.noResult ?? 0);
+                            const points = noResults > 0 ? (wins * 2 + noResults) : (t.points ?? wins * 2);
 
                             const td = teamLookup[t.team_name] || {};
-                            const record = `${t.wins}-${t.losses}` + (t.no_result ? `-${t.no_result}` : '');
+                            const record = `${wins}W-${losses}L` + (noResults ? `-${noResults}NR` : '');
                             const stadiumLink = td.stadiumId ? `<span onclick="event.preventDefault(); window.location='/stadium/${td.stadiumId}';" style="text-decoration: underline; cursor: pointer;">${td.stadium}</span>` : (td.stadium || '');
 
                             cardsContainer.innerHTML += `
@@ -397,7 +401,7 @@
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
                                         <div style="color: ${td.color2 || '#000'}; font-weight: 700; font-size: 1.05rem;">${t.team_name} <span style="font-weight: 400; font-size: 0.9rem;">(${record})</span></div>
-                                        <div style="color: ${td.color2 || '#000'}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">${t.abbreviation} &middot; Pts: ${t.points} &middot; NRR: <span class="${nrrClass}">${t.nrr}</span></div>
+                                        <div style="color: ${td.color2 || '#000'}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">${t.abbreviation} &middot; Pts: ${points} &middot; NRR: <span class="${nrrClass}">${t.nrr}</span></div>
                                         ${td.stadium ? `<div style="color: ${td.color3}; font-size: 0.85rem;">${stadiumLink}</div><div style="color: ${td.color3}; font-size: 0.8rem;">${td.stadiumCity}, ${td.stadiumState}</div>` : ''}
                                     </div>
                                 </a>`;
