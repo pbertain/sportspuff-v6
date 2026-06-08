@@ -127,8 +127,10 @@ class TestPageSmoke(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'id="league-date-picker"', response.data)
         self.assertIn(b'id="league-timezone-select"', response.data)
+        self.assertIn(b'id="league-schedule-context"', response.data)
         self.assertIn(b"/api/proxy/schedule/", response.data)
         self.assertIn(b"/api/proxy/scores/", response.data)
+        self.assertIn(b"/api/season-info/", response.data)
 
     def test_static_logo_route_redirects_to_splitsp_lat(self):
         response = self.client.get("/static/logos/mlb/mlb_logo.png")

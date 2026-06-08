@@ -662,6 +662,13 @@ main, .main-content {
   font-size: 0.88rem;
 }
 
+.league-schedule-context {
+  color: rgba(255, 180, 0, 0.86);
+  font-size: 0.8rem;
+  font-weight: 650;
+  margin-top: 0.2rem;
+}
+
 .league-schedule-count {
   margin-bottom: 0.75rem;
 }
@@ -705,6 +712,22 @@ main, .main-content {
   font-size: 0.72rem;
   font-weight: 600;
   margin-top: 1px;
+}
+
+.league-cricket-score {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.league-cricket-score span {
+  color: var(--golden-yellow);
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin: 0;
 }
 
 .league-schedule-empty {

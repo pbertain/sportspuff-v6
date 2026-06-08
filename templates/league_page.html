@@ -28,6 +28,7 @@
                 <div>
                     <h2 class="league-schedule-title mb-1">Schedule &amp; Scores</h2>
                     <div class="league-schedule-meta">Games for {{ league_name }}</div>
+                    <div id="league-schedule-context" class="league-schedule-context"></div>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-end">
                     <div>
@@ -634,23 +635,58 @@
                 return game.game_status || 'Scheduled';
             }
 
+            function cricketScoreLines(game) {
+                const away = game.cricket_away_score || game.visitor_score || '';
+                const home = game.cricket_home_score || game.home_score || '';
+                if (!away && !home) return '';
+                return `<div class="league-cricket-score">
+                    ${away ? `<span>${escapeHtml(away)}</span>` : ''}
+                    ${home ? `<span>${escapeHtml(home)}</span>` : ''}
+                </div>`;
+            }
+
             function scoreText(game) {
                 const isCricket = LEAGUE === 'IPL' || LEAGUE === 'MLC';
                 if (isCricket && (game.cricket_away_score || game.cricket_home_score)) {
-                    return [game.cricket_away_score, game.cricket_home_score].filter(Boolean).join(' / ');
+                    return cricketScoreLines(game);
                 }
                 const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
                     && (game.is_final || Number(game.home_score) > 0 || Number(game.visitor_score) > 0);
-                return hasScore ? `${game.visitor_score} - ${game.home_score}` : 'vs';
+                return escapeHtml(hasScore ? `${game.visitor_score} - ${game.home_score}` : 'vs');
+            }
+
+            function emptyMessage(picked, seasonInfo) {
+                const date = prettyDate(picked);
+                const phase = seasonInfo?.current_phase || '';
+                if (phase && ['Off Season', 'Offseason', 'Off Tour'].includes(phase)) {
+                    return `${LEAGUE} is off-season. No games on ${date}.`;
+                }
+                if (LEAGUE === 'MLS' && picked >= '2026-05-25' && picked <= '2026-07-15') {
+                    return `MLS is on World Cup break. No matches on ${date}.`;
+                }
+                if (LEAGUE === 'IPL' || LEAGUE === 'MLC') {
+                    return `No matches on ${date}.`;
+                }
+                return `No games on ${date}.`;
+            }
+
+            function renderSeasonContext(info) {
+                const target = document.getElementById('league-schedule-context');
+                if (!target || !info || !Array.isArray(info.season_types)) return;
+                const phase = info.current_phase || '';
+                const next = info.season_types.find(st => st.start_date || st.start);
+                const dates = next ? (next.display || `${next.name}: ${prettyDate(next.start_date || next.start)} - ${prettyDate(next.end_date || next.end)}`) : '';
+                target.textContent = [info.year, phase, dates].filter(Boolean).join(' · ');
             }
 
             function renderGame(game) {
                 const visitor = game.visitor_team || game.away_team || 'TBD';
                 const home = game.home_team || 'TBD';
+                const score = scoreText(game);
                 return `<div class="league-schedule-game">
                     <div class="league-schedule-team text-start">${escapeHtml(visitor)}</div>
                     <div class="league-schedule-score">
-                        <div>${escapeHtml(scoreText(game))}</div>
+                        <div>${score}</div>
                         <span>${escapeHtml(statusText(game))}</span>
                     </div>
                     <div class="league-schedule-team text-end">${escapeHtml(home)}</div>
@@ -668,10 +704,12 @@
                 results.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
                 try {
-                    const [scheduleRes, scoresRes] = await Promise.all([
+                    const [seasonInfo, scheduleRes, scoresRes] = await Promise.all([
+                        fetch(`/api/season-info/${leagueLower}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch(`/api/proxy/schedule/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { games: [] }),
                         fetch(`/api/proxy/scores/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { scores: [] })
                     ]);
+                    renderSeasonContext(seasonInfo);
                     const byId = {};
                     (scheduleRes.games || []).forEach(game => { byId[gameKey(game)] = game; });
                     (scoresRes.scores || []).forEach(score => {
@@ -686,7 +724,7 @@
                     });
 
                     if (games.length === 0) {
-                        results.innerHTML = `<div class="league-schedule-empty">No games on ${escapeHtml(prettyDate(picked))}</div>`;
+                        results.innerHTML = `<div class="league-schedule-empty">${escapeHtml(emptyMessage(picked, seasonInfo))}</div>`;
                         return;
                     }
 
