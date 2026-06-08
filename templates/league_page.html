@@ -6,6 +6,7 @@
     <title>{{ league_name }} - Sportspuff v6</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -19,6 +20,38 @@
                     <img src="{{ league_name | get_league_logo }}" alt="{{ league_name }} Logo" style="height: 80px; margin-right: 20px;" onerror="this.style.display='none';">
                     {{ league_name }}
                 </h1>
+            </div>
+        </div>
+
+        <div class="league-schedule-module mb-4" data-league="{{ league_name }}">
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <div>
+                    <h2 class="league-schedule-title mb-1">Schedule &amp; Scores</h2>
+                    <div class="league-schedule-meta">Games for {{ league_name }}</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+                    <div>
+                        <label for="league-date-picker" class="form-label text-white fw-bold mb-1">Date</label>
+                        <div class="input-group">
+                            <input type="text" id="league-date-picker" class="form-control" readonly>
+                            <button id="league-today-btn" class="btn btn-outline-light" type="button">Today</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="league-timezone-select" class="form-label text-white fw-bold mb-1">Timezone</label>
+                        <select id="league-timezone-select" class="form-select">
+                            <option value="pt" selected>Pacific Time</option>
+                            <option value="et">Eastern Time</option>
+                            <option value="ct">Central Time</option>
+                            <option value="mt">Mountain Time</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="league-schedule-results" class="league-schedule-results">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
             </div>
         </div>
 
@@ -562,6 +595,119 @@
     {% include 'shared_footer.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="{{ url_for('static', filename='js/contrast.js') }}"></script>
+    <script>
+        (function() {
+            const LEAGUE = {{ league_name | tojson }};
+            const leagueLower = LEAGUE.toLowerCase();
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[char]));
+            }
+
+            function prettyDate(value) {
+                if (!value) return '';
+                return new Date(value + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            function gameKey(game) {
+                return game.game_id || [game.home_team, game.visitor_team, game.game_time].filter(Boolean).join('|');
+            }
+
+            function statusText(game) {
+                const status = String(game.game_status || '').toLowerCase();
+                if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
+                if (['in_progress', 'live', 'active'].includes(status)) return game.time_remaining || 'Live';
+                if (game.game_time) {
+                    const d = new Date(game.game_time);
+                    if (!Number.isNaN(d.getTime())) {
+                        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+                    }
+                }
+                return game.game_status || 'Scheduled';
+            }
+
+            function scoreText(game) {
+                const isCricket = LEAGUE === 'IPL' || LEAGUE === 'MLC';
+                if (isCricket && (game.cricket_away_score || game.cricket_home_score)) {
+                    return [game.cricket_away_score, game.cricket_home_score].filter(Boolean).join(' / ');
+                }
+                const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
+                    && (game.is_final || Number(game.home_score) > 0 || Number(game.visitor_score) > 0);
+                return hasScore ? `${game.visitor_score} - ${game.home_score}` : 'vs';
+            }
+
+            function renderGame(game) {
+                const visitor = game.visitor_team || game.away_team || 'TBD';
+                const home = game.home_team || 'TBD';
+                return `<div class="league-schedule-game">
+                    <div class="league-schedule-team text-start">${escapeHtml(visitor)}</div>
+                    <div class="league-schedule-score">
+                        <div>${escapeHtml(scoreText(game))}</div>
+                        <span>${escapeHtml(statusText(game))}</span>
+                    </div>
+                    <div class="league-schedule-team text-end">${escapeHtml(home)}</div>
+                </div>`;
+            }
+
+            async function loadLeagueSchedule() {
+                const results = document.getElementById('league-schedule-results');
+                const datePicker = document.getElementById('league-date-picker');
+                const timezone = document.getElementById('league-timezone-select').value;
+                const today = new Date().toISOString().slice(0, 10);
+                const picked = datePicker.value || today;
+                const apiDate = picked === today ? 'today' : picked;
+
+                results.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+                try {
+                    const [scheduleRes, scoresRes] = await Promise.all([
+                        fetch(`/api/proxy/schedule/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { games: [] }),
+                        fetch(`/api/proxy/scores/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { scores: [] })
+                    ]);
+                    const byId = {};
+                    (scheduleRes.games || []).forEach(game => { byId[gameKey(game)] = game; });
+                    (scoresRes.scores || []).forEach(score => {
+                        const key = gameKey(score);
+                        byId[key] = {...(byId[key] || {}), ...score};
+                    });
+                    const games = Object.values(byId).sort((a, b) => {
+                        if (a.game_time && b.game_time) return new Date(a.game_time) - new Date(b.game_time);
+                        if (a.game_time) return -1;
+                        if (b.game_time) return 1;
+                        return 0;
+                    });
+
+                    if (games.length === 0) {
+                        results.innerHTML = `<div class="league-schedule-empty">No games on ${escapeHtml(prettyDate(picked))}</div>`;
+                        return;
+                    }
+
+                    results.innerHTML = `<div class="league-schedule-count">${games.length} ${games.length === 1 ? 'game' : 'games'} on ${escapeHtml(prettyDate(picked))}</div>${games.map(renderGame).join('')}`;
+                } catch (error) {
+                    results.innerHTML = `<div class="league-schedule-empty">Unable to load schedule: ${escapeHtml(error.message || error)}</div>`;
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const fp = flatpickr(document.getElementById('league-date-picker'), {
+                    defaultDate: 'today',
+                    dateFormat: 'Y-m-d',
+                    allowInput: false,
+                    onChange: loadLeagueSchedule
+                });
+                document.getElementById('league-today-btn').addEventListener('click', () => fp.setDate('today', true));
+                document.getElementById('league-timezone-select').addEventListener('change', loadLeagueSchedule);
+                loadLeagueSchedule();
+            });
+        })();
+    </script>
 </body>
 </html>

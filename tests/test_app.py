@@ -91,6 +91,45 @@ class TestPageSmoke(unittest.TestCase):
             self.assertIn(b"id=\"event-date-picker\"", response.data)
             db.assert_not_called()
 
+    def test_regular_league_page_exposes_schedule_module(self):
+        cursor = FakeCursor(
+            fetchone_values=[{"league_name_proper": "NFL", "league_name": "nfl"}],
+            fetchall_values=[
+                [
+                    {
+                        "team_id": 1,
+                        "real_team_name": "Buffalo Bills",
+                        "city_name": "Buffalo",
+                        "state_name": "NY",
+                        "country": "us",
+                        "logo_filename": "bills.png",
+                        "team_color_1": "#00338D",
+                        "team_color_2": "#ffffff",
+                        "team_color_3": "#C60C30",
+                        "team_wins": 13,
+                        "team_losses": 4,
+                        "team_ties": 0,
+                        "s_stadium_id": None,
+                        "full_stadium_name": None,
+                        "stadium_city": None,
+                        "stadium_state": None,
+                        "conference_name": "AFC",
+                        "division_name": "East",
+                        "team_league": "NFL",
+                    }
+                ]
+            ],
+        )
+
+        with patch("app.get_db_connection", return_value=fake_connection(cursor)), patch("app._fetch_nfl_standings", return_value={}):
+            response = self.client.get("/league/NFL")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="league-date-picker"', response.data)
+        self.assertIn(b'id="league-timezone-select"', response.data)
+        self.assertIn(b"/api/proxy/schedule/", response.data)
+        self.assertIn(b"/api/proxy/scores/", response.data)
+
     def test_static_logo_route_redirects_to_splitsp_lat(self):
         response = self.client.get("/static/logos/mlb/mlb_logo.png")
 
