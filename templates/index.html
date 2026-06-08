@@ -112,6 +112,26 @@
                 </h2>
                 
                 <div class="league-grid">
+                    <!-- ATP -->
+                    <a href="{{ url_for('league_page', league_name='ATP') }}" class="league-card atp fade-in-up" data-league="ATP">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/atp/atp-logo.png" alt="ATP Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-table-tennis" style="color: #003DA5; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">ATP Tour</h3>
+                        <p class="league-count">Matches</p>
+                    </a>
+
+                    <!-- Cycling -->
+                    <a href="{{ url_for('league_page', league_name='CYCLING') }}" class="league-card cycling fade-in-up" data-league="CYCLING">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/cycling/cycling-logo.png" alt="Cycling Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-bicycle" style="color: #F5E814; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">Cycling</h3>
+                        <p class="league-count">Stages</p>
+                    </a>
+
                     <!-- IPL -->
                     <a href="{{ url_for('league_page', league_name='IPL') }}" class="league-card ipl fade-in-up" data-league="IPL">
                         <div class="league-logo">
@@ -190,6 +210,26 @@
                         </div>
                         <h3 class="league-name">Women's National Basketball Association</h3>
                         <p class="league-count">{{ league_stats | selectattr('league', 'equalto', 'WNBA') | map(attribute='count') | first or 0 }} Teams</p>
+                    </a>
+
+                    <!-- WC -->
+                    <a href="{{ url_for('league_page', league_name='WC') }}" class="league-card wc fade-in-up" data-league="WC">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/wc/wc-logo.png" alt="WC Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-futbol" style="color: #00824A; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">World Cup</h3>
+                        <p class="league-count">Fixtures</p>
+                    </a>
+
+                    <!-- WTA -->
+                    <a href="{{ url_for('league_page', league_name='WTA') }}" class="league-card wta fade-in-up" data-league="WTA">
+                        <div class="league-logo">
+                            <img src="https://www.splitsp.lat/logos/wta/wta-logo.png" alt="WTA Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fas fa-table-tennis" style="color: #A01469; display: none;"></i>
+                        </div>
+                        <h3 class="league-name">WTA Tour</h3>
+                        <p class="league-count">Matches</p>
                     </a>
                 </div>
             </div>
@@ -815,6 +855,31 @@
                         hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
                         && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0)));
 
+                    function firstValue(...values) {
+                        return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+                    }
+
+                    function tennisTournamentName() {
+                        return firstValue(
+                            game.tennis_tournament,
+                            game.tournament_name,
+                            game.tournament,
+                            game.event_name,
+                            game.competition_name,
+                            game.league_name
+                        );
+                    }
+
+                    function tennisPlayerName(side) {
+                        const name = side === 'home'
+                            ? firstValue(game.home_player, game.player1, game.player_1, game.player_one, game.home_competitor, game.home_team, game.strHomeTeam)
+                            : firstValue(game.visitor_player, game.away_player, game.player2, game.player_2, game.player_two, game.away_competitor, game.visitor_team, game.away_team, game.strAwayTeam);
+                        if (!name) return 'TBD';
+                        const clean = String(name).replace(/\s+/g, ' ').trim();
+                        const parts = clean.split(' ');
+                        return parts.length > 1 ? parts[parts.length - 1] : clean;
+                    }
+
                     // Cycling: events are calendar entries, not matchups. Render as a single
                     // colspan banner with race + stage + status. Skip the team-vs-team layout.
                     if (isCyclingEvent) {
@@ -911,8 +976,8 @@
                     }
                     // Get full team names from database if available, otherwise use API team name
                     // Use real_team_name first (has spaces between words)
-                    const visitorFullName = visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team;
-                    const homeFullName = homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team;
+                    const visitorFullName = isTennis ? tennisPlayerName('visitor') : (visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team);
+                    const homeFullName = isTennis ? tennisPlayerName('home') : (homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team);
                     const visitorShortName = getShortTeamName(visitorFullName);
                     const homeShortName = getShortTeamName(homeFullName);
                     
@@ -998,7 +1063,7 @@
                     } else {
                         statusDisplay = 'Scheduled';
                     }
-                    
+
                     // Get team records - W-L-OTL for NHL, W-L-T for NFL, W-L for other leagues
                     // During playoffs, show series record instead of regular season records.
                     // is_playoff is the new (2026-06-04+) authoritative field; game_type === 'playoffs'
@@ -1123,8 +1188,8 @@
                         }
                     }
                     
-                    const visitorUrl = getTeamUrl(game.visitor_team, gameLeague);
-                    const homeUrl = getTeamUrl(game.home_team, gameLeague);
+                    const visitorUrl = isTennis ? '#' : getTeamUrl(game.visitor_team, gameLeague);
+                    const homeUrl = isTennis ? '#' : getTeamUrl(game.home_team, gameLeague);
                     
                     // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
                     // (visitorTeamData and homeTeamData are already defined above)
@@ -1163,6 +1228,8 @@
                                              + (game.series_total ? ` &middot; Best of ${game.series_total}` : '');
                                     } else if (isTennis && game.tennis_tournament) {
                                         line = game.tennis_tournament + (game.tennis_round ? ` &middot; R${game.tennis_round}` : '');
+                                    } else if (isTennis && tennisTournamentName()) {
+                                        line = tennisTournamentName() + ((game.tennis_round || game.round) ? ` &middot; R${game.tennis_round || game.round}` : '');
                                     } else if (gameLeague === 'WC' && game.wc_round_label) {
                                         line = game.wc_round_label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                                     }
