@@ -123,7 +123,7 @@
 
         function detailLine(game) {
             if (EVENT_MODE === 'tennis') {
-                return [tournamentName(game), game.tennis_round || game.round ? `R${game.tennis_round || game.round}` : ''].filter(Boolean).join(' · ');
+                return game.tennis_round || game.round ? `R${game.tennis_round || game.round}` : '';
             }
             if (EVENT_MODE === 'cycling') {
                 return [game.cycling_race || game.home_team, game.cycling_stage_label || game.visitor_team, game.cycling_country].filter(Boolean).join(' · ');
@@ -171,6 +171,26 @@
                 </div>
                 ${details ? `<div class="event-league-meta mt-2">${escapeHtml(details)}</div>` : ''}
             </div>`;
+        }
+
+        function renderTennisGroups(games) {
+            const groups = new Map();
+            games.forEach(game => {
+                const name = tournamentName(game) || 'Tournament';
+                if (!groups.has(name)) groups.set(name, []);
+                groups.get(name).push(game);
+            });
+            return Array.from(groups.entries()).map(([name, matches]) => `
+                <div class="event-league-tournament-group">
+                    <div class="event-league-tournament-banner">
+                        <div>
+                            <div class="event-league-tournament-name">${escapeHtml(name)}</div>
+                            <div class="event-league-meta">${matches.length} ${matches.length === 1 ? 'match' : 'matches'}</div>
+                        </div>
+                    </div>
+                    ${matches.map(renderGame).join('')}
+                </div>
+            `).join('');
         }
 
         function renderSeasonInfo(info) {
@@ -222,19 +242,24 @@
 
                 if (games.length === 0) {
                     const phase = seasonRes.current_phase || '';
-                    const noun = EVENT_MODE === 'cycling' ? 'stages' : (EVENT_MODE === 'tennis' ? 'matches' : 'fixtures');
+                    const noun = EVENT_MODE === 'cycling' ? 'stages' : 'matches';
                     const prefix = phase && !['Off Season', 'Off Tour', 'Regular Season'].includes(phase) ? `${phase} — ` : '';
+                    const emptyTitle = EVENT_MODE === 'world-cup'
+                        ? `No matches on ${prettyDate(picked)}`
+                        : `${prefix}No ${noun} on ${prettyDate(picked)}`;
                     results.innerHTML = `<div class="text-center py-4">
-                        <h2 class="fs-4 mb-1">${escapeHtml(prefix)}no ${escapeHtml(noun)} on ${escapeHtml(prettyDate(picked))}</h2>
-                        <div class="event-league-meta">Try a tournament or race date from the date picker.</div>
+                        ${EVENT_MODE === 'world-cup' ? '<div class="event-soccer-ball" aria-hidden="true"><i class="fas fa-futbol"></i></div>' : ''}
+                        <h2 class="fs-4 mb-1">${escapeHtml(emptyTitle)}</h2>
+                        <div class="event-league-meta">${EVENT_MODE === 'world-cup' ? 'Check another match date from the date picker.' : 'Try a tournament or race date from the date picker.'}</div>
                     </div>`;
                     return;
                 }
 
+                const renderedEvents = EVENT_MODE === 'tennis' ? renderTennisGroups(games) : games.map(renderGame).join('');
                 results.innerHTML = `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h2 class="fs-4 mb-0">${escapeHtml(prettyDate(picked))}</h2>
                     <span class="event-league-pill">${games.length} ${games.length === 1 ? 'event' : 'events'}</span>
-                </div>${games.map(renderGame).join('')}`;
+                </div>${renderedEvents}`;
             } catch (error) {
                 results.innerHTML = `<div class="alert alert-warning mb-0">Unable to load ${escapeHtml(EVENT_LEAGUE)}: ${escapeHtml(error.message || error)}</div>`;
             }

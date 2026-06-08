@@ -195,6 +195,31 @@ def _fetch_mls_standings(api_base_url):
         return None
 
 
+def _fetch_nfl_standings(api_base_url):
+    """Fetch NFL standings keyed by team name and abbreviation."""
+    try:
+        response = requests.get(f'{api_base_url}/api/v1/standings/nfl', timeout=10)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        records = {}
+        for t in data.get('teams', []):
+            name = (t.get('team_name') or '').strip()
+            abbrev = (t.get('abbreviation') or '').strip()
+            record = {
+                'wins': int(t.get('wins') or 0),
+                'losses': int(t.get('losses') or 0),
+                'ties': int(t.get('ties') or 0),
+            }
+            if name:
+                records[name] = record
+            if abbrev:
+                records[abbrev] = record
+        return records
+    except Exception:
+        return None
+
+
 def _fetch_wnba_standings(api_base_url):
     """Fetch WNBA standings from sportspuff-api keyed by team name."""
     try:
@@ -750,6 +775,8 @@ def league_page(league_name):
             team['abbreviation'] = get_team_abbreviation(team['real_team_name'], league_name)
             organized_teams[conference][division].append(team)
 
+        nfl_division_grid = []
+
         # For MLB (and other leagues with standings), sort teams within each division by wins desc
         # and compute Games Behind (GB)
         if league_name == 'MLB':
@@ -768,14 +795,71 @@ def league_page(league_name):
 
         # For MLS, sort teams within each conference by points (3*W + 1*T) desc
         if league_name == 'MLS':
+            mls_records = _fetch_mls_standings(API_BASE_URL) or {}
+            mls_teams = mls_records.get('teams', {})
             for conference in organized_teams:
                 for division in organized_teams[conference]:
                     teams_list = organized_teams[conference][division]
                     for team in teams_list:
+                        rec = mls_teams.get(team['real_team_name']) or mls_teams.get(team['abbreviation'])
+                        if rec:
+                            team['team_wins'] = int(rec.get('wins') or team.get('team_wins') or 0)
+                            team['team_losses'] = int(rec.get('losses') or team.get('team_losses') or 0)
+                            team['team_ties'] = int(rec.get('draws') or team.get('team_ties') or 0)
+                            team['mls_points'] = int(rec.get('points') or ((team['team_wins'] * 3) + team['team_ties']))
+                            continue
                         w = team.get('team_wins') or 0
                         t = team.get('team_ties') or 0
                         team['mls_points'] = w * 3 + t
                     teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
+
+        if league_name == 'NFL':
+            nfl_records = _fetch_nfl_standings(API_BASE_URL) or {}
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    for team in teams_list:
+                        rec = nfl_records.get(team['real_team_name']) or nfl_records.get(team['abbreviation'])
+                        if rec:
+                            team['team_wins'] = rec['wins']
+                            team['team_losses'] = rec['losses']
+                            team['team_ties'] = rec['ties']
+                    teams_list.sort(
+                        key=lambda t: (
+                            -(t.get('team_wins') or 0),
+                            (t.get('team_losses') or 0),
+                            -(t.get('team_ties') or 0),
+                            t.get('real_team_name') or '',
+                        )
+                    )
+                    if teams_list and teams_list[0].get('team_wins') is not None:
+                        leader_wins = teams_list[0].get('team_wins') or 0
+                        leader_losses = teams_list[0].get('team_losses') or 0
+                        leader_ties = teams_list[0].get('team_ties') or 0
+                        leader_points = (leader_wins * 2) + leader_ties
+                        for team in teams_list:
+                            team_points = ((team.get('team_wins') or 0) * 2) + (team.get('team_ties') or 0)
+                            gb = (leader_points - team_points) / 2.0
+                            if gb == 0 and (team.get('team_losses') or 0) == leader_losses:
+                                team['games_behind'] = '-'
+                            else:
+                                team['games_behind'] = f'{gb:.1f}'.rstrip('0').rstrip('.')
+
+            nfl_order = [
+                [('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')],
+                [('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')],
+            ]
+            nfl_division_grid = [
+                [
+                    {
+                        'conference': conference,
+                        'division': division,
+                        'teams': organized_teams.get(conference, {}).get(division, []),
+                    }
+                    for conference, division in row
+                ]
+                for row in nfl_order
+            ]
 
         # For WNBA, fetch live records from sportspuff-api and sort by wins desc
         if league_name == 'WNBA':
@@ -809,6 +893,7 @@ def league_page(league_name):
         return render_template('league_page.html', 
                              league_name=league_name,
                              organized_teams=organized_teams,
+                             nfl_division_grid=nfl_division_grid,
                              logo_mapping=LOGO_MAPPING,
                              league_info=league_info)
     
@@ -1858,27 +1943,11 @@ def nfl_team_records():
         if cached:
             return jsonify(cached), 200
 
-        response = requests.get(f'{API_BASE_URL}/api/v1/standings/nfl', timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        team_records = {}
-        for team in data.get('teams', []):
-            name = team.get('team_name', '').strip()
-            abv = team.get('abbreviation', '').strip()
-            record = {
-                'wins': int(team.get('wins') or 0),
-                'losses': int(team.get('losses') or 0),
-                'ties': int(team.get('ties') or 0),
-            }
-            if name:
-                team_records[name] = record
-            if abv:
-                team_records[abv] = record
+        team_records = _fetch_nfl_standings(API_BASE_URL) or {}
 
         result = {'teams': team_records}
         set_cached_response(cache_key, result)
-        logger.info(f"Fetched records for {len(data.get('teams', []))} NFL teams from sportspuff-api")
+        logger.info(f"Fetched records for {len(team_records)} NFL team keys from sportspuff-api")
         return jsonify(result), 200
 
     except requests.exceptions.RequestException as e:

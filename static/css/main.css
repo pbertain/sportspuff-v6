@@ -570,6 +570,30 @@ main, .main-content {
   margin-top: 10px;
 }
 
+.event-league-tournament-group + .event-league-tournament-group {
+  margin-top: 1.25rem;
+}
+
+.event-league-tournament-banner {
+  align-items: center;
+  background: rgba(20, 10, 40, 0.92);
+  background: color-mix(in srgb, var(--event-accent, var(--golden-yellow)) 28%, rgba(20, 10, 40, 0.92));
+  border: 1px solid color-mix(in srgb, var(--event-accent, var(--golden-yellow)) 54%, rgba(255, 255, 255, 0.18));
+  border-left: 5px solid var(--event-accent, var(--golden-yellow));
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.event-league-tournament-name {
+  color: var(--warm-white);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .event-league-meta {
   color: rgba(245, 245, 245, 0.74);
   font-size: 0.88rem;
@@ -595,6 +619,23 @@ main, .main-content {
   color: rgba(255, 255, 255, 0.86);
   padding: 2px 9px;
   font-size: 0.78rem;
+}
+
+.event-soccer-ball {
+  animation: event-soccer-bounce 1.15s ease-in-out infinite alternate;
+  color: var(--event-accent, var(--golden-yellow));
+  font-size: 2.4rem;
+  margin: 0 auto 0.75rem;
+  width: 3rem;
+}
+
+@keyframes event-soccer-bounce {
+  from {
+    transform: translateX(-18px) translateY(0) rotate(-18deg);
+  }
+  to {
+    transform: translateX(18px) translateY(-12px) rotate(18deg);
+  }
 }
 
 /* Conference boxes with floating logos */
@@ -786,6 +827,20 @@ main, .main-content {
   flex: 0 0 45%;
   max-width: 45%;
   margin: 0 2.5%;
+}
+
+.nfl-division-grid {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.nfl-division-box .division-title {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.nfl-team-item:hover {
+  transform: translateY(-2px);
 }
 
 .division-title {

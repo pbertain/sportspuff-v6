@@ -25,6 +25,7 @@ from app import (  # noqa: E402
     app,
     get_db_connection,
     _empty_all_scores_response,
+    _fetch_nfl_standings,
     _normalize_timezone,
 )
 
@@ -272,6 +273,41 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("no_result ?? t.no_results ?? t.nr ?? t.noResult", template)
         self.assertIn("wins * 2 + noResults", template)
         self.assertIn("NR", template)
+
+    def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
+        template = (PROJECT_ROOT / "templates/league_page.html").read_text()
+        app_source = (PROJECT_ROOT / "app.py").read_text()
+
+        self.assertIn("nfl_division_grid", template)
+        self.assertIn("{{ slot.conference }}", template)
+        self.assertIn("{{ slot.division }}", template)
+        self.assertIn("[('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')]", app_source)
+        self.assertIn("[('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')]", app_source)
+        self.assertIn("{{ team.team_wins }}W-{{ team.team_ties or 0 }}D-{{ team.team_losses }}L", template)
+
+    def test_event_page_groups_tennis_and_uses_world_cup_empty_copy(self):
+        template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
+
+        self.assertIn("function renderTennisGroups", template)
+        self.assertIn("event-league-tournament-banner", template)
+        self.assertIn("No matches on", template)
+        self.assertIn("event-soccer-ball", template)
+
+    @patch("app.requests.get")
+    def test_fetch_nfl_standings_keys_by_name_and_abbreviation(self, mock_get):
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {
+            "teams": [
+                {"team_name": "Buffalo Bills", "abbreviation": "BUF", "wins": "13", "losses": "4", "ties": "0"}
+            ]
+        }
+        mock_get.return_value = response
+
+        records = _fetch_nfl_standings("https://api.example.test")
+
+        self.assertEqual(records["Buffalo Bills"], {"wins": 13, "losses": 4, "ties": 0})
+        self.assertEqual(records["BUF"], {"wins": 13, "losses": 4, "ties": 0})
 
 
 class TestDatabaseAndConfig(unittest.TestCase):
