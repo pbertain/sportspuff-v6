@@ -312,7 +312,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()
 
         self.assertIn("no_result ?? t.no_results ?? t.nr ?? t.noResult", template)
-        self.assertIn("wins * 2 + noResults", template)
+        self.assertIn("(wins * 2) + noResults", template)
+        self.assertIn("${wins}W-${losses}L-${noResults}NR", template)
         self.assertIn("NR", template)
 
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
@@ -326,6 +327,20 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("[('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')]", app_source)
         self.assertIn("{{ team.team_wins }}W-{{ team.team_ties or 0 }}D-{{ team.team_losses }}L", template)
 
+    def test_league_page_standings_records_and_readable_card_lines(self):
+        template = (PROJECT_ROOT / "templates/league_page.html").read_text()
+        app_source = (PROJECT_ROOT / "app.py").read_text()
+        contrast_script = (PROJECT_ROOT / "static/js/contrast.js").read_text()
+
+        self.assertIn("def _fetch_league_standings", app_source)
+        self.assertIn("league_name == 'NBA'", app_source)
+        self.assertIn("league_name == 'NHL'", app_source)
+        self.assertIn("Pts {{ team.standings_points", template)
+        self.assertIn("class=\"team-record-line\"", template)
+        self.assertIn("class=\"stadium-info\"", template)
+        self.assertIn("class=\"location-info\"", template)
+        self.assertIn(".team-name, .team-record-line, .stadium-info, .location-info", contrast_script)
+
     def test_event_page_groups_tennis_and_uses_world_cup_empty_copy(self):
         template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
 
@@ -333,6 +348,21 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("event-league-tournament-banner", template)
         self.assertIn("No matches on", template)
         self.assertIn("event-soccer-ball", template)
+
+    def test_homepage_uses_active_event_branding_for_banners(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        for snippet in [
+            "const EVENT_BRANDING",
+            "function activeEventContext",
+            "event-brand-wimbledon",
+            "event-brand-roland-garros",
+            "event-brand-tour-de-france",
+            "event-brand-world-cup",
+            "activeEventContext(lower, pickedDate)",
+            "activeEventContext(leagueLower, pickedDate)",
+        ]:
+            self.assertIn(snippet, template)
 
     @patch("app.requests.get")
     def test_fetch_nfl_standings_keys_by_name_and_abbreviation(self, mock_get):

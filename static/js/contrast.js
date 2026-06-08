@@ -129,16 +129,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Find text elements within this team item
-            const teamName = teamItem.querySelector('.team-name');
-            const stadiumInfo = teamItem.querySelector('.stadium-info');
-            const locationInfo = teamItem.querySelector('.location-info');
+            const textElements = teamItem.querySelectorAll('.team-name, .team-record-line, .stadium-info, .location-info');
             
-            // Get original colors
-            const originalTeamNameColor = teamName ? window.getComputedStyle(teamName).color : null;
-            const originalStadiumColor = stadiumInfo ? window.getComputedStyle(stadiumInfo).color : null;
-            const originalLocationColor = locationInfo ? window.getComputedStyle(locationInfo).color : null;
-            
-            // Convert colors to hex
             function rgbToHex(rgb) {
                 if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return null;
                 const match = rgb.match(/\d+/g);
@@ -148,25 +140,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return null;
             }
             
-            const originalTeamNameHex = rgbToHex(originalTeamNameColor);
-            const originalStadiumHex = rgbToHex(originalStadiumColor);
-            const originalLocationHex = rgbToHex(originalLocationColor);
-            
-            // Apply optimal colors
-            if (teamName) {
-                const optimalTeamNameColor = getOptimalTextColor(bgHex, originalTeamNameHex);
-                teamName.style.color = optimalTeamNameColor;
-            }
-            
-            if (stadiumInfo) {
-                const optimalStadiumColor = getOptimalTextColor(bgHex, originalStadiumHex);
-                stadiumInfo.style.color = optimalStadiumColor;
-            }
-            
-            if (locationInfo) {
-                const optimalLocationColor = getOptimalTextColor(bgHex, originalLocationHex);
-                locationInfo.style.color = optimalLocationColor;
-            }
+            textElements.forEach(function(element) {
+                const originalHex = rgbToHex(window.getComputedStyle(element).color);
+                const optimal = getOptimalTextColor(bgHex, originalHex);
+                if (element.dataset.contrastColor !== optimal) {
+                    element.style.color = optimal;
+                    element.dataset.contrastColor = optimal;
+                }
+            });
         });
     }
 
@@ -179,18 +160,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Re-apply if CSS changes (for dynamic content)
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && 
-                (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
-                setTimeout(applyContrastAdjustments, 50);
-            }
-        });
+    const observer = new MutationObserver(function() {
+        setTimeout(applyContrastAdjustments, 50);
     });
     
-    // Observe changes to team items
-    const teamItems = document.querySelectorAll('.team-item');
-    teamItems.forEach(function(item) {
-        observer.observe(item, { attributes: true });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
     });
 });

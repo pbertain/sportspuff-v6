@@ -281,6 +281,7 @@
             for (const t of (seasonInfo.season_types || [])) {
                 if (t.start_date && t.end_date && date >= t.start_date && date <= t.end_date) return t.name;
             }
+            if (seasonInfo && seasonInfo.current_phase) return seasonInfo.current_phase;
             return 'Off Season';
         }
         function nextRegularSeasonStart(seasonInfo, fromDate) {
@@ -296,6 +297,82 @@
         }
         function isMlsWorldCupBreak(date) {
             return date >= '2026-05-25' && date <= '2026-07-15';
+        }
+        function eventSlug(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/&/g, 'and')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+        const EVENT_BRANDING = {
+            'wimbledon': {
+                label: 'Wimbledon',
+                asset: '/static/images/events/tennis/balls/tennis-ball-wimbledon-green.png',
+                className: 'event-brand-wimbledon'
+            },
+            'roland-garros': {
+                label: 'Roland Garros',
+                asset: '/static/images/events/tennis/balls/tennis-ball-roland-garros-clay.png',
+                className: 'event-brand-roland-garros'
+            },
+            'french-open': {
+                label: 'Roland Garros',
+                asset: '/static/images/events/tennis/balls/tennis-ball-roland-garros-clay.png',
+                className: 'event-brand-roland-garros'
+            },
+            'us-open': {
+                label: 'US Open',
+                asset: '',
+                className: 'event-brand-us-open'
+            },
+            'australian-open': {
+                label: 'Australian Open',
+                asset: '',
+                className: 'event-brand-australian-open'
+            },
+            'tour-de-france': {
+                label: 'Tour de France',
+                asset: '',
+                className: 'event-brand-tour-de-france'
+            },
+            'world-cup': {
+                label: 'World Cup 2026',
+                asset: '',
+                className: 'event-brand-world-cup'
+            },
+            'fifa-world-cup': {
+                label: 'World Cup 2026',
+                asset: '',
+                className: 'event-brand-world-cup'
+            }
+        };
+        function activeEventContext(leagueLower, pickedDate) {
+            const info = seasonInfoCache[leagueLower];
+            const phase = info ? phaseForDate(info, pickedDate) : '';
+            const slug = eventSlug(phase);
+            const isTourEvent = ['atp', 'wta', 'cycling'].includes(leagueLower)
+                && phase
+                && !['off-season', 'off-tour', 'regular-season'].includes(slug);
+            const isWorldCup = leagueLower === 'wc' && slug && slug !== 'off-season';
+            if (!isTourEvent && !isWorldCup) return null;
+
+            const branding = isWorldCup ? EVENT_BRANDING['world-cup'] : (EVENT_BRANDING[slug] || {});
+            return {
+                label: branding.label || phase,
+                asset: branding.asset || LEAGUE_LOGOS[leagueLower.toUpperCase()] || '',
+                className: branding.className || `event-brand-${slug}`,
+                phase
+            };
         }
         function emptyBannerMessage(leagueLower, pickedDate, isToday) {
             // Special-case: MLS during FIFA World Cup window — even if season-info says in-season.
@@ -329,17 +406,20 @@
         }
         function emptyBannerHtml(leagueLower, pickedDate, isToday) {
             const isWcBreak = (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate));
+            const eventContext = activeEventContext(leagueLower, pickedDate);
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
             const upper = leagueLower.toUpperCase();
-            const logo = LEAGUE_LOGOS[upper] || '';
+            const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || '';
+            const name = eventContext?.label || upper;
+            const brandClass = eventContext?.className || '';
             const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';
             return `
-                <div class="league-empty-banner league-empty-${leagueLower}">
-                    ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${upper}" onerror="this.style.display='none';">` : ''}
-                    <div class="league-empty-name">${upper}</div>
+                <div class="league-empty-banner league-empty-${leagueLower} ${brandClass}">
+                    ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${escapeHtml(name)}" onerror="this.style.display='none';">` : ''}
+                    <div class="league-empty-name">${escapeHtml(name)}</div>
                     <div class="league-empty-sep">&middot;</div>
                     ${icon}
-                    <div class="league-empty-message">${message}</div>
+                    <div class="league-empty-message">${escapeHtml(message)}</div>
                 </div>`;
         }
 
@@ -1639,7 +1719,10 @@
                     const lower = leagueName.toLowerCase();
                     if (!activeLeagues.has(lower)) return;
                     const leagueGames = gamesByLeague[leagueName] || [];
-                    const leagueLogo = `https://www.splitsp.lat/logos/${lower}/${lower}_logo.png`;
+                    const eventContext = activeEventContext(lower, pickedDate);
+                    const leagueLogo = eventContext?.asset || `https://www.splitsp.lat/logos/${lower}/${lower}_logo.png`;
+                    const headerLabel = eventContext?.label || leagueName;
+                    const headerClass = eventContext?.className || '';
 
                     // MLS during World Cup window is handled inside emptyBannerMessage()
                     // — it picks the right copy. We just need to detect "no games for this league".
@@ -1650,10 +1733,10 @@
 
                     html += `
                         <div class="league-section mb-4">
-                            <div class="league-header mb-2" style="padding: 0.5rem 0;">
+                            <div class="league-header mb-2 ${headerClass}" style="padding: 0.5rem 0;">
                                 <div class="d-flex align-items-center justify-content-center">
-                                    <img src="${leagueLogo}" alt="${leagueName}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
-                                    <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${leagueName}</span>
+                                    <img src="${leagueLogo}" alt="${escapeHtml(headerLabel)}" style="height: 30px; vertical-align: middle; margin-right: 8px;" onerror="this.style.display='none';">
+                                    <span style="font-size: 1rem; font-weight: 600; color: #2D1B4E;">${escapeHtml(headerLabel)}</span>
                                 </div>
                             </div>
                             <div class="table-responsive-scores">
@@ -1827,6 +1910,30 @@
         .league-empty-atp     { background: rgba(  0,  35, 102, 0.40); border-color: rgba(  0,  72, 184, 0.55); border-left-color: #003DA5; } /* ATP navy */
         .league-empty-wta     { background: rgba(160,  20, 105, 0.32); border-color: rgba(160,  20, 105, 0.55); border-left-color: #A01469; } /* WTA magenta */
         .league-empty-cycling { background: rgba(245, 232,  20, 0.20); border-color: rgba(245, 232,  20, 0.45); border-left-color: #F5E814; } /* maillot jaune */
+        .event-brand-wimbledon       { background: linear-gradient(135deg, rgba(31, 122, 58, 0.62), rgba(91, 43, 120, 0.56)); border-left-color: #F0D35A; }
+        .event-brand-roland-garros   { background: linear-gradient(135deg, rgba(217, 107, 43, 0.62), rgba(37, 68, 110, 0.50)); border-left-color: #FFE1B8; }
+        .event-brand-us-open         { background: linear-gradient(135deg, rgba(0, 47, 108, 0.62), rgba(197, 34, 58, 0.52)); border-left-color: #FFFFFF; }
+        .event-brand-australian-open { background: linear-gradient(135deg, rgba(0, 163, 224, 0.55), rgba(242, 109, 61, 0.52)); border-left-color: #FFFFFF; }
+        .event-brand-tour-de-france  { background: linear-gradient(135deg, rgba(245, 232, 20, 0.40), rgba(28, 28, 28, 0.50)); border-left-color: #F5E814; }
+        .event-brand-world-cup       { background: linear-gradient(135deg, rgba(0, 130, 73, 0.55), rgba(118, 18, 43, 0.45)); border-left-color: #D4AF37; }
+        #scores-schedules-container .league-header.event-brand-wimbledon,
+        #scores-schedules-container .league-header.event-brand-roland-garros,
+        #scores-schedules-container .league-header.event-brand-us-open,
+        #scores-schedules-container .league-header.event-brand-australian-open,
+        #scores-schedules-container .league-header.event-brand-tour-de-france,
+        #scores-schedules-container .league-header.event-brand-world-cup {
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        #scores-schedules-container .league-header[class*="event-brand-"] span {
+            color: #fff !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        #scores-schedules-container .league-header[class*="event-brand-"] img {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 6px;
+            padding: 3px;
+        }
 
         /* Orbital league-logo loading spinner */
         .orbit-loader {

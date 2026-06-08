@@ -242,6 +242,37 @@ def _fetch_wnba_standings(api_base_url):
         return None
 
 
+def _fetch_league_standings(api_base_url, league):
+    """Fetch standings keyed by team name and abbreviation for record-based league pages."""
+    try:
+        response = requests.get(f'{api_base_url}/api/v1/standings/{league.lower()}', timeout=10)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        records = {}
+        for t in data.get('teams', []) or data.get('standings', []):
+            name = (t.get('team_name') or t.get('name') or '').strip()
+            abbrev = (t.get('abbreviation') or t.get('team_abbreviation') or '').strip()
+            record = {
+                'wins': int(t.get('wins') or 0),
+                'losses': int(t.get('losses') or 0),
+                'ties': int(t.get('ties') or t.get('draws') or t.get('otl') or t.get('overtime_losses') or 0),
+                'points': t.get('points'),
+                'games_back': t.get('games_back') if t.get('games_back') not in (None, '') else t.get('gb'),
+            }
+            if record['points'] in (None, ''):
+                record['points'] = (record['wins'] * 2) + record['ties']
+            else:
+                record['points'] = int(record['points'] or 0)
+            if name:
+                records[name] = record
+            if abbrev:
+                records[abbrev] = record
+        return records
+    except Exception:
+        return None
+
+
 def _background_cache_refresh(api_base_url):
     """Background thread: refresh cache every 60 seconds."""
     timezones = ['pt', 'et', 'ct', 'mt']
@@ -777,13 +808,34 @@ def league_page(league_name):
 
         nfl_division_grid = []
 
-        # For MLB (and other leagues with standings), sort teams within each division by wins desc
-        # and compute Games Behind (GB)
-        if league_name == 'MLB':
+        def _record_for_team(records, team):
+            return records.get(team['real_team_name']) or records.get(team.get('abbreviation'))
+
+        def _apply_records(records, include_points=False):
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    for team in organized_teams[conference][division]:
+                        rec = _record_for_team(records, team)
+                        if not rec:
+                            continue
+                        team['team_wins'] = rec.get('wins', team.get('team_wins'))
+                        team['team_losses'] = rec.get('losses', team.get('team_losses'))
+                        team['team_ties'] = rec.get('ties', team.get('team_ties') or 0)
+                        if include_points:
+                            team['standings_points'] = rec.get('points')
+
+        def _sort_by_record_with_gb():
             for conference in organized_teams:
                 for division in organized_teams[conference]:
                     teams_list = organized_teams[conference][division]
-                    teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
+                    teams_list.sort(
+                        key=lambda t: (
+                            -(t.get('team_wins') or 0),
+                            (t.get('team_losses') or 0),
+                            -(t.get('team_ties') or 0),
+                            t.get('real_team_name') or '',
+                        )
+                    )
                     if teams_list and teams_list[0].get('team_wins') is not None:
                         leader_wins = teams_list[0].get('team_wins') or 0
                         leader_losses = teams_list[0].get('team_losses') or 0
@@ -792,6 +844,37 @@ def league_page(league_name):
                             tl = team.get('team_losses') or 0
                             gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
                             team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
+
+        def _sort_by_points():
+            for conference in organized_teams:
+                for division in organized_teams[conference]:
+                    teams_list = organized_teams[conference][division]
+                    for team in teams_list:
+                        if team.get('standings_points') is None:
+                            team['standings_points'] = ((team.get('team_wins') or 0) * 2) + (team.get('team_ties') or 0)
+                    teams_list.sort(
+                        key=lambda t: (
+                            -(t.get('standings_points') or 0),
+                            -(t.get('team_wins') or 0),
+                            (t.get('team_losses') or 0),
+                            t.get('real_team_name') or '',
+                        )
+                    )
+
+        # For MLB (and other leagues with standings), sort teams within each division by wins desc
+        # and compute Games Behind (GB)
+        if league_name == 'MLB':
+            _sort_by_record_with_gb()
+
+        if league_name == 'NBA':
+            nba_records = _fetch_league_standings(API_BASE_URL, 'nba') or {}
+            _apply_records(nba_records)
+            _sort_by_record_with_gb()
+
+        if league_name == 'NHL':
+            nhl_records = _fetch_league_standings(API_BASE_URL, 'nhl') or {}
+            _apply_records(nhl_records, include_points=True)
+            _sort_by_points()
 
         # For MLS, sort teams within each conference by points (3*W + 1*T) desc
         if league_name == 'MLS':
@@ -815,35 +898,8 @@ def league_page(league_name):
 
         if league_name == 'NFL':
             nfl_records = _fetch_nfl_standings(API_BASE_URL) or {}
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    teams_list = organized_teams[conference][division]
-                    for team in teams_list:
-                        rec = nfl_records.get(team['real_team_name']) or nfl_records.get(team['abbreviation'])
-                        if rec:
-                            team['team_wins'] = rec['wins']
-                            team['team_losses'] = rec['losses']
-                            team['team_ties'] = rec['ties']
-                    teams_list.sort(
-                        key=lambda t: (
-                            -(t.get('team_wins') or 0),
-                            (t.get('team_losses') or 0),
-                            -(t.get('team_ties') or 0),
-                            t.get('real_team_name') or '',
-                        )
-                    )
-                    if teams_list and teams_list[0].get('team_wins') is not None:
-                        leader_wins = teams_list[0].get('team_wins') or 0
-                        leader_losses = teams_list[0].get('team_losses') or 0
-                        leader_ties = teams_list[0].get('team_ties') or 0
-                        leader_points = (leader_wins * 2) + leader_ties
-                        for team in teams_list:
-                            team_points = ((team.get('team_wins') or 0) * 2) + (team.get('team_ties') or 0)
-                            gb = (leader_points - team_points) / 2.0
-                            if gb == 0 and (team.get('team_losses') or 0) == leader_losses:
-                                team['games_behind'] = '-'
-                            else:
-                                team['games_behind'] = f'{gb:.1f}'.rstrip('0').rstrip('.')
+            _apply_records(nfl_records)
+            _sort_by_record_with_gb()
 
             nfl_order = [
                 [('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')],

@@ -11,6 +11,28 @@
 </head>
 <body>
     {% include 'shared_header.html' %}
+    {% macro team_card_text(team, league_name) -%}
+        <div class="team-name" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem; line-height: 1.15;">{{ team.real_team_name }}</div>
+        {% if team.abbreviation or (team.team_wins is not none and team.team_losses is not none) %}
+        <div class="team-record-line" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.86; margin-top: 2px;">
+            {% if team.abbreviation %}{{ team.abbreviation }}{% endif %}
+            {% if team.team_wins is not none and team.team_losses is not none %}
+                {% if team.abbreviation %} &middot; {% endif %}
+                {% if league_name == 'MLS' %}
+                    {{ team.team_wins }}W-{{ team.team_ties or 0 }}D-{{ team.team_losses }}L &middot; {{ team.mls_points or ((team.team_wins or 0) * 3 + (team.team_ties or 0)) }} pts
+                {% elif league_name == 'NHL' %}
+                    {{ team.team_wins }}-{{ team.team_losses }}-{{ team.team_ties or 0 }} &middot; Pts {{ team.standings_points or ((team.team_wins or 0) * 2 + (team.team_ties or 0)) }}
+                {% elif league_name == 'NFL' %}
+                    {{ team.team_wins }}-{{ team.team_losses }}-{{ team.team_ties or 0 }}{% if team.games_behind is defined and team.games_behind != '-' %} &middot; GB {{ team.games_behind }}{% endif %}
+                {% else %}
+                    {{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %} &middot; GB {{ team.games_behind }}{% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if team.full_stadium_name %}<div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
+        <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+    {%- endmacro %}
 
     <div class="container-fluid px-4 my-4">
         <!-- League Header -->
@@ -136,9 +158,9 @@
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
                                         <div class="mls-team-record" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight:400;font-size:0.9rem">({{ team.team_wins }}W-{{ team.team_ties or 0 }}D-{{ team.team_losses }}L, {{ team.mls_points or ((team.team_wins or 0) * 3 + (team.team_ties or 0)) }}pts)</span>{% endif %}</div>
-                                        {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                        {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                        <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                        {% if team.abbreviation %}<div class="team-record-line" style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
+                                        {% if team.full_stadium_name %}<div class="stadium-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
+                                        <div class="location-info" style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
                                     </div>
                                 </a>
                                 {% endfor %}
@@ -230,13 +252,7 @@
                                         <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 52px; height: 52px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1rem; line-height: 1.15;">{{ team.real_team_name }}</div>
-                                        {% if team.team_wins is not none and team.team_losses is not none %}
-                                        <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 600; font-size: 0.84rem; opacity: 0.86; margin-top: 2px;">
-                                            {{ team.team_wins }}-{{ team.team_losses }}-{{ team.team_ties or 0 }}{% if team.games_behind is defined and team.games_behind != '-' %} · GB {{ team.games_behind }}{% endif %}
-                                        </div>
-                                        {% endif %}
-                                        {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.78rem; opacity: 0.78;">{{ team.abbreviation }}</div>{% endif %}
+                                        {{ team_card_text(team, league_name) }}
                                     </div>
                                 </a>
                                 {% endfor %}
@@ -276,10 +292,7 @@
                                                 <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                             </div>
                                             <div style="flex: 1; min-width: 0;">
-                                                <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                                {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                                {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                                <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                                {{ team_card_text(team, league_name) }}
                                             </div>
                                         </a>
                                         {% endfor %}
@@ -350,10 +363,7 @@
                                         <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                        {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                        {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                        <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                        {{ team_card_text(team, league_name) }}
                                     </div>
                                 </a>
                                 {% endfor %}
@@ -392,10 +402,7 @@
                                             <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                         </div>
                                         <div style="flex: 1; min-width: 0;">
-                                            <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                            {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                            {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                            <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                            {{ team_card_text(team, league_name) }}
                                         </div>
                                     </a>
                                     {% endfor %}
@@ -454,10 +461,10 @@
                             const wins = Number(t.wins || 0);
                             const losses = Number(t.losses || 0);
                             const noResults = Number(t.no_result ?? t.no_results ?? t.nr ?? t.noResult ?? 0);
-                            const points = noResults > 0 ? (wins * 2 + noResults) : (t.points ?? wins * 2);
+                            const points = (wins * 2) + noResults;
 
                             const td = teamLookup[t.team_name] || {};
-                            const record = `${wins}W-${losses}L` + (noResults ? `-${noResults}NR` : '');
+                            const record = `${wins}W-${losses}L-${noResults}NR`;
                             const stadiumLink = td.stadiumId ? `<span onclick="event.preventDefault(); window.location='/stadium/${td.stadiumId}';" style="text-decoration: underline; cursor: pointer;">${td.stadium}</span>` : (td.stadium || '');
 
                             cardsContainer.innerHTML += `
@@ -503,11 +510,15 @@
                         const tbody = document.getElementById('mlc-standings-body');
                         data.standings.forEach(t => {
                             const nrrClass = parseFloat(t.nrr) >= 0 ? 'text-success' : 'text-danger';
+                            const wins = Number(t.wins || 0);
+                            const losses = Number(t.losses || 0);
+                            const noResults = Number(t.no_result ?? t.no_results ?? t.nr ?? t.noResult ?? 0);
+                            const points = (wins * 2) + noResults;
                             tbody.innerHTML += `<tr>
                                 <td>${t.rank}</td>
                                 <td><strong>${t.abbreviation}</strong> ${t.team_name}</td>
-                                <td>${t.matches}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.no_result || 0}</td>
-                                <td><strong>${t.points}</strong></td>
+                                <td>${t.matches}</td><td>${wins}</td><td>${losses}</td><td>${noResults}</td>
+                                <td><strong>${points}</strong></td>
                                 <td class="${nrrClass}">${t.nrr}</td>
                             </tr>`;
                         });
@@ -531,10 +542,7 @@
                                             <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                         </div>
                                         <div style="flex: 1; min-width: 0;">
-                                            <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                            {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                            {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                            <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                            {{ team_card_text(team, league_name) }}
                                         </div>
                                     </a>
                                     {% endfor %}
@@ -574,10 +582,7 @@
                                                 <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
                                             </div>
                                             <div style="flex: 1; min-width: 0;">
-                                                <div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 1.05rem;">{{ team.real_team_name }}{% if team.team_wins is not none and team.team_losses is not none %} <span style="font-weight: 400; font-size: 0.9rem;">({{ team.team_wins }}-{{ team.team_losses }}{% if team.games_behind is defined and team.games_behind != '-' %}, GB: {{ team.games_behind }}{% endif %})</span>{% endif %}</div>
-                                                {% if team.abbreviation %}<div style="color: {{ team.team_color_2 or '#000000' }}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">{{ team.abbreviation }}</div>{% endif %}
-                                                {% if team.full_stadium_name %}<div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.85rem;">{% if team.s_stadium_id %}<span onclick="event.preventDefault(); window.location='{{ url_for('stadium_detail', stadium_id=team.s_stadium_id) }}';" style="text-decoration: underline; cursor: pointer;">{{ team.full_stadium_name }}</span>{% else %}{{ team.full_stadium_name }}{% endif %}</div>
-                                                <div style="color: {{ team.team_color_3 or team.team_color_2 or '#666666' }}; font-size: 0.8rem;">{{ team.stadium_city.title() }}, {{ team.stadium_state.upper() }}</div>{% endif %}
+                                                {{ team_card_text(team, league_name) }}
                                             </div>
                                         </a>
                                         {% endfor %}
