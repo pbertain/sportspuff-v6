@@ -38,17 +38,17 @@
       "id": "us-open",
       "label": "US Open",
       "theme": "us-open",
-      "ball": null,
+      "ball": "balls/tennis-ball-us-open-navy.svg",
       "accent": "#002f6c",
-      "available": false
+      "available": true
     },
     {
       "id": "australian-open",
       "label": "Australian Open",
       "theme": "australian-open",
-      "ball": null,
+      "ball": "balls/tennis-ball-australian-open-blue.svg",
       "accent": "#00a3e0",
-      "available": false
+      "available": true
     }
   ]
 }

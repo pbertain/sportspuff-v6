@@ -281,6 +281,23 @@ class TestTournamentThemeAssets(unittest.TestCase):
             self.assertTrue(tournament["ball"], tournament)
             self.assertTrue((base_dir / tournament["ball"]).exists(), tournament)
 
+    def test_active_event_assets_are_local_and_documented(self):
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+        inventory = (PROJECT_ROOT / "docs/EVENT_ASSET_INVENTORY.md").read_text()
+        expected_assets = [
+            "static/images/events/tennis/balls/tennis-ball-us-open-navy.svg",
+            "static/images/events/tennis/balls/tennis-ball-australian-open-blue.svg",
+            "static/images/events/wc/world-cup-2026-mark.svg",
+        ]
+
+        for asset in expected_assets:
+            self.assertTrue((PROJECT_ROOT / asset).exists(), asset)
+            self.assertIn(f"/{asset}", index_template)
+            self.assertIn(asset, inventory)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png", index_template)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png", inventory)
+        self.assertTrue((PROJECT_ROOT / "static/images/events/cycling/tour-de-france-mark.svg").exists())
+
     def test_shared_header_exposes_expected_theme_options(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
 
@@ -363,6 +380,16 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "activeEventContext(leagueLower, pickedDate)",
         ]:
             self.assertIn(snippet, template)
+
+    def test_homepage_groups_tennis_and_skips_team_logos_for_players(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn("function homepageTennisTournamentName", template)
+        self.assertIn("homepage-tennis-tournament-divider", template)
+        self.assertIn("leagueName === 'ATP' || leagueName === 'WTA'", template)
+        self.assertIn("const visitorTeamData = isTennis ? null : findTeamData", template)
+        self.assertIn("const visitorLogo = isTennis ? ''", template)
+        self.assertIn("${isTennis ? '' : `", template)
 
     @patch("app.requests.get")
     def test_fetch_nfl_standings_keys_by_name_and_abbreviation(self, mock_get):

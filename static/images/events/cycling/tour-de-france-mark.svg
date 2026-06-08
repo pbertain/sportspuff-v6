@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 96" role="img" aria-labelledby="title desc">
+  <title id="title">Tour de France inspired race mark</title>
+  <desc id="desc">A yellow cycling race badge with road lines and a bicycle wheel.</desc>
+  <rect x="4" y="4" width="152" height="88" rx="16" fill="#f5e814"/>
+  <path d="M18 66c29-28 58-34 88-17 16 9 27 9 36 0" fill="none" stroke="#1c1c1c" stroke-width="6" stroke-linecap="round" opacity="0.84"/>
+  <circle cx="43" cy="66" r="14" fill="none" stroke="#1c1c1c" stroke-width="5"/>
+  <circle cx="103" cy="66" r="14" fill="none" stroke="#1c1c1c" stroke-width="5"/>
+  <path d="M43 66l22-25 18 25 20-25M65 41h18M72 33h16" fill="none" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="80" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#1c1c1c">TOUR</text>
+</svg>

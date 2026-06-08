@@ -314,6 +314,19 @@
                 "'": '&#39;'
             }[char]));
         }
+        function firstGameValue(...values) {
+            return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+        }
+        function homepageTennisTournamentName(game) {
+            return firstGameValue(
+                game.tennis_tournament,
+                game.tournament_name,
+                game.tournament,
+                game.event_name,
+                game.competition_name,
+                game.league_name
+            );
+        }
         const EVENT_BRANDING = {
             'wimbledon': {
                 label: 'Wimbledon',
@@ -332,27 +345,27 @@
             },
             'us-open': {
                 label: 'US Open',
-                asset: '',
+                asset: '/static/images/events/tennis/balls/tennis-ball-us-open-navy.svg',
                 className: 'event-brand-us-open'
             },
             'australian-open': {
                 label: 'Australian Open',
-                asset: '',
+                asset: '/static/images/events/tennis/balls/tennis-ball-australian-open-blue.svg',
                 className: 'event-brand-australian-open'
             },
             'tour-de-france': {
                 label: 'Tour de France',
-                asset: '',
+                asset: 'https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png',
                 className: 'event-brand-tour-de-france'
             },
             'world-cup': {
                 label: 'World Cup 2026',
-                asset: '',
+                asset: '/static/images/events/wc/world-cup-2026-mark.svg',
                 className: 'event-brand-world-cup'
             },
             'fifa-world-cup': {
                 label: 'World Cup 2026',
-                asset: '',
+                asset: '/static/images/events/wc/world-cup-2026-mark.svg',
                 className: 'event-brand-world-cup'
             }
         };
@@ -989,16 +1002,17 @@
 
                     // Get team colors and logos
                     // Get team data for full names and abbreviations (league-aware lookup)
-                    const visitorTeamData = findTeamData(game.visitor_team, gameLeague);
-                    const homeTeamData = findTeamData(game.home_team, gameLeague);
+                    const visitorTeamData = isTennis ? null : findTeamData(game.visitor_team, gameLeague);
+                    const homeTeamData = isTennis ? null : findTeamData(game.home_team, gameLeague);
 
                     // Use league-aware team data for colors and logos
-                    const visitorColor = visitorTeamData?.color_1 || '#6c757d';
-                    const homeColor = homeTeamData?.color_1 || '#6c757d';
+                    const tennisColor = gameLeague === 'WTA' ? '#A01469' : '#003DA5';
+                    const visitorColor = isTennis ? tennisColor : (visitorTeamData?.color_1 || '#6c757d');
+                    const homeColor = isTennis ? tennisColor : (homeTeamData?.color_1 || '#6c757d');
                     const visitorTextColor = getTextColor(visitorColor);
                     const homeTextColor = getTextColor(homeColor);
-                    const visitorLogo = visitorTeamData?.logo_url || '/static/images/no-logo.png';
-                    const homeLogo = homeTeamData?.logo_url || '/static/images/no-logo.png';
+                    const visitorLogo = isTennis ? '' : (visitorTeamData?.logo_url || '/static/images/no-logo.png');
+                    const homeLogo = isTennis ? '' : (homeTeamData?.logo_url || '/static/images/no-logo.png');
                     const visitorLogoBg = visitorTeamData?.color_3 || '#FFFFFF';
                     const homeLogoBg = homeTeamData?.color_3 || '#FFFFFF';
                     
@@ -1273,8 +1287,8 @@
                     
                     // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
                     // (visitorTeamData and homeTeamData are already defined above)
-                    const visitorAbbrev = visitorTeamData?.abbreviation || game.visitor_team_abbrev || '';
-                    const homeAbbrev = homeTeamData?.abbreviation || game.home_team_abbrev || '';
+                    const visitorAbbrev = isTennis ? '' : (visitorTeamData?.abbreviation || game.visitor_team_abbrev || '');
+                    const homeAbbrev = isTennis ? '' : (homeTeamData?.abbreviation || game.home_team_abbrev || '');
                     
                     // Get abbreviation box colors with contrast checking
                     const visitorAbbrevBg = visitorTeamData?.color_2 || '#FFFFFF';
@@ -1289,10 +1303,12 @@
                         <tr>
                             <td style="background-color: ${visitorColor}; color: ${visitorTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 4px 0 0 4px; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${visitorUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
+                                    ${isTennis ? '' : `
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${visitorLogo}" alt="${game.visitor_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${visitorLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${visitorIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
+                                    `}
                                     ${visitorAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${visitorAbbrevColors.bg}; color: ${visitorAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${visitorAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.visitor_team}">${visitorShortName}</span>
                                     ${visitorRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${visitorRecord})</span>` : ''}
@@ -1318,10 +1334,12 @@
                             </td>
                             <td style="background-color: ${homeColor}; color: ${homeTextColor}; padding: 10px 8px; font-weight: 600; border-radius: 0 4px 4px 0; position: relative; white-space: nowrap; overflow: visible;">
                                 <a href="${homeUrl}" style="text-decoration: none; color: inherit; display: flex; align-items-center; gap: 6px;" class="team-link">
+                                    ${isTennis ? '' : `
                                     <div style="position: relative; flex-shrink: 0;">
                                         <img src="${homeLogo}" alt="${game.home_team}" style="width: 28px; height: 28px; object-fit: contain; background-color: ${homeLogoBg}; padding: 2px; border-radius: 4px;" onerror="this.style.display='none';">
                                         ${homeIsWinner ? `<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large" />` : ''}
                                     </div>
+                                    `}
                                     ${homeAbbrev ? `<span class="team-abbrev-box" style="font-size: 0.7rem; font-weight: 700; padding: 2px 4px; background-color: ${homeAbbrevColors.bg}; color: ${homeAbbrevColors.text}; border-radius: 3px; margin-right: 4px; min-width: 28px; text-align: center; display: inline-block;">${homeAbbrev}</span>` : ''}
                                     <span class="team-name-text" style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;" title="${game.home_team}">${homeShortName}</span>
                                     ${homeRecord ? `<span class="team-record" style="font-size: 0.75rem; opacity: 0.9;">(${homeRecord})</span>` : ''}
@@ -1752,12 +1770,36 @@
                                     <tbody>
                     `;
 
-                    leagueGames.forEach(game => {
-                        const gameLeague = (game.league || game.sport || leagueName).toUpperCase();
-                        if (!game.league) game.league = gameLeague.toLowerCase();
-                        if (!game.sport)  game.sport  = gameLeague.toLowerCase();
-                        html += renderGameRow(game, teamColors, gameLeague);
-                    });
+                    if (leagueName === 'ATP' || leagueName === 'WTA') {
+                        const groups = new Map();
+                        leagueGames.forEach(game => {
+                            const tournament = homepageTennisTournamentName(game) || 'Tournament';
+                            if (!groups.has(tournament)) groups.set(tournament, []);
+                            groups.get(tournament).push(game);
+                        });
+                        groups.forEach((matches, tournament) => {
+                            html += `
+                                <tr class="homepage-tennis-tournament-divider">
+                                    <td colspan="4">
+                                        <span>${leagueName} &mdash; ${escapeHtml(tournament)}</span>
+                                    </td>
+                                </tr>
+                            `;
+                            matches.forEach(game => {
+                                const gameLeague = (game.league || game.sport || leagueName).toUpperCase();
+                                if (!game.league) game.league = gameLeague.toLowerCase();
+                                if (!game.sport)  game.sport  = gameLeague.toLowerCase();
+                                html += renderGameRow(game, teamColors, gameLeague);
+                            });
+                        });
+                    } else {
+                        leagueGames.forEach(game => {
+                            const gameLeague = (game.league || game.sport || leagueName).toUpperCase();
+                            if (!game.league) game.league = gameLeague.toLowerCase();
+                            if (!game.sport)  game.sport  = gameLeague.toLowerCase();
+                            html += renderGameRow(game, teamColors, gameLeague);
+                        });
+                    }
 
                     html += `
                                     </tbody>
@@ -2052,6 +2094,21 @@
             border-top: 1px solid rgba(181, 152, 214, 0.3);
             color: #F5F0FF;
             background-color: #5A4A9D;
+        }
+        #scores-schedules-container .homepage-tennis-tournament-divider td {
+            background: rgba(12, 16, 40, 0.58);
+            color: #fff;
+            padding: 8px 12px;
+            text-align: left;
+            border-top: 2px solid rgba(255, 255, 255, 0.22);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        #scores-schedules-container .homepage-tennis-tournament-divider span {
+            display: inline-block;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
         #scores-schedules-container .scores-table tbody td[style*="text-align: center"] {
             color: #F5F0FF;
