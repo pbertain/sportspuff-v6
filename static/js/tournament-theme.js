@@ -1,6 +1,22 @@
 (function () {
   const STORAGE_KEY = 'sportspuff:tournament-theme';
-  const THEMES = new Set(['atp', 'wta', 'wimbledon', 'roland-garros', 'us-open', 'australian-open']);
+  const THEMES = new Set([
+    'baseball',
+    'basketball',
+    'cricket',
+    'cycling',
+    'football',
+    'hockey',
+    'soccer',
+    'tennis',
+    'atp',
+    'wta',
+    'wimbledon',
+    'roland-garros',
+    'us-open',
+    'australian-open'
+  ]);
+  const TENNIS_THEMES = new Set(['tennis', 'atp', 'wta', 'wimbledon', 'roland-garros', 'us-open', 'australian-open']);
 
   function cleanTheme(theme) {
     return THEMES.has(theme) ? theme : '';
@@ -9,11 +25,17 @@
   function applyTheme(theme) {
     const clean = cleanTheme(theme);
     if (clean) {
-      document.body.dataset.tournamentTheme = clean;
+      document.body.dataset.sportTheme = clean;
+      if (TENNIS_THEMES.has(clean)) {
+        document.body.dataset.tournamentTheme = clean;
+      } else {
+        delete document.body.dataset.tournamentTheme;
+      }
       try {
         localStorage.setItem(STORAGE_KEY, clean);
       } catch (e) {}
     } else {
+      delete document.body.dataset.sportTheme;
       delete document.body.dataset.tournamentTheme;
       try {
         localStorage.removeItem(STORAGE_KEY);

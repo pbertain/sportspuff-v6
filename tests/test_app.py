@@ -301,8 +301,25 @@ class TestTournamentThemeAssets(unittest.TestCase):
     def test_shared_header_exposes_expected_theme_options(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
 
-        for theme in ["atp", "wta", "wimbledon", "roland-garros", "us-open", "australian-open"]:
+        for theme in [
+            "baseball",
+            "basketball",
+            "cricket",
+            "cycling",
+            "football",
+            "hockey",
+            "soccer",
+            "tennis",
+            "atp",
+            "wta",
+            "wimbledon",
+            "roland-garros",
+            "us-open",
+            "australian-open",
+        ]:
             self.assertIn(f'value="{theme}"', header)
+        self.assertIn('class="collapse navbar-collapse navbar-main-panel"', header)
+        self.assertIn('<div class="tournament-theme-control">', header)
 
     def test_shared_header_links_to_event_leagues(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
@@ -324,6 +341,17 @@ class TestTournamentThemeAssets(unittest.TestCase):
         for snippet in ["home_player", "away_player", "player1", "player2", "tournament_name", "competition_name"]:
             self.assertIn(snippet, event_template)
             self.assertIn(snippet, index_template)
+
+    def test_sport_theme_css_and_script_support_all_sport_groups(self):
+        css = (PROJECT_ROOT / "static/css/main.css").read_text()
+        script = (PROJECT_ROOT / "static/js/tournament-theme.js").read_text()
+
+        for theme in ["baseball", "basketball", "cricket", "cycling", "football", "hockey", "soccer", "tennis"]:
+            self.assertIn(f'body[data-sport-theme="{theme}"]', css)
+            self.assertIn(f"'{theme}'", script)
+        self.assertIn("document.body.dataset.sportTheme", script)
+        self.assertIn("body[data-sport-theme]::before", css)
+        self.assertIn("navbar-main-panel", css)
 
     def test_ipl_standings_accounts_for_no_results(self):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()

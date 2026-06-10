@@ -7,43 +7,57 @@
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <div class="navbar-nav ms-auto">
-            <div class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    Leagues
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='ATP') }}">ATP</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='CYCLING') }}">Cycling</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLC') }}">MLC</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WC') }}">WC</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WTA') }}">WTA</a></li>
-                </ul>
+        <div class="collapse navbar-collapse navbar-main-panel" id="navbarNav">
+            <div class="navbar-nav">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        Leagues
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='ATP') }}">ATP</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='CYCLING') }}">Cycling</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='IPL') }}">IPL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLB') }}">MLB</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLC') }}">MLC</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='MLS') }}">MLS</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NBA') }}">NBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NFL') }}">NFL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='NHL') }}">NHL</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WC') }}">WC</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WNBA') }}">WNBA</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('league_page', league_name='WTA') }}">WTA</a></li>
+                    </ul>
+                </div>
+                <a class="nav-link {% if request.endpoint == 'teams' %}active{% endif %}" href="{{ url_for('teams') }}">Teams</a>
+                <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
+                <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
+                <a class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a>
             </div>
-            <a class="nav-link {% if request.endpoint == 'teams' %}active{% endif %}" href="{{ url_for('teams') }}">Teams</a>
-            <a class="nav-link {% if request.endpoint == 'stadiums' %}active{% endif %}" href="{{ url_for('stadiums') }}">Stadiums</a>
-            <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
-            <a class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a>
-            <div class="nav-item tournament-theme-control">
-                <label class="visually-hidden" for="tournament-theme-select">Tournament theme</label>
-                <select id="tournament-theme-select" class="form-select form-select-sm" aria-label="Tournament theme">
-                    <option value="">Sportspuff theme</option>
-                    <option value="atp">ATP</option>
-                    <option value="wta">WTA</option>
-                    <option value="wimbledon">Wimbledon</option>
-                    <option value="roland-garros">Roland Garros</option>
-                    <option value="us-open">US Open</option>
-                    <option value="australian-open">Australian Open</option>
+            <div class="tournament-theme-control">
+                <label class="visually-hidden" for="tournament-theme-select">Theme</label>
+                <select id="tournament-theme-select" class="form-select form-select-sm" aria-label="Theme">
+                    <option value="">Sportspuff</option>
+                    <optgroup label="Sports">
+                        <option value="baseball">Baseball</option>
+                        <option value="basketball">Basketball</option>
+                        <option value="cricket">Cricket</option>
+                        <option value="cycling">Cycling</option>
+                        <option value="football">Football</option>
+                        <option value="hockey">Hockey</option>
+                        <option value="soccer">Soccer</option>
+                        <option value="tennis">Tennis</option>
+                    </optgroup>
+                    <optgroup label="Tours">
+                        <option value="atp">ATP</option>
+                        <option value="wta">WTA</option>
+                    </optgroup>
+                    <optgroup label="Events">
+                        <option value="australian-open">Australian Open</option>
+                        <option value="roland-garros">Roland Garros</option>
+                        <option value="us-open">US Open</option>
+                        <option value="wimbledon">Wimbledon</option>
+                    </optgroup>
                 </select>
-            </div>
             </div>
         </div>
     </div>

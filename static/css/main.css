@@ -42,6 +42,10 @@
   --tennis-australian-open-blue: #00a3e0;
   --tennis-theme-accent: var(--golden-yellow);
   --tennis-theme-accent-contrast: #140a28;
+  --theme-accent: var(--golden-yellow);
+  --theme-accent-contrast: #140a28;
+  --theme-icon: "SP";
+  --theme-icon-alt: "6";
   
   /* Gradients */
   --primary-gradient: linear-gradient(135deg, var(--deep-purple) 0%, var(--electric-red) 100%);
@@ -63,6 +67,101 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-sport-theme="baseball"] {
+  --main-bg: linear-gradient(135deg, #14243b 0%, #1f5d8f 52%, #b0303d 100%);
+  --primary-gradient: linear-gradient(135deg, #173b64 0%, #b0303d 100%);
+  --card-bg: rgba(18, 43, 73, 0.84);
+  --container-bg: rgba(10, 24, 42, 0.9);
+  --theme-accent: #f7f2e8;
+  --theme-accent-contrast: #14243b;
+  --theme-icon: "⚾";
+  --theme-icon-alt: "◆";
+}
+
+body[data-sport-theme="basketball"] {
+  --main-bg: linear-gradient(135deg, #27134a 0%, #7a2fbd 48%, #d86a24 100%);
+  --primary-gradient: linear-gradient(135deg, #45207b 0%, #d86a24 100%);
+  --card-bg: rgba(72, 31, 123, 0.84);
+  --container-bg: rgba(30, 13, 58, 0.9);
+  --theme-accent: #ffb15c;
+  --theme-accent-contrast: #2b123f;
+  --theme-icon: "🏀";
+  --theme-icon-alt: "◒";
+}
+
+body[data-sport-theme="cricket"] {
+  --main-bg: linear-gradient(135deg, #112b28 0%, #167b6a 50%, #e08a2d 100%);
+  --primary-gradient: linear-gradient(135deg, #125247 0%, #d67623 100%);
+  --card-bg: rgba(20, 86, 76, 0.82);
+  --container-bg: rgba(10, 38, 35, 0.91);
+  --theme-accent: #ffd16d;
+  --theme-accent-contrast: #172c27;
+  --theme-icon: "🏏";
+  --theme-icon-alt: "●";
+}
+
+body[data-sport-theme="cycling"] {
+  --main-bg: linear-gradient(135deg, #122326 0%, #1f6f73 52%, #f0cf28 100%);
+  --primary-gradient: linear-gradient(135deg, #1d5e66 0%, #d6b91d 100%);
+  --card-bg: rgba(22, 77, 82, 0.82);
+  --container-bg: rgba(9, 36, 39, 0.91);
+  --theme-accent: #f9dc38;
+  --theme-accent-contrast: #172326;
+  --theme-icon: "🚴";
+  --theme-icon-alt: "◎";
+}
+
+body[data-sport-theme="football"] {
+  --main-bg: linear-gradient(135deg, #211416 0%, #5c1d2b 50%, #b9975b 100%);
+  --primary-gradient: linear-gradient(135deg, #4b1724 0%, #b9975b 100%);
+  --card-bg: rgba(78, 28, 40, 0.84);
+  --container-bg: rgba(34, 15, 20, 0.91);
+  --theme-accent: #dfc58b;
+  --theme-accent-contrast: #211416;
+  --theme-icon: "🏈";
+  --theme-icon-alt: "◇";
+}
+
+body[data-sport-theme="hockey"] {
+  --main-bg: linear-gradient(135deg, #111827 0%, #2f5966 52%, #c9d9df 100%);
+  --primary-gradient: linear-gradient(135deg, #172236 0%, #7fa7b3 100%);
+  --card-bg: rgba(27, 47, 62, 0.84);
+  --container-bg: rgba(10, 19, 31, 0.92);
+  --theme-accent: #e7f3f7;
+  --theme-accent-contrast: #111827;
+  --theme-icon: "🏒";
+  --theme-icon-alt: "✦";
+}
+
+body[data-sport-theme="soccer"] {
+  --main-bg: linear-gradient(135deg, #102419 0%, #23784c 54%, #d7dfe5 100%);
+  --primary-gradient: linear-gradient(135deg, #174a2e 0%, #7da947 100%);
+  --card-bg: rgba(24, 86, 54, 0.82);
+  --container-bg: rgba(9, 37, 23, 0.91);
+  --theme-accent: #f1f5f0;
+  --theme-accent-contrast: #102419;
+  --theme-icon: "⚽";
+  --theme-icon-alt: "⬟";
+}
+
+body[data-sport-theme="tennis"] {
+  --main-bg: linear-gradient(135deg, #102916 0%, #2d7c3a 52%, #d7c75a 100%);
+  --primary-gradient: linear-gradient(135deg, #1f6f35 0%, #d7c75a 100%);
+  --card-bg: rgba(31, 102, 48, 0.8);
+  --container-bg: rgba(10, 43, 18, 0.91);
+  --tennis-theme-accent: #eef079;
+  --tennis-theme-accent-contrast: #102916;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "◦";
+}
+
 body[data-tournament-theme="atp"] {
   --main-bg: linear-gradient(135deg, #07152f 0%, var(--tennis-atp-navy) 58%, #163a76 100%);
   --primary-gradient: linear-gradient(135deg, var(--tennis-atp-navy) 0%, #2878d8 100%);
@@ -70,6 +169,10 @@ body[data-tournament-theme="atp"] {
   --container-bg: rgba(5, 17, 39, 0.9);
   --tennis-theme-accent: #78b7ff;
   --tennis-theme-accent-contrast: #061326;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "ATP";
 }
 
 body[data-tournament-theme="wta"] {
@@ -79,6 +182,10 @@ body[data-tournament-theme="wta"] {
   --container-bg: rgba(35, 14, 69, 0.9);
   --tennis-theme-accent: #ffb3ed;
   --tennis-theme-accent-contrast: #2a103f;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "WTA";
 }
 
 body[data-tournament-theme="wimbledon"] {
@@ -88,6 +195,10 @@ body[data-tournament-theme="wimbledon"] {
   --container-bg: rgba(13, 42, 23, 0.91);
   --tennis-theme-accent: #f0d35a;
   --tennis-theme-accent-contrast: #132716;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "W";
 }
 
 body[data-tournament-theme="roland-garros"] {
@@ -97,6 +208,10 @@ body[data-tournament-theme="roland-garros"] {
   --container-bg: rgba(46, 20, 10, 0.9);
   --tennis-theme-accent: #ffe1b8;
   --tennis-theme-accent-contrast: #32170a;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "RG";
 }
 
 body[data-tournament-theme="us-open"] {
@@ -106,6 +221,10 @@ body[data-tournament-theme="us-open"] {
   --container-bg: rgba(4, 21, 50, 0.91);
   --tennis-theme-accent: #ffffff;
   --tennis-theme-accent-contrast: #061a3e;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "US";
 }
 
 body[data-tournament-theme="australian-open"] {
@@ -115,44 +234,73 @@ body[data-tournament-theme="australian-open"] {
   --container-bg: rgba(5, 43, 61, 0.9);
   --tennis-theme-accent: #ffffff;
   --tennis-theme-accent-contrast: #063147;
+  --theme-accent: var(--tennis-theme-accent);
+  --theme-accent-contrast: var(--tennis-theme-accent-contrast);
+  --theme-icon: "🎾";
+  --theme-icon-alt: "AO";
 }
 
+body[data-sport-theme]::before,
+body[data-sport-theme]::after {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  color: var(--theme-accent);
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.13;
+  text-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+body[data-sport-theme]::before {
+  content: var(--theme-icon);
+  right: clamp(18px, 5vw, 72px);
+  bottom: clamp(22px, 7vh, 88px);
+  font-size: clamp(3.5rem, 8vw, 7rem);
+}
+
+body[data-sport-theme]::after {
+  content: var(--theme-icon-alt);
+  left: clamp(16px, 4vw, 56px);
+  top: clamp(128px, 22vh, 220px);
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  transform: rotate(-10deg);
+}
+
+body[data-sport-theme] .navbar,
 body[data-tournament-theme] .navbar {
-  border-bottom: 3px solid var(--tennis-theme-accent);
+  border-bottom: 3px solid var(--theme-accent);
 }
 
+body[data-sport-theme] .league-card::before,
 body[data-tournament-theme] .league-card::before {
-  background: var(--tennis-theme-accent);
+  background: var(--theme-accent);
 }
 
+body[data-sport-theme] .stat-card:hover,
 body[data-tournament-theme] .stat-card:hover {
-  border-color: var(--tennis-theme-accent);
+  border-color: var(--theme-accent);
 }
 
 .tournament-theme-control {
   display: flex;
   align-items: center;
-  margin: 0 0.5rem;
+  margin-left: 1rem;
 }
 
 .tournament-theme-control .form-select {
-  min-width: 170px;
+  width: 176px;
   background-color: rgba(255, 255, 255, 0.92);
   border-color: rgba(255, 255, 255, 0.35);
   color: #1a0b3d;
   font-weight: 600;
+  border-radius: 8px;
 }
 
+body[data-sport-theme] .tournament-theme-control .form-select,
 body[data-tournament-theme] .tournament-theme-control .form-select {
-  border-color: var(--tennis-theme-accent);
+  border-color: var(--theme-accent);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
-}
-
-@media (max-width: 991px) {
-  .tournament-theme-control {
-    align-items: flex-start;
-    margin: 0.5rem 0;
-  }
 }
 
 /* Main Content Area - Softer Purple Background */
@@ -227,6 +375,12 @@ main, .main-content {
   justify-content: space-between;
 }
 
+.navbar-main-panel {
+  align-items: flex-end;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
 .navbar-nav {
   display: flex;
   align-items: flex-end;
@@ -284,6 +438,27 @@ main, .main-content {
 .navbar-nav .dropdown-item:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--warm-white);
+}
+
+@media (max-width: 991px) {
+  .navbar-main-panel {
+    align-items: flex-start;
+    gap: 0;
+    padding-top: 0.75rem;
+  }
+
+  .navbar-nav {
+    align-items: flex-start;
+  }
+
+  .tournament-theme-control {
+    align-items: flex-start;
+    margin: 0.5rem 0;
+  }
+
+  .tournament-theme-control .form-select {
+    width: min(100%, 240px);
+  }
 }
 
 /* Hero Section */
