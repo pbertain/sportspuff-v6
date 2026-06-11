@@ -25,6 +25,8 @@ from app import (  # noqa: E402
     app,
     get_db_connection,
     _empty_all_scores_response,
+    _fetch_all_scores_for_tz,
+    _fetch_api_json,
     _fetch_nfl_standings,
     _normalize_timezone,
 )
@@ -239,7 +241,11 @@ class TestLiveDataProxyHelpers(unittest.TestCase):
         self.assertEqual(data["cycling"]["scores"]["scores"], [])
 
     def test_all_scores_today_falls_back_to_empty_shape_without_network(self):
-        with patch("app.get_cached_response", return_value=None), patch("app._refresh_cache_async") as refresh:
+        with (
+            patch("app.get_cached_response", return_value=None),
+            patch("app._refresh_cache_async") as refresh,
+            patch("app._fetch_league_schedule_and_scores", return_value={"schedule": {"games": []}, "scores": {"scores": []}}),
+        ):
             response = self.client.get("/api/proxy/all-scores/today?tz=pst")
 
         self.assertEqual(response.status_code, 200)
@@ -247,6 +253,42 @@ class TestLiveDataProxyHelpers(unittest.TestCase):
         self.assertIn("wc", data)
         self.assertIn("cycling", data)
         refresh.assert_called_once()
+
+    @patch("app.requests.get")
+    def test_api_json_retries_fallback_host_after_primary_502(self, mock_get):
+        primary = MagicMock(status_code=502, text="bad gateway")
+        fallback = MagicMock(status_code=200)
+        fallback.json.return_value = {"games": [{"game_id": "wc1"}]}
+        mock_get.side_effect = [primary, fallback]
+
+        data = _fetch_api_json("/api/v1/schedule/wc/2026-06-11?tz=pt", api_base_url="https://api.sportspuff.net")
+
+        self.assertEqual(data["games"][0]["game_id"], "wc1")
+        self.assertEqual(mock_get.call_args_list[0].args[0], "https://api.sportspuff.net/api/v1/schedule/wc/2026-06-11?tz=pt")
+        self.assertEqual(mock_get.call_args_list[1].args[0], "https://api-dev.sportspuff.net/api/v1/schedule/wc/2026-06-11?tz=pt")
+
+    @patch("app.requests.get")
+    def test_all_scores_fetch_uses_fallback_for_wc_schedule(self, mock_get):
+        def response_for(url, **kwargs):
+            if "api.sportspuff.net/api/v1/schedule/wc/" in url:
+                response = MagicMock(status_code=502, text="bad gateway")
+                return response
+            if "api-dev.sportspuff.net/api/v1/schedule/wc/" in url:
+                response = MagicMock(status_code=200)
+                response.json.return_value = {"sport": "wc", "date": "2026-06-11", "games": [{"game_id": "2391728"}]}
+                return response
+            response = MagicMock(status_code=200)
+            if "/scores/" in url:
+                response.json.return_value = {"scores": []}
+            else:
+                response.json.return_value = {"games": []}
+            return response
+
+        mock_get.side_effect = response_for
+
+        data = _fetch_all_scores_for_tz("https://api.sportspuff.net", "pt", "2026-06-11")
+
+        self.assertEqual(data["wc"]["schedule"]["games"][0]["game_id"], "2391728")
 
 
 class TestTournamentThemeAssets(unittest.TestCase):

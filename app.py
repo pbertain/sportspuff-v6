@@ -67,6 +67,44 @@ def _normalize_timezone(tz):
     return aliases.get((tz or 'pt').lower(), tz)
 
 
+def _configured_api_base_urls(api_base_url=None):
+    """Return primary API host followed by configured fallbacks."""
+    fallback_hosts = os.getenv('SPORTSPUFF_API_FALLBACK_BASE_URLS', 'https://api-dev.sportspuff.net')
+    candidates = [api_base_url or API_BASE_URL]
+    candidates.extend(host.strip() for host in fallback_hosts.split(',') if host.strip())
+
+    seen = set()
+    ordered = []
+    for host in candidates:
+        normalized = host.rstrip('/')
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            ordered.append(normalized)
+    return ordered
+
+
+def _fetch_api_json(path, timeout=15, api_base_url=None):
+    """Fetch JSON from the primary API, retrying fallback hosts on upstream failure."""
+    last_error = None
+    for api_base in _configured_api_base_urls(api_base_url):
+        url = f"{api_base}{path}"
+        try:
+            response = requests.get(url, timeout=timeout, verify=True, allow_redirects=True)
+            if response.status_code == 200:
+                return response.json()
+            last_error = requests.exceptions.HTTPError(
+                f"API returned status {response.status_code}: {response.text[:200]}"
+            )
+            logger.warning(f"API request failed from {url}: status {response.status_code}")
+        except (requests.exceptions.RequestException, ValueError) as e:
+            last_error = e
+            logger.warning(f"API request failed from {url}: {e}")
+
+    if isinstance(last_error, requests.exceptions.RequestException):
+        raise last_error
+    raise requests.exceptions.RequestException(str(last_error or "API request failed"))
+
+
 def _empty_all_scores_response():
     leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
@@ -79,30 +117,37 @@ def _empty_all_scores_response():
     }
 
 
+def _fetch_league_schedule_and_scores(lg, api_date, tz, api_base_url=None, timeout=15, include_scores=True):
+    league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
+    try:
+        league_data['schedule'] = _fetch_api_json(
+            f'/api/v1/schedule/{lg}/{api_date}?tz={tz}',
+            timeout=timeout,
+            api_base_url=api_base_url,
+        )
+    except Exception:
+        pass
+    if include_scores:
+        try:
+            league_data['scores'] = _fetch_api_json(
+                f'/api/v1/scores/{lg}/{api_date}?tz={tz}',
+                timeout=timeout,
+                api_base_url=api_base_url,
+            )
+        except Exception:
+            pass
+    return league_data
+
+
 def _fetch_all_scores_for_tz(api_base_url, tz, api_date='today'):
     """Fetch all-scores data for a given timezone (no Flask request context needed)."""
     leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     result = {}
 
     def fetch_league(lg):
-        schedule_url = f'{api_base_url}/api/v1/schedule/{lg}/{api_date}?tz={tz}'
-        scores_url = f'{api_base_url}/api/v1/scores/{lg}/{api_date}?tz={tz}'
-        league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
-        try:
-            r = requests.get(schedule_url, timeout=15)
-            if r.status_code == 200:
-                league_data['schedule'] = r.json()
-        except Exception:
-            pass
-        try:
-            r = requests.get(scores_url, timeout=15)
-            if r.status_code == 200:
-                league_data['scores'] = r.json()
-        except Exception:
-            pass
-        return lg, league_data
+        return lg, _fetch_league_schedule_and_scores(lg, api_date, tz, api_base_url=api_base_url)
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = {executor.submit(fetch_league, lg): lg for lg in leagues}
         for future in as_completed(futures):
             try:
@@ -124,6 +169,9 @@ def _refresh_all_scores_cache(api_base_url, api_date, tz):
 
 def _refresh_cache_async(cache_key, refresh_func):
     """Start one background refresh for a cache key without blocking the request."""
+    if os.getenv('DISABLE_BACKGROUND_CACHE_REFRESH') == '1':
+        return
+
     with _api_cache_lock:
         lock = _refresh_locks.setdefault(cache_key, threading.Lock())
     if not lock.acquire(blocking=False):
@@ -1839,32 +1887,25 @@ def proxy_all_scores(date):
             cache_key,
             lambda: _refresh_all_scores_cache(API_BASE_URL, api_date, tz)
         )
-        logger.warning(f"No all-scores cache available for {tz}; warming asynchronously")
-        return jsonify(_empty_all_scores_response()), 200
+        data = _empty_all_scores_response()
+        data['wc'] = _fetch_league_schedule_and_scores(
+            'wc',
+            api_date,
+            tz,
+            api_base_url=API_BASE_URL,
+            timeout=5,
+            include_scores=False,
+        )
+        logger.warning(f"No all-scores cache available for {tz}; returning WC-first fallback while warming cache")
+        return jsonify(data), 200
 
     leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     result = {}
 
     def fetch_league(lg):
-        api_base = API_BASE_URL
-        schedule_url = f'{api_base}/api/v1/schedule/{lg}/{api_date}?tz={tz}'
-        scores_url = f'{api_base}/api/v1/scores/{lg}/{api_date}?tz={tz}'
-        league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
-        try:
-            r = requests.get(schedule_url, timeout=15)
-            if r.status_code == 200:
-                league_data['schedule'] = r.json()
-        except:
-            pass
-        try:
-            r = requests.get(scores_url, timeout=15)
-            if r.status_code == 200:
-                league_data['scores'] = r.json()
-        except:
-            pass
-        return lg, league_data
+        return lg, _fetch_league_schedule_and_scores(lg, api_date, tz)
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = {executor.submit(fetch_league, lg): lg for lg in leagues}
         for future in as_completed(futures):
             try:
@@ -1894,17 +1935,10 @@ def proxy_schedule(league, date):
         if cached_response:
             return jsonify(cached_response)
         
-        # Fetch from API with timezone parameter
-        api_base = API_BASE_URL
-        url = f'{api_base}/api/v1/schedule/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching schedule from: {url} (timeout=20s)")
         try:
-            # Use shorter timeout to avoid nginx 502 errors
-            # Nginx typically has 60s timeout, so we use 20s to leave buffer
-            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
-            logger.info(f"Schedule API response status: {response.status_code}, length: {len(response.content)}")
+            data = _fetch_api_json(f'/api/v1/schedule/{league}/{api_date}?tz={tz}', timeout=20)
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching schedule from {url} after 20s")
+            logger.error(f"Timeout fetching schedule for {league}/{api_date} after 20s")
             # Return cached response if available, even if expired
             expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
             if expired_cache:
@@ -1923,24 +1957,7 @@ def proxy_schedule(league, date):
             # Return empty structure instead of error
             logger.warning("No cache available, returning empty schedule")
             return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
-        
-        # Check if response is successful
-        if response.status_code != 200:
-            error_msg = f'API returned status {response.status_code}'
-            try:
-                error_data = response.json()
-                error_msg = error_data.get('error', error_msg)
-            except:
-                error_msg = f'API returned status {response.status_code}: {response.text[:200]}'
-            logger.error(f"Error proxying schedule request: {error_msg}")
-            return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
-        
-        try:
-            data = response.json()
-        except ValueError as e:
-            logger.error(f"Failed to parse JSON from schedule API: {e}, response text: {response.text[:500]}")
-            return jsonify({'error': 'Invalid JSON response from API'}), 500
-        
+
         # Check for API errors in response
         if isinstance(data, dict) and 'error' in data:
             logger.error(f"API returned error: {data['error']}")
@@ -2223,17 +2240,10 @@ def proxy_scores(league, date):
         if cached_response:
             return jsonify(cached_response)
 
-        # Only fetch fresh scores if cache is expired or missing
-        api_base = API_BASE_URL
-        url = f'{api_base}/api/v1/scores/{league}/{api_date}?tz={tz}'
-        logger.info(f"Fetching scores from: {url} (timeout=20s)")
         try:
-            # Use shorter timeout to avoid nginx 502 errors
-            # Nginx typically has 60s timeout, so we use 20s to leave buffer
-            response = requests.get(url, timeout=20, verify=True, allow_redirects=True)
-            logger.info(f"Scores API response status: {response.status_code}, length: {len(response.content)}")
+            data = _fetch_api_json(f'/api/v1/scores/{league}/{api_date}?tz={tz}', timeout=20)
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching scores from {url} after 20s")
+            logger.error(f"Timeout fetching scores for {league}/{api_date} after 20s")
             # Return cached response if available, even if expired
             expired_cache = get_cached_response(cache_key, 'scores', allow_expired=True)
             if expired_cache:
@@ -2252,48 +2262,10 @@ def proxy_scores(league, date):
             # Return empty structure instead of error
             logger.warning("No cache available, returning empty scores")
             return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'scores': []}), 200
-        
-        # Check if response is successful
-        if response.status_code != 200:
-            error_msg = f'API returned status {response.status_code}'
-            try:
-                error_data = response.json()
-                error_msg = error_data.get('error', error_msg)
-            except:
-                error_msg = f'API returned status {response.status_code}: {response.text[:200]}'
-            logger.error(f"Error proxying scores request: {error_msg}")
-            # If API fails, try to return cached response as fallback only if very recent
-            if 'cached_response' in locals() and cached_response:
-                cached_date = cached_response.get('date', '')
-                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-                if cached_date == today_date:
-                    logger.info("Returning cached scores as fallback")
-                    return jsonify(cached_response)
-            return jsonify({'error': error_msg}), response.status_code if response.status_code < 500 else 500
-        
-        try:
-            data = response.json()
-        except ValueError as e:
-            logger.error(f"Failed to parse JSON from scores API: {e}, response text: {response.text[:500]}")
-            # Try cached response as fallback
-            if 'cached_response' in locals() and cached_response:
-                cached_date = cached_response.get('date', '')
-                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-                if cached_date == today_date:
-                    logger.info("Returning cached scores as fallback after JSON parse error")
-                    return jsonify(cached_response)
-            return jsonify({'error': 'Invalid JSON response from API'}), 500
-        
+
         # Check for API errors in response
         if isinstance(data, dict) and 'error' in data:
             logger.error(f"API returned error: {data['error']}")
-            # Try cached response as fallback
-            if 'cached_response' in locals() and cached_response:
-                cached_date = cached_response.get('date', '')
-                today_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-                if cached_date == today_date:
-                    logger.info("Returning cached scores as fallback")
-                    return jsonify(cached_response)
             return jsonify(data), 500
         
         # Cache the response (very short TTL - 5 seconds)
