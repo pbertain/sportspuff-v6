@@ -211,12 +211,49 @@
             panel.style.display = '';
         }
 
+        function rankedWorldCupTeams(teams) {
+            return [...teams].sort((a, b) =>
+                (Number(a.group_rank ?? a.rank ?? 999) - Number(b.group_rank ?? b.rank ?? 999)) ||
+                String(a.team_name || '').localeCompare(String(b.team_name || ''))
+            );
+        }
+
+        function worldCupGroupsFromStandings(data) {
+            const apiGroups = Array.isArray(data?.groups) ? data.groups : [];
+            const flatTeams = Array.isArray(data?.teams) ? data.teams : [];
+            const flatByGroup = flatTeams.reduce((groups, team) => {
+                const groupName = String(team.group || '').trim();
+                if (!groupName) return groups;
+                if (!groups[groupName]) groups[groupName] = [];
+                groups[groupName].push(team);
+                return groups;
+            }, {});
+            const seenGroups = new Set();
+
+            const groups = apiGroups.map(group => {
+                const groupName = String(group.group || '').trim();
+                if (groupName) seenGroups.add(groupName);
+                const apiTeams = Array.isArray(group.teams) ? group.teams : [];
+                const flatTeamsForGroup = flatByGroup[groupName] || [];
+                const teams = flatTeamsForGroup.length > apiTeams.length ? flatTeamsForGroup : apiTeams;
+                return {...group, group: groupName, teams: rankedWorldCupTeams(teams)};
+            });
+
+            Object.keys(flatByGroup).forEach(groupName => {
+                if (!seenGroups.has(groupName)) {
+                    groups.push({group: groupName, teams: rankedWorldCupTeams(flatByGroup[groupName])});
+                }
+            });
+
+            return groups;
+        }
+
         function renderWorldCupStandings(data) {
             if (EVENT_MODE !== 'world-cup') return;
             const panel = document.getElementById('wc-standings-panel');
             if (!panel) return;
 
-            const groups = Array.isArray(data?.groups) ? data.groups : [];
+            const groups = worldCupGroupsFromStandings(data);
             if (groups.length === 0) {
                 panel.style.display = 'none';
                 return;

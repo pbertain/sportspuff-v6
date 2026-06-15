@@ -475,8 +475,12 @@ class TestTournamentThemeAssets(unittest.TestCase):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()
 
         self.assertIn('id="wc-standings-panel"', template)
+        self.assertIn("function worldCupGroupsFromStandings", template)
         self.assertIn("function renderWorldCupStandings", template)
         self.assertIn("data?.groups", template)
+        self.assertIn("data?.teams", template)
+        self.assertIn("flatByGroup", template)
+        self.assertIn("flatTeamsForGroup.length > apiTeams.length", template)
         self.assertIn("/api/proxy/standings/${league}", template)
         for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
             self.assertIn(column, template)
@@ -511,7 +515,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "teams": [],
             "knockout_bracket": {"sides": {"left": [], "right": []}},
         }
-        with patch("app.get_cached_response", return_value=None), patch("app.set_cached_response"):
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
             response = app.test_client().get("/api/proxy/standings/wc")
 
         self.assertEqual(response.status_code, 200)
@@ -519,6 +523,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["groups"][0]["group"], "A")
         self.assertEqual(data["groups"][0]["teams"][0]["team_name"], "Mexico")
         mock_fetch.assert_called_once_with("/api/v1/standings/wc", timeout=15)
+        mock_cache.assert_called_once_with("standings:wc:groups-v2", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "standings:wc:groups-v2")
 
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()

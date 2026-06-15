@@ -2014,7 +2014,9 @@ def proxy_standings(league):
     if league_lower not in ('mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc'):
         return jsonify({'teams': [], 'standings': [], 'available': False}), 400
 
-    cache_key = f'standings:{league_lower}'
+    # World Cup standings changed shape to include full group data; version the key
+    # so deployments do not keep serving older truncated group payloads.
+    cache_key = f'standings:{league_lower}:groups-v2' if league_lower == 'wc' else f'standings:{league_lower}'
     cached_response = get_cached_response(cache_key, 'schedule')
     if cached_response:
         return jsonify(cached_response)
