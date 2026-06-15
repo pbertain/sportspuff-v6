@@ -56,6 +56,9 @@
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
         {% if league_config.mode == 'world-cup' %}
+        <div id="wc-marquee" class="wc-marquee mb-3" style="display: none;" aria-hidden="true">
+            <div class="wc-marquee-track"></div>
+        </div>
         <div id="wc-standings-panel" class="wc-standings-panel mb-3" style="display: none;"></div>
         {% endif %}
         <div id="event-league-results" class="event-league-card">
@@ -292,12 +295,52 @@
             return groups;
         }
 
+        function renderWorldCupMarquee(data) {
+            if (EVENT_MODE !== 'world-cup') return;
+            const marquee = document.getElementById('wc-marquee');
+            if (!marquee) return;
+            const track = marquee.querySelector('.wc-marquee-track');
+            if (!track) return;
+
+            const groups = worldCupGroupsFromStandings(data);
+            const seen = new Set();
+            const teams = [];
+            groups.forEach(group => {
+                (group.teams || []).forEach(team => {
+                    const abbrev = String(team.abbreviation || '').trim();
+                    if (!abbrev) return;
+                    const key = abbrev.toLowerCase();
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    teams.push({
+                        abbrev,
+                        teamName: team.team_name || abbrev,
+                        teamCode: worldCupTeamCode(team)
+                    });
+                });
+            });
+
+            if (teams.length === 0) {
+                marquee.style.display = 'none';
+                return;
+            }
+
+            const buildItem = ({abbrev, teamName, teamCode}) => {
+                const url = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : '';
+                const img = `<img class="wc-marquee-logo" src="https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(abbrev.toLowerCase())}_ball_logo.png" alt="${escapeHtml(teamName)}" loading="lazy" onerror="this.style.display='none';">`;
+                return url
+                    ? `<a class="wc-marquee-item" href="${url}" title="${escapeHtml(teamName)}">${img}</a>`
+                    : `<span class="wc-marquee-item" title="${escapeHtml(teamName)}">${img}</span>`;
+            };
+            const items = teams.map(buildItem).join('');
+            track.innerHTML = items + items;
+            marquee.style.display = '';
+        }
+
         function renderWorldCupStandings(data) {
             if (EVENT_MODE !== 'world-cup') return;
             const panel = document.getElementById('wc-standings-panel');
-            if (!panel) return;
-
-            const groups = worldCupGroupsFromStandings(data);
+            if (!panel) return;            const groups = worldCupGroupsFromStandings(data);
             if (groups.length === 0) {
                 panel.style.display = 'none';
                 return;
@@ -404,6 +447,7 @@
                         : Promise.resolve({})
                 ]);
                 renderSeasonInfo(seasonRes);
+                renderWorldCupMarquee(standingsRes);
                 renderWorldCupStandings(standingsRes);
 
                 const byId = {};
