@@ -46,21 +46,21 @@
                     <table class="wc-team-stats-table">
                         <tbody>
                             <tr><th>Record</th><td>{{ team.record or ((team.wins or 0) ~ '-' ~ (team.draws or 0) ~ '-' ~ (team.losses or 0)) }}</td></tr>
-                            <tr><th>GP</th><td>{{ team.matches or 0 }}</td></tr>
-                            <tr><th>W</th><td>{{ team.wins or 0 }}</td></tr>
-                            <tr><th>D</th><td>{{ team.draws or 0 }}</td></tr>
-                            <tr><th>L</th><td>{{ team.losses or 0 }}</td></tr>
-                            <tr><th>F</th><td>{{ team.goals_for or 0 }}</td></tr>
-                            <tr><th>A</th><td>{{ team.goals_against or 0 }}</td></tr>
-                            <tr><th>GD</th><td>{{ team.goal_difference or 0 }}</td></tr>
-                            <tr><th>P</th><td>{{ team.points or 0 }}</td></tr>
+                            <tr><th>Games Played</th><td>{{ team.matches or 0 }}</td></tr>
+                            <tr><th>Wins</th><td>{{ team.wins or 0 }}</td></tr>
+                            <tr><th>Draws</th><td>{{ team.draws or 0 }}</td></tr>
+                            <tr><th>Losses</th><td>{{ team.losses or 0 }}</td></tr>
+                            <tr><th>Goals For</th><td>{{ team.goals_for or 0 }}</td></tr>
+                            <tr><th>Goals Against</th><td>{{ team.goals_against or 0 }}</td></tr>
+                            <tr><th>Goal Difference</th><td>{{ team.goal_difference or 0 }}</td></tr>
+                            <tr><th>Points</th><td>{{ team.points or 0 }}</td></tr>
                         </tbody>
                     </table>
                 </div>
 
                 {% if group_teams %}
                 <div class="wc-team-panel mt-3">
-                    <h2>Group {{ team.group }} Standings</h2>
+                    <h2 class="wc-team-group-title">Group {{ team.group }} Standings</h2>
                     <div class="wc-team-group-table-wrap">
                         <table class="wc-team-group-table">
                             <thead>
@@ -68,6 +68,11 @@
                                     <th>#</th>
                                     <th>Team</th>
                                     <th>GP</th>
+                                    <th>W</th>
+                                    <th>D</th>
+                                    <th>L</th>
+                                    <th>F</th>
+                                    <th>A</th>
                                     <th>GD</th>
                                     <th>P</th>
                                 </tr>
@@ -78,6 +83,11 @@
                                     <td>{{ row.group_rank or loop.index }}</td>
                                     <td>{{ row.team_name }}</td>
                                     <td>{{ row.matches or 0 }}</td>
+                                    <td>{{ row.wins or 0 }}</td>
+                                    <td>{{ row.draws or 0 }}</td>
+                                    <td>{{ row.losses or 0 }}</td>
+                                    <td>{{ row.goals_for or 0 }}</td>
+                                    <td>{{ row.goals_against or 0 }}</td>
                                     <td>{{ row.goal_difference or 0 }}</td>
                                     <td>{{ row.points or 0 }}</td>
                                 </tr>

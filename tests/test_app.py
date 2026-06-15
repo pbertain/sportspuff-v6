@@ -569,6 +569,10 @@ class TestTournamentThemeAssets(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("South Africa", html)
         self.assertIn("Group E Standings", html)
+        for label in ["Games Played", "Wins", "Draws", "Losses", "Goals For", "Goals Against", "Goal Difference", "Points"]:
+            self.assertIn(label, html)
+        for column in ["GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
+            self.assertIn(column, html)
         self.assertIn("Morocco", html)
         self.assertIn("Norway", html)
         self.assertIn('class="is-current-team"', html)

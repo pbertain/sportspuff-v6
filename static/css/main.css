@@ -1015,6 +1015,11 @@ main, .main-content {
   font-weight: 850;
 }
 
+.wc-team-panel .wc-team-group-title {
+  color: var(--event-accent, #d4af37);
+  font-size: 1.2rem;
+}
+
 .wc-team-stats-table {
   border-collapse: collapse;
   width: 100%;
@@ -1029,8 +1034,8 @@ main, .main-content {
 
 .wc-team-stats-table th {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 0.78rem;
-  text-transform: uppercase;
+  font-size: 0.86rem;
+  text-transform: none;
 }
 
 .wc-team-stats-table td {
@@ -1045,7 +1050,8 @@ main, .main-content {
 
 .wc-team-group-table {
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  min-width: 430px;
   width: 100%;
 }
 
@@ -1053,14 +1059,14 @@ main, .main-content {
 .wc-team-group-table td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
-  padding: 7px 4px;
+  padding: 7px 3px;
   text-align: center;
   white-space: nowrap;
 }
 
 .wc-team-group-table th {
   color: rgba(255, 255, 255, 0.68);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 850;
 }
 
