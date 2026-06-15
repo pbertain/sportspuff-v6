@@ -2007,6 +2007,41 @@ def proxy_schedule(league, date):
         logger.warning("No cache available, returning empty schedule")
         return jsonify({'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'), 'games': []}), 200
 
+@app.route('/api/proxy/standings/<league>')
+def proxy_standings(league):
+    """Proxy standings API requests to avoid CORS issues with caching."""
+    league_lower = league.lower()
+    if league_lower not in ('mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc'):
+        return jsonify({'teams': [], 'standings': [], 'available': False}), 400
+
+    cache_key = f'standings:{league_lower}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    try:
+        data = _fetch_api_json(f'/api/v1/standings/{league_lower}', timeout=15)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Standings API returned error for {league_lower}: {data['error']}")
+            return jsonify(data), 500
+
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying standings for {league_lower}: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached standings due to request exception")
+            return jsonify(expired_cache)
+        return jsonify({'teams': [], 'standings': [], 'groups': [], 'available': False}), 200
+    except Exception as e:
+        logger.error(f"Unexpected error proxying standings for {league_lower}: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached standings due to unexpected error")
+            return jsonify(expired_cache)
+        return jsonify({'teams': [], 'standings': [], 'groups': [], 'available': False}), 200
+
 @app.route('/api/nfl/team-records')
 def nfl_team_records():
     """Fetch NFL team records from sportspuff-api standings, keyed by full name and abbreviation."""

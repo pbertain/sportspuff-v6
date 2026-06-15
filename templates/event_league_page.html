@@ -44,6 +44,9 @@
         </div>
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
+        {% if league_config.mode == 'world-cup' %}
+        <div id="wc-standings-panel" class="wc-standings-panel mb-3" style="display: none;"></div>
+        {% endif %}
         <div id="event-league-results" class="event-league-card">
             <div class="text-center py-4">
                 <div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div>
@@ -208,6 +211,76 @@
             panel.style.display = '';
         }
 
+        function renderWorldCupStandings(data) {
+            if (EVENT_MODE !== 'world-cup') return;
+            const panel = document.getElementById('wc-standings-panel');
+            if (!panel) return;
+
+            const groups = Array.isArray(data?.groups) ? data.groups : [];
+            if (groups.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            const groupCards = groups.map(group => {
+                const teams = Array.isArray(group.teams) ? group.teams : [];
+                const rows = teams.map(team => `
+                    <tr>
+                        <td class="wc-rank">${escapeHtml(team.group_rank ?? '')}</td>
+                        <td class="wc-team">
+                            <span class="wc-team-code">${escapeHtml(team.abbreviation || '')}</span>
+                            <span class="wc-team-name">${escapeHtml(team.team_name || 'TBD')}</span>
+                        </td>
+                        <td>${escapeHtml(team.matches ?? 0)}</td>
+                        <td>${escapeHtml(team.wins ?? 0)}</td>
+                        <td>${escapeHtml(team.draws ?? 0)}</td>
+                        <td>${escapeHtml(team.losses ?? 0)}</td>
+                        <td>${escapeHtml(team.goals_for ?? 0)}</td>
+                        <td>${escapeHtml(team.goals_against ?? 0)}</td>
+                        <td>${escapeHtml(team.goal_difference ?? 0)}</td>
+                        <td class="wc-points">${escapeHtml(team.points ?? 0)}</td>
+                    </tr>
+                `).join('');
+
+                return `
+                    <section class="wc-group-card" aria-label="Group ${escapeHtml(group.group || '')} standings">
+                        <div class="wc-group-title">Group ${escapeHtml(group.group || '')}</div>
+                        <div class="wc-group-table-wrap">
+                            <table class="wc-group-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Team</th>
+                                        <th>GP</th>
+                                        <th>W</th>
+                                        <th>D</th>
+                                        <th>L</th>
+                                        <th>F</th>
+                                        <th>A</th>
+                                        <th>GD</th>
+                                        <th>P</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="wc-standings-header">
+                    <div>
+                        <h2 class="wc-standings-title">World Cup Group Standings</h2>
+                        <div class="event-league-meta">Groups are shown in API order; teams are already ranked.</div>
+                    </div>
+                    <span class="event-league-pill">${groups.length} groups</span>
+                </div>
+                <div class="wc-groups-grid">${groupCards}</div>
+            `;
+            panel.style.display = '';
+        }
+
         async function loadEventLeague() {
             const results = document.getElementById('event-league-results');
             const datePicker = document.getElementById('event-date-picker');
@@ -220,12 +293,16 @@
             results.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
             try {
-                const [seasonRes, scheduleRes, scoresRes] = await Promise.all([
+                const [seasonRes, scheduleRes, scoresRes, standingsRes] = await Promise.all([
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
-                    fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] })
+                    fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
+                    EVENT_MODE === 'world-cup'
+                        ? fetch(`/api/proxy/standings/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+                        : Promise.resolve({})
                 ]);
                 renderSeasonInfo(seasonRes);
+                renderWorldCupStandings(standingsRes);
 
                 const byId = {};
                 (scheduleRes.games || []).forEach(game => { byId[game.game_id || `${game.home_team}-${game.visitor_team}-${game.game_time}`] = game; });

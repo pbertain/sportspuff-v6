@@ -470,6 +470,56 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("No matches on", template)
         self.assertIn("event-soccer-ball", template)
 
+    def test_event_page_renders_world_cup_group_standings(self):
+        template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
+        css = (PROJECT_ROOT / "static/css/main.css").read_text()
+
+        self.assertIn('id="wc-standings-panel"', template)
+        self.assertIn("function renderWorldCupStandings", template)
+        self.assertIn("data?.groups", template)
+        self.assertIn("/api/proxy/standings/${league}", template)
+        for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
+            self.assertIn(column, template)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr))", css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", css)
+        self.assertIn("grid-template-columns: 1fr", css)
+
+    @patch("app._fetch_api_json")
+    def test_proxy_standings_exposes_world_cup_groups(self, mock_fetch):
+        mock_fetch.return_value = {
+            "groups": [
+                {
+                    "group": "A",
+                    "teams": [
+                        {
+                            "group_rank": 1,
+                            "team_name": "Mexico",
+                            "abbreviation": "MEX",
+                            "matches": 1,
+                            "wins": 1,
+                            "draws": 0,
+                            "losses": 0,
+                            "goals_for": 2,
+                            "goals_against": 0,
+                            "goal_difference": 2,
+                            "points": 3,
+                            "record": "1-0-0",
+                        }
+                    ],
+                }
+            ],
+            "teams": [],
+            "knockout_bracket": {"sides": {"left": [], "right": []}},
+        }
+        with patch("app.get_cached_response", return_value=None), patch("app.set_cached_response"):
+            response = app.test_client().get("/api/proxy/standings/wc")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["groups"][0]["group"], "A")
+        self.assertEqual(data["groups"][0]["teams"][0]["team_name"], "Mexico")
+        mock_fetch.assert_called_once_with("/api/v1/standings/wc", timeout=15)
+
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()
 
