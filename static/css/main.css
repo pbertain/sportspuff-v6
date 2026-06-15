@@ -955,7 +955,7 @@ main, .main-content {
   width: 18px;
 }
 
-.wc-marquee {
+.team-marquee {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   background: rgba(7, 31, 22, 0.52);
@@ -966,44 +966,44 @@ main, .main-content {
           mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
 }
 
-.wc-marquee-track {
+.team-marquee-track {
   align-items: center;
-  animation: wc-marquee-scroll 60s linear infinite;
+  animation: team-marquee-scroll 60s linear infinite;
   display: flex;
   gap: 28px;
   width: max-content;
   will-change: transform;
 }
 
-.wc-marquee:hover .wc-marquee-track,
-.wc-marquee:focus-within .wc-marquee-track {
+.team-marquee:hover .team-marquee-track,
+.team-marquee:focus-within .team-marquee-track {
   animation-play-state: paused;
 }
 
-.wc-marquee-item {
+.team-marquee-item {
   display: inline-flex;
   flex: 0 0 auto;
   transition: transform 0.2s ease;
 }
 
-.wc-marquee-item:hover,
-.wc-marquee-item:focus {
+.team-marquee-item:hover,
+.team-marquee-item:focus {
   transform: scale(1.18) rotate(-6deg);
 }
 
-.wc-marquee-logo {
+.team-marquee-logo {
   height: 48px;
   object-fit: contain;
   width: 48px;
 }
 
-@keyframes wc-marquee-scroll {
+@keyframes team-marquee-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wc-marquee-track { animation: none; }
+  .team-marquee-track { animation: none; }
 }
 
 .wc-advancing-top2 td {

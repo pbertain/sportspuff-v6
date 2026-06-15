@@ -56,8 +56,8 @@
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
         {% if league_config.mode == 'world-cup' %}
-        <div id="wc-marquee" class="wc-marquee mb-3" style="display: none;" aria-hidden="true">
-            <div class="wc-marquee-track"></div>
+        <div id="wc-marquee" class="team-marquee mb-3" style="display: none;" aria-hidden="true">
+            <div class="team-marquee-track"></div>
         </div>
         <div id="wc-standings-panel" class="wc-standings-panel mb-3" style="display: none;"></div>
         {% endif %}
@@ -299,7 +299,7 @@
             if (EVENT_MODE !== 'world-cup') return;
             const marquee = document.getElementById('wc-marquee');
             if (!marquee) return;
-            const track = marquee.querySelector('.wc-marquee-track');
+            const track = marquee.querySelector('.team-marquee-track');
             if (!track) return;
 
             const groups = worldCupGroupsFromStandings(data);
@@ -327,10 +327,10 @@
 
             const buildItem = ({abbrev, teamName, teamCode}) => {
                 const url = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : '';
-                const img = `<img class="wc-marquee-logo" src="https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(abbrev.toLowerCase())}_ball_logo.png" alt="${escapeHtml(teamName)}" loading="lazy" onerror="this.style.display='none';">`;
+                const img = `<img class="team-marquee-logo" src="https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(abbrev.toLowerCase())}_ball_logo.png" alt="${escapeHtml(teamName)}" loading="lazy" onerror="this.style.display='none';">`;
                 return url
-                    ? `<a class="wc-marquee-item" href="${url}" title="${escapeHtml(teamName)}">${img}</a>`
-                    : `<span class="wc-marquee-item" title="${escapeHtml(teamName)}">${img}</span>`;
+                    ? `<a class="team-marquee-item" href="${url}" title="${escapeHtml(teamName)}">${img}</a>`
+                    : `<span class="team-marquee-item" title="${escapeHtml(teamName)}">${img}</span>`;
             };
             const items = teams.map(buildItem).join('');
             track.innerHTML = items + items;

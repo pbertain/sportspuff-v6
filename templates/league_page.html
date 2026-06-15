@@ -45,6 +45,28 @@
             </div>
         </div>
 
+        {% set marquee_teams = [] %}
+        {% for conference in organized_teams.values() %}
+            {% for division_teams in conference.values() %}
+                {% for team in division_teams %}
+                    {% if marquee_teams.append(team) %}{% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+        {% if marquee_teams %}
+        <div class="team-marquee mb-4" aria-hidden="true">
+            <div class="team-marquee-track">
+                {% for _ in range(2) %}
+                    {% for team in marquee_teams %}
+                        <a class="team-marquee-item" href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" title="{{ team.real_team_name }}">
+                            <img class="team-marquee-logo" src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" loading="lazy" onerror="this.style.display='none';">
+                        </a>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="league-schedule-module mb-4" data-league="{{ league_name }}">
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
                 <div>
