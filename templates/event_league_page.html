@@ -218,11 +218,18 @@
             );
         }
 
+        const validWorldCupGroups = new Set('ABCDEFGHIJKL'.split(''));
+
+        function worldCupGroupName(value) {
+            const groupName = String(value || '').trim().toUpperCase();
+            return validWorldCupGroups.has(groupName) ? groupName : '';
+        }
+
         function worldCupGroupsFromStandings(data) {
             const apiGroups = Array.isArray(data?.groups) ? data.groups : [];
             const flatTeams = Array.isArray(data?.teams) ? data.teams : [];
             const flatByGroup = flatTeams.reduce((groups, team) => {
-                const groupName = String(team.group || '').trim();
+                const groupName = worldCupGroupName(team.group);
                 if (!groupName) return groups;
                 if (!groups[groupName]) groups[groupName] = [];
                 groups[groupName].push(team);
@@ -231,13 +238,14 @@
             const seenGroups = new Set();
 
             const groups = apiGroups.map(group => {
-                const groupName = String(group.group || '').trim();
+                const groupName = worldCupGroupName(group.group);
+                if (!groupName) return null;
                 if (groupName) seenGroups.add(groupName);
                 const apiTeams = Array.isArray(group.teams) ? group.teams : [];
                 const flatTeamsForGroup = flatByGroup[groupName] || [];
                 const teams = flatTeamsForGroup.length > apiTeams.length ? flatTeamsForGroup : apiTeams;
                 return {...group, group: groupName, teams: rankedWorldCupTeams(teams)};
-            });
+            }).filter(Boolean);
 
             Object.keys(flatByGroup).forEach(groupName => {
                 if (!seenGroups.has(groupName)) {

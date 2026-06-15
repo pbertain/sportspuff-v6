@@ -480,6 +480,10 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("data?.groups", template)
         self.assertIn("data?.teams", template)
         self.assertIn("flatByGroup", template)
+        self.assertIn("validWorldCupGroups", template)
+        self.assertIn("'ABCDEFGHIJKL'", template)
+        self.assertIn("worldCupGroupName(team.group)", template)
+        self.assertIn("worldCupGroupName(group.group)", template)
         self.assertIn("flatTeamsForGroup.length > apiTeams.length", template)
         self.assertIn("/api/proxy/standings/${league}", template)
         for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
