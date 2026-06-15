@@ -340,6 +340,40 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png", inventory)
         self.assertTrue((PROJECT_ROOT / "static/images/events/cycling/tour-de-france-mark.svg").exists())
 
+    def test_world_cup_team_balls_use_fifa_country_codes(self):
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn('WC_TEAM_BALL_BASE_URL = "https://www.splitsp.lat/logos/wc/teamballs"', index_template)
+        for team_name, code in [
+            ("Germany", "ger"),
+            ("Spain", "esp"),
+            ("England", "eng"),
+            ("Scotland", "sco"),
+            ("South Africa", "rsa"),
+            ("South Korea", "kor"),
+            ("Czech Republic", "cze"),
+            ("Congo DR", "cod"),
+            ("Saudi Arabia", "ksa"),
+            ("Switzerland", "sui"),
+            ("Curaçao", "cuw"),
+        ]:
+            self.assertIn(f'"{team_name}": "{code}"', index_template)
+        self.assertIn('${code}_ball_logo.png', index_template)
+        self.assertIn("isWorldCup ? getWorldCupTeamAbbrev(game.visitor_team)", index_template)
+        self.assertIn("(isTennis || isWorldCup) ? null : findTeamData(game.visitor_team, gameLeague)", index_template)
+        self.assertIn("lower === 'wc' ? 'World Cup'", index_template)
+        self.assertNotIn('SOU_ball_logo.png', index_template)
+        self.assertNotIn('ENG_ball_logo.png', index_template)
+
+    def test_homepage_league_dropdown_stays_above_scorecards(self):
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn('class="scores-controls d-flex justify-content-center gap-3 mb-3 flex-wrap"', index_template)
+        self.assertIn(".scores-controls", index_template)
+        self.assertIn("z-index: 2000", index_template)
+        self.assertIn("#leagues-menu", index_template)
+        self.assertIn("z-index: 3000", index_template)
+
     def test_shared_header_exposes_expected_theme_options(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
 
@@ -457,7 +491,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function homepageTennisTournamentName", template)
         self.assertIn("homepage-tennis-tournament-divider", template)
         self.assertIn("leagueName === 'ATP' || leagueName === 'WTA'", template)
-        self.assertIn("const visitorTeamData = isTennis ? null : findTeamData", template)
+        self.assertIn("const visitorTeamData = (isTennis || isWorldCup) ? null : findTeamData", template)
         self.assertIn("const visitorLogo = isTennis ? ''", template)
         self.assertIn("${isTennis ? '' : `", template)
 

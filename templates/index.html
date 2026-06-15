@@ -27,7 +27,7 @@
                 <div class="text-center mb-4 fade-in-up">
                     <h2 style="font-size: 2rem; margin: 0 0 20px 0;">📅 Schedules & 🏆 Scores</h2>
                 </div>
-                <div class="d-flex justify-content-center gap-3 mb-3 flex-wrap">
+                <div class="scores-controls d-flex justify-content-center gap-3 mb-3 flex-wrap">
                     <div class="mb-2">
                         <label class="form-label text-white fw-bold">Leagues:</label>
                         <div class="dropdown">
@@ -453,6 +453,80 @@
             WTA:     "https://www.splitsp.lat/logos/wta/wta-logo.png",
             CYCLING: "https://www.splitsp.lat/logos/cycling/cycling-logo.png"
         };
+        const WC_TEAM_BALL_BASE_URL = "https://www.splitsp.lat/logos/wc/teamballs";
+        const WC_TEAM_CODES = {
+            "Algeria": "alg",
+            "Argentina": "arg",
+            "Australia": "aus",
+            "Austria": "aut",
+            "Belgium": "bel",
+            "Bosnia and Herzegovina": "bih",
+            "Bosnia-Herzegovina": "bih",
+            "Brazil": "bra",
+            "Cabo Verde": "cpv",
+            "Cape Verde": "cpv",
+            "Canada": "can",
+            "Colombia": "col",
+            "Congo DR": "cod",
+            "DR Congo": "cod",
+            "Democratic Republic of the Congo": "cod",
+            "Croatia": "cro",
+            "Curaçao": "cuw",
+            "Curacao": "cuw",
+            "Czech Republic": "cze",
+            "Czechia": "cze",
+            "Côte d'Ivoire": "civ",
+            "Cote d'Ivoire": "civ",
+            "Ivory Coast": "civ",
+            "Ecuador": "ecu",
+            "Egypt": "egy",
+            "England": "eng",
+            "France": "fra",
+            "Germany": "ger",
+            "Ghana": "gha",
+            "Haiti": "hai",
+            "IR Iran": "irn",
+            "Iran": "irn",
+            "Iraq": "irq",
+            "Japan": "jpn",
+            "Jordan": "jor",
+            "Korea Republic": "kor",
+            "South Korea": "kor",
+            "Mexico": "mex",
+            "Morocco": "mar",
+            "Netherlands": "ned",
+            "New Zealand": "nzl",
+            "Norway": "nor",
+            "Panama": "pan",
+            "Paraguay": "par",
+            "Portugal": "por",
+            "Qatar": "qat",
+            "Saudi Arabia": "ksa",
+            "Scotland": "sco",
+            "Senegal": "sen",
+            "South Africa": "rsa",
+            "Spain": "esp",
+            "Sweden": "swe",
+            "Switzerland": "sui",
+            "Tunisia": "tun",
+            "Türkiye": "tur",
+            "Turkey": "tur",
+            "USA": "usa",
+            "United States": "usa",
+            "Uruguay": "uru",
+            "Uzbekistan": "uzb"
+        };
+        function getWorldCupTeamCode(teamName) {
+            const cleanName = String(teamName || '').replace(/\s+/g, ' ').trim();
+            return WC_TEAM_CODES[cleanName] || '';
+        }
+        function getWorldCupTeamAbbrev(teamName) {
+            return getWorldCupTeamCode(teamName).toUpperCase();
+        }
+        function getWorldCupTeamBallLogo(teamName) {
+            const code = getWorldCupTeamCode(teamName);
+            return code ? `${WC_TEAM_BALL_BASE_URL}/${code}_ball_logo.png` : '/static/images/no-logo.png';
+        }
         function orbitalLoaderHtml(label) {
             const R = 110;
             const slots = ORBIT_LEAGUES.map((lg, i) => {
@@ -942,6 +1016,7 @@
                     const isCricket = gameLeague === 'IPL' || gameLeague === 'MLC';
                     const isTennis = gameLeague === 'ATP' || gameLeague === 'WTA';
                     const isCyclingEvent = gameLeague === 'CYCLING';
+                    const isWorldCup = gameLeague === 'WC';
                     const hasCricketScore = isCricket && (game.cricket_home_score || game.cricket_away_score);
                     const hasCricketLive = isCricket && isInProgress && game.cricket_result;
                     const hasScore = !isTennis && !isCyclingEvent && (
@@ -1002,8 +1077,8 @@
 
                     // Get team colors and logos
                     // Get team data for full names and abbreviations (league-aware lookup)
-                    const visitorTeamData = isTennis ? null : findTeamData(game.visitor_team, gameLeague);
-                    const homeTeamData = isTennis ? null : findTeamData(game.home_team, gameLeague);
+                    const visitorTeamData = (isTennis || isWorldCup) ? null : findTeamData(game.visitor_team, gameLeague);
+                    const homeTeamData = (isTennis || isWorldCup) ? null : findTeamData(game.home_team, gameLeague);
 
                     // Use league-aware team data for colors and logos
                     const tennisColor = gameLeague === 'WTA' ? '#A01469' : '#003DA5';
@@ -1011,8 +1086,8 @@
                     const homeColor = isTennis ? tennisColor : (homeTeamData?.color_1 || '#6c757d');
                     const visitorTextColor = getTextColor(visitorColor);
                     const homeTextColor = getTextColor(homeColor);
-                    const visitorLogo = isTennis ? '' : (visitorTeamData?.logo_url || '/static/images/no-logo.png');
-                    const homeLogo = isTennis ? '' : (homeTeamData?.logo_url || '/static/images/no-logo.png');
+                    const visitorLogo = isTennis ? '' : (isWorldCup ? getWorldCupTeamBallLogo(game.visitor_team) : (visitorTeamData?.logo_url || '/static/images/no-logo.png'));
+                    const homeLogo = isTennis ? '' : (isWorldCup ? getWorldCupTeamBallLogo(game.home_team) : (homeTeamData?.logo_url || '/static/images/no-logo.png'));
                     const visitorLogoBg = visitorTeamData?.color_3 || '#FFFFFF';
                     const homeLogoBg = homeTeamData?.color_3 || '#FFFFFF';
                     
@@ -1287,8 +1362,8 @@
                     
                     // Get team abbreviations - use from teamColors if available, otherwise from API, otherwise fallback
                     // (visitorTeamData and homeTeamData are already defined above)
-                    const visitorAbbrev = isTennis ? '' : (visitorTeamData?.abbreviation || game.visitor_team_abbrev || '');
-                    const homeAbbrev = isTennis ? '' : (homeTeamData?.abbreviation || game.home_team_abbrev || '');
+                    const visitorAbbrev = isTennis ? '' : (isWorldCup ? getWorldCupTeamAbbrev(game.visitor_team) : (visitorTeamData?.abbreviation || game.visitor_team_abbrev || ''));
+                    const homeAbbrev = isTennis ? '' : (isWorldCup ? getWorldCupTeamAbbrev(game.home_team) : (homeTeamData?.abbreviation || game.home_team_abbrev || ''));
                     
                     // Get abbreviation box colors with contrast checking
                     const visitorAbbrevBg = visitorTeamData?.color_2 || '#FFFFFF';
@@ -1739,7 +1814,7 @@
                     const leagueGames = gamesByLeague[leagueName] || [];
                     const eventContext = activeEventContext(lower, pickedDate);
                     const leagueLogo = eventContext?.asset || `https://www.splitsp.lat/logos/${lower}/${lower}_logo.png`;
-                    const headerLabel = eventContext?.label || leagueName;
+                    const headerLabel = lower === 'wc' ? 'World Cup' : (eventContext?.label || leagueName);
                     const headerClass = eventContext?.className || '';
 
                     // MLS during World Cup window is handled inside emptyBannerMessage()
@@ -1888,6 +1963,19 @@
             margin: 0 auto;
             max-width: 99%;
             width: 99%;
+        }
+        .scores-controls {
+            position: relative;
+            z-index: 2000;
+        }
+        .scores-controls .dropdown {
+            position: relative;
+            z-index: 2050;
+        }
+        #leagues-menu {
+            z-index: 3000;
+            max-height: min(70vh, 420px);
+            overflow-y: auto;
         }
 
         /* Per-league empty-state banner (no games / offseason).
