@@ -477,6 +477,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn('id="wc-standings-panel"', template)
         self.assertIn("function worldCupGroupsFromStandings", template)
         self.assertIn("function renderWorldCupStandings", template)
+        self.assertIn("function mergeWorldCupTeams", template)
         self.assertIn("data?.groups", template)
         self.assertIn("data?.teams", template)
         self.assertIn("flatByGroup", template)
@@ -484,7 +485,6 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("'ABCDEFGHIJKL'", template)
         self.assertIn("worldCupGroupName(team.group)", template)
         self.assertIn("worldCupGroupName(group.group)", template)
-        self.assertIn("flatTeamsForGroup.length > apiTeams.length", template)
         self.assertIn("/api/proxy/standings/${league}", template)
         for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
             self.assertIn(column, template)
@@ -493,8 +493,12 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("grid-template-columns: 1fr", css)
         self.assertIn("WC_TEAM_CODES", template)
         self.assertIn("worldCupTeamCode(team)", template)
-        self.assertIn('href="/team/wc/${encodeURIComponent(teamCode)}"', template)
+        self.assertIn("const teamUrl = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : ''", template)
+        self.assertIn("wc-team-code-link", template)
+        self.assertIn("wc-advancing-team", template)
         self.assertIn(".wc-team-link", css)
+        self.assertIn(".wc-team-code-link", css)
+        self.assertIn(".wc-advancing-team", css)
 
     @patch("app.set_cached_response")
     @patch("app.get_cached_response", return_value=None)
@@ -683,6 +687,26 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "activeEventContext(leagueLower, pickedDate)",
         ]:
             self.assertIn(snippet, template)
+
+    def test_world_cup_homepage_team_links_use_team_pages(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn("if (league === 'WC')", template)
+        self.assertIn("return code ? `/team/wc/${code}`", template)
+
+    def test_cycling_uses_uci_branding(self):
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+        event_template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
+        css = (PROJECT_ROOT / "static/css/main.css").read_text()
+        app_source = (PROJECT_ROOT / "app.py").read_text()
+
+        self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo.png", index_template)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo.png", app_source)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo-125-years.png", app_source)
+        self.assertIn("banner_logo_url", event_template)
+        self.assertIn("cycling-anniversary-banner", event_template)
+        self.assertIn("cycling-anniversary-banner", css)
+        self.assertIn("https://www.uci.org/the-uci-celebrates-its-125th-anniversary/7cSGKuFPEiLx1fVHx7YCDe", app_source)
 
     def test_shared_header_dropdown_stays_above_page_content(self):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()

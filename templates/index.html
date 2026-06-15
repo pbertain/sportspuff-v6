@@ -125,7 +125,7 @@
                     <!-- Cycling -->
                     <a href="{{ url_for('league_page', league_name='CYCLING') }}" class="league-card cycling fade-in-up" data-league="CYCLING">
                         <div class="league-logo">
-                            <img src="https://www.splitsp.lat/logos/cycling/cycling-logo.png" alt="Cycling Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <img src="https://www.splitsp.lat/logos/cycling/uci/uci-logo.png" alt="Cycling Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fas fa-bicycle" style="color: #F5E814; display: none;"></i>
                         </div>
                         <h3 class="league-name">Cycling</h3>
@@ -245,7 +245,7 @@
         // Team colors from database (passed from server) - includes NBA and NHL
         const allTeamColors = {{ team_colors | tojson | safe }};
 
-        const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC'];
+        const ORBIT_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA', 'IPL', 'MLC', 'ATP', 'WC', 'WTA', 'CYCLING'];
         // Canonical render order on the homepage (alphabetical, matches header dropdown).
         const RENDER_ORDER = ['ATP', 'CYCLING', 'IPL', 'MLB', 'MLC', 'MLS', 'NBA', 'NFL', 'NHL', 'WC', 'WNBA', 'WTA'];
 
@@ -451,7 +451,7 @@
             WC:      "https://www.splitsp.lat/logos/wc/wc-logo.png",
             ATP:     "https://www.splitsp.lat/logos/atp/atp-logo.png",
             WTA:     "https://www.splitsp.lat/logos/wta/wta-logo.png",
-            CYCLING: "https://www.splitsp.lat/logos/cycling/cycling-logo.png"
+            CYCLING: "https://www.splitsp.lat/logos/cycling/uci/uci-logo.png"
         };
         const WC_TEAM_BALL_BASE_URL = "https://www.splitsp.lat/logos/wc/teamballs";
         const WC_TEAM_CODES = {
@@ -988,6 +988,10 @@
                 
                 // Helper function to get team URL
                 function getTeamUrl(teamName, league = 'NBA') {
+                    if (league === 'WC') {
+                        const code = getWorldCupTeamCode(teamName);
+                        return code ? `/team/wc/${code}` : `/team/wc/${teamName.replace(/\s+/g, '_')}`;
+                    }
                     const teamNameUrl = teamName.replace(/\s+/g, '_');
                     return `/team/${league}/${teamNameUrl}`;
                 }

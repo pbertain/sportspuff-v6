@@ -43,6 +43,17 @@
             </div>
         </div>
 
+        {% if league_config.mode == 'cycling' and league_config.banner_logo_url and league_config.banner_link %}
+        <a class="cycling-anniversary-banner mb-4" href="{{ league_config.banner_link }}" target="_blank" rel="noopener noreferrer">
+            <img src="{{ league_config.banner_logo_url }}" alt="{{ league_config.banner_text or 'UCI 125 years' }}" onerror="this.style.display='none';">
+            <div>
+                <div class="cycling-anniversary-kicker">Official UCI Anniversary</div>
+                <div class="cycling-anniversary-title">{{ league_config.banner_text or 'UCI celebrates 125 years' }}</div>
+            </div>
+            <i class="fas fa-arrow-up-right-from-square ms-auto"></i>
+        </a>
+        {% endif %}
+
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
         {% if league_config.mode == 'world-cup' %}
         <div id="wc-standings-panel" class="wc-standings-panel mb-3" style="display: none;"></div>
@@ -219,6 +230,24 @@
             );
         }
 
+        function mergeWorldCupTeams(primaryTeams, secondaryTeams) {
+            const merged = new Map();
+            [primaryTeams, secondaryTeams].forEach(teamList => {
+                (Array.isArray(teamList) ? teamList : []).forEach(team => {
+                    const key = [
+                        String(team.team_name || '').trim().toLowerCase(),
+                        String(team.abbreviation || '').trim().toLowerCase()
+                    ].join('|');
+                    if (!merged.has(key)) {
+                        merged.set(key, team);
+                    } else {
+                        merged.set(key, {...merged.get(key), ...team});
+                    }
+                });
+            });
+            return rankedWorldCupTeams(Array.from(merged.values()));
+        }
+
         const validWorldCupGroups = new Set('ABCDEFGHIJKL'.split(''));
 
         function worldCupGroupName(value) {
@@ -251,8 +280,7 @@
                 if (groupName) seenGroups.add(groupName);
                 const apiTeams = Array.isArray(group.teams) ? group.teams : [];
                 const flatTeamsForGroup = flatByGroup[groupName] || [];
-                const teams = flatTeamsForGroup.length > apiTeams.length ? flatTeamsForGroup : apiTeams;
-                return {...group, group: groupName, teams: rankedWorldCupTeams(teams)};
+                return {...group, group: groupName, teams: mergeWorldCupTeams(apiTeams, flatTeamsForGroup)};
             }).filter(Boolean);
 
             Object.keys(flatByGroup).forEach(groupName => {
@@ -280,14 +308,21 @@
                 const rows = teams.map(team => {
                     const teamCode = worldCupTeamCode(team);
                     const teamName = escapeHtml(team.team_name || 'TBD');
-                    const teamNameHtml = teamCode
-                        ? `<a class="wc-team-link" href="/team/wc/${encodeURIComponent(teamCode)}">${teamName}</a>`
+                    const teamUrl = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : '';
+                    const isAdvancing = Number(team.group_rank ?? team.rank ?? 999) <= 2;
+                    const teamNameHtml = teamUrl
+                        ? `<a class="wc-team-link" href="${teamUrl}">${teamName}</a>`
                         : `<span class="wc-team-name">${teamName}</span>`;
+                    const teamAbbrevHtml = team.abbreviation
+                        ? (teamUrl
+                            ? `<a class="wc-team-code wc-team-code-link" href="${teamUrl}">${escapeHtml(team.abbreviation)}</a>`
+                            : `<span class="wc-team-code">${escapeHtml(team.abbreviation)}</span>`)
+                        : '';
                     return `
-                    <tr>
+                    <tr class="${isAdvancing ? 'wc-advancing-team' : ''}">
                         <td class="wc-rank">${escapeHtml(team.group_rank ?? '')}</td>
                         <td class="wc-team">
-                            <span class="wc-team-code">${escapeHtml(team.abbreviation || '')}</span>
+                            ${teamAbbrevHtml}
                             ${teamNameHtml}
                         </td>
                         <td>${escapeHtml(team.matches ?? 0)}</td>

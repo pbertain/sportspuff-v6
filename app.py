@@ -863,9 +863,12 @@ def league_page(league_name):
         'CYCLING': {
             'display_name': 'Cycling',
             'subtitle': 'Race calendar, stages, and daily events',
-            'logo_url': 'https://www.splitsp.lat/logos/cycling/cycling-logo.png',
+            'logo_url': 'https://www.splitsp.lat/logos/cycling/uci/uci-logo.png',
             'accent': '#F5E814',
             'mode': 'cycling',
+            'banner_logo_url': 'https://www.splitsp.lat/logos/cycling/uci/uci-logo-125-years.png',
+            'banner_link': 'https://www.uci.org/the-uci-celebrates-its-125th-anniversary/7cSGKuFPEiLx1fVHx7YCDe',
+            'banner_text': 'UCI celebrates 125 years',
         },
     }
     if league_upper in event_leagues:
