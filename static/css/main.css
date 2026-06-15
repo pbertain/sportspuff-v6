@@ -824,7 +824,7 @@ main, .main-content {
 .wc-groups-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .wc-group-card {
@@ -908,6 +908,18 @@ main, .main-content {
   font-weight: 750;
 }
 
+.wc-team-link {
+  color: inherit;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.wc-team-link:hover,
+.wc-team-link:focus {
+  color: var(--event-accent, #d4af37);
+  text-decoration: underline;
+}
+
 .wc-points {
   color: var(--event-accent, #d4af37);
   font-weight: 900;
@@ -944,6 +956,184 @@ main, .main-content {
   }
   to {
     transform: translateX(18px) translateY(-12px) rotate(18deg);
+  }
+}
+
+.wc-team-shell {
+  color: var(--warm-white);
+}
+
+.wc-team-hero {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0, 130, 73, 0.52), rgba(118, 18, 43, 0.45));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 4px solid var(--event-accent, #00824a);
+  border-radius: 8px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  padding: 24px;
+}
+
+.wc-team-ball-wrap {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  min-height: 260px;
+  padding: 16px;
+}
+
+.wc-team-ball-logo {
+  height: auto;
+  max-height: 240px;
+  max-width: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.wc-team-hero-copy h1 {
+  color: var(--warm-white);
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1.05;
+  margin: 0 0 12px;
+}
+
+.wc-team-panel {
+  background: rgba(7, 31, 22, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  height: 100%;
+  padding: 16px;
+}
+
+.wc-team-panel h2 {
+  color: var(--warm-white);
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.wc-team-stats-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.wc-team-stats-table th,
+.wc-team-stats-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 8px 0;
+}
+
+.wc-team-stats-table th {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.wc-team-stats-table td {
+  font-size: 1rem;
+  font-weight: 850;
+  text-align: right;
+}
+
+.wc-team-group-table-wrap {
+  overflow-x: auto;
+}
+
+.wc-team-group-table {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  width: 100%;
+}
+
+.wc-team-group-table th,
+.wc-team-group-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 7px 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wc-team-group-table th {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.wc-team-group-table th:nth-child(2),
+.wc-team-group-table td:nth-child(2) {
+  text-align: left;
+  width: 100%;
+}
+
+.wc-team-group-table .is-current-team td {
+  background: rgba(212, 175, 55, 0.16);
+  color: var(--warm-white);
+  font-weight: 850;
+}
+
+.wc-team-games {
+  display: grid;
+  gap: 10px;
+}
+
+.wc-team-game {
+  align-items: center;
+  background: rgba(20, 10, 40, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.wc-team-game h3 {
+  color: var(--warm-white);
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.25;
+  margin: 2px 0 4px;
+}
+
+.wc-team-game h3 span,
+.wc-team-game-status {
+  color: var(--event-accent, #d4af37);
+  font-weight: 900;
+}
+
+.wc-team-game-date {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.wc-team-game-status {
+  white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+  .wc-team-hero {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .wc-team-ball-wrap {
+    min-height: 220px;
+  }
+
+  .wc-team-hero-copy h1 {
+    font-size: 2rem;
+  }
+
+  .wc-team-game {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

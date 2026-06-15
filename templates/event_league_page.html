@@ -62,6 +62,7 @@
     <script>
         const EVENT_LEAGUE = {{ league_name | tojson }};
         const EVENT_MODE = {{ league_config.mode | tojson }};
+        const WC_TEAM_CODES = {{ (wc_team_codes or {}) | tojson }};
 
         function prettyDate(value) {
             if (!value) return '';
@@ -225,6 +226,13 @@
             return validWorldCupGroups.has(groupName) ? groupName : '';
         }
 
+        function worldCupTeamCode(team) {
+            const teamName = String(team?.team_name || '').replace(/\s+/g, ' ').trim();
+            const mappedCode = WC_TEAM_CODES[teamName];
+            if (mappedCode) return mappedCode;
+            return String(team?.abbreviation || '').trim().toLowerCase();
+        }
+
         function worldCupGroupsFromStandings(data) {
             const apiGroups = Array.isArray(data?.groups) ? data.groups : [];
             const flatTeams = Array.isArray(data?.teams) ? data.teams : [];
@@ -269,12 +277,18 @@
 
             const groupCards = groups.map(group => {
                 const teams = Array.isArray(group.teams) ? group.teams : [];
-                const rows = teams.map(team => `
+                const rows = teams.map(team => {
+                    const teamCode = worldCupTeamCode(team);
+                    const teamName = escapeHtml(team.team_name || 'TBD');
+                    const teamNameHtml = teamCode
+                        ? `<a class="wc-team-link" href="/team/wc/${encodeURIComponent(teamCode)}">${teamName}</a>`
+                        : `<span class="wc-team-name">${teamName}</span>`;
+                    return `
                     <tr>
                         <td class="wc-rank">${escapeHtml(team.group_rank ?? '')}</td>
                         <td class="wc-team">
                             <span class="wc-team-code">${escapeHtml(team.abbreviation || '')}</span>
-                            <span class="wc-team-name">${escapeHtml(team.team_name || 'TBD')}</span>
+                            ${teamNameHtml}
                         </td>
                         <td>${escapeHtml(team.matches ?? 0)}</td>
                         <td>${escapeHtml(team.wins ?? 0)}</td>
@@ -285,7 +299,7 @@
                         <td>${escapeHtml(team.goal_difference ?? 0)}</td>
                         <td class="wc-points">${escapeHtml(team.points ?? 0)}</td>
                     </tr>
-                `).join('');
+                `}).join('');
 
                 return `
                     <section class="wc-group-card" aria-label="Group ${escapeHtml(group.group || '')} standings">

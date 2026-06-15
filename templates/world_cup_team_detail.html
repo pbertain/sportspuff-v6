@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.team_name }} - World Cup - Sportspuff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+</head>
+<body style="--event-accent: #00824A;">
+    {% include 'shared_header.html' %}
+
+    <main class="container wc-team-shell my-4">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('league_page', league_name='WC') }}">World Cup</a></li>
+                <li class="breadcrumb-item active">{{ team.team_name }}</li>
+            </ol>
+        </nav>
+
+        <section class="wc-team-hero mb-4">
+            <div class="wc-team-ball-wrap">
+                <img class="wc-team-ball-logo" src="{{ team.ball_logo_url }}" alt="{{ team.team_name }} ball logo" onerror="this.style.display='none';">
+            </div>
+            <div class="wc-team-hero-copy">
+                <div class="event-league-meta">World Cup</div>
+                <h1>{{ team.team_name }}</h1>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="event-league-pill">{{ team.standard_code.upper() }}</span>
+                    {% if team.group %}
+                    <span class="event-league-pill">Group {{ team.group }}</span>
+                    {% endif %}
+                    {% if team.group_rank %}
+                    <span class="event-league-pill">Rank {{ team.group_rank }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <div class="row g-3">
+            <section class="col-lg-4">
+                <div class="wc-team-panel">
+                    <h2>Group Stats</h2>
+                    <table class="wc-team-stats-table">
+                        <tbody>
+                            <tr><th>Record</th><td>{{ team.record or ((team.wins or 0) ~ '-' ~ (team.draws or 0) ~ '-' ~ (team.losses or 0)) }}</td></tr>
+                            <tr><th>GP</th><td>{{ team.matches or 0 }}</td></tr>
+                            <tr><th>W</th><td>{{ team.wins or 0 }}</td></tr>
+                            <tr><th>D</th><td>{{ team.draws or 0 }}</td></tr>
+                            <tr><th>L</th><td>{{ team.losses or 0 }}</td></tr>
+                            <tr><th>F</th><td>{{ team.goals_for or 0 }}</td></tr>
+                            <tr><th>A</th><td>{{ team.goals_against or 0 }}</td></tr>
+                            <tr><th>GD</th><td>{{ team.goal_difference or 0 }}</td></tr>
+                            <tr><th>P</th><td>{{ team.points or 0 }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if group_teams %}
+                <div class="wc-team-panel mt-3">
+                    <h2>Group {{ team.group }} Standings</h2>
+                    <div class="wc-team-group-table-wrap">
+                        <table class="wc-team-group-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Team</th>
+                                    <th>GP</th>
+                                    <th>GD</th>
+                                    <th>P</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in group_teams %}
+                                <tr{% if row.team_name == team.team_name %} class="is-current-team"{% endif %}>
+                                    <td>{{ row.group_rank or loop.index }}</td>
+                                    <td>{{ row.team_name }}</td>
+                                    <td>{{ row.matches or 0 }}</td>
+                                    <td>{{ row.goal_difference or 0 }}</td>
+                                    <td>{{ row.points or 0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+            <section class="col-lg-8">
+                <div class="wc-team-panel">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <h2 class="mb-0">Matches</h2>
+                        <span id="wc-team-games-count" class="event-league-pill">Loading</span>
+                    </div>
+                    <div id="wc-team-games" class="wc-team-games">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="mt-4">
+            <a href="{{ url_for('league_page', league_name='WC') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to World Cup
+            </a>
+        </div>
+    </main>
+
+    {% include 'shared_footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const TEAM_CODE = {{ team.standard_code | tojson }};
+        const TEAM_NAME = {{ team.team_name | tojson }};
+        const SCHEDULE_START = {{ wc_schedule_start | tojson }};
+        const SCHEDULE_END = {{ wc_schedule_end | tojson }};
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function scheduleDates(start, end) {
+            const dates = [];
+            const cursor = new Date(`${start}T12:00:00Z`);
+            const last = new Date(`${end}T12:00:00Z`);
+            while (cursor <= last) {
+                dates.push(cursor.toISOString().slice(0, 10));
+                cursor.setUTCDate(cursor.getUTCDate() + 1);
+            }
+            return dates;
+        }
+
+        function isTeamGame(game) {
+            const code = TEAM_CODE.toLowerCase();
+            const name = TEAM_NAME.toLowerCase();
+            return String(game.home_team_abbrev || '').toLowerCase() === code ||
+                String(game.visitor_team_abbrev || '').toLowerCase() === code ||
+                String(game.home_team || '').toLowerCase() === name ||
+                String(game.visitor_team || '').toLowerCase() === name;
+        }
+
+        function gameStatus(game) {
+            const status = String(game.game_status || '').toLowerCase();
+            if (game.is_final || status === 'final') return 'Final';
+            if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
+            if (game.game_time) {
+                const date = new Date(game.game_time);
+                if (!Number.isNaN(date.getTime())) {
+                    return date.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', timeZoneName: 'short'});
+                }
+            }
+            return status ? status.replace(/_/g, ' ') : 'TBD';
+        }
+
+        function gameScore(game) {
+            const hasScore = game.home_score !== undefined && game.visitor_score !== undefined &&
+                (game.is_final || Number(game.home_score) > 0 || Number(game.visitor_score) > 0);
+            return hasScore ? `${game.visitor_score} - ${game.home_score}` : 'vs';
+        }
+
+        function renderGame(game) {
+            const date = game.game_date || (game.game_time ? game.game_time.slice(0, 10) : '');
+            const prettyDate = date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : 'TBD';
+            const detail = [game.wc_round_label || game.game_type, game.venue_name || game.venue || game.stadium_name].filter(Boolean).join(' · ').replace(/_/g, ' ');
+            return `<article class="wc-team-game">
+                <div>
+                    <div class="wc-team-game-date">${escapeHtml(prettyDate)}</div>
+                    <h3>${escapeHtml(game.visitor_team || 'TBD')} <span>${escapeHtml(gameScore(game))}</span> ${escapeHtml(game.home_team || 'TBD')}</h3>
+                    <div class="event-league-meta">${escapeHtml(detail)}</div>
+                </div>
+                <div class="wc-team-game-status">${escapeHtml(gameStatus(game))}</div>
+            </article>`;
+        }
+
+        async function loadTeamGames() {
+            const container = document.getElementById('wc-team-games');
+            const count = document.getElementById('wc-team-games-count');
+            try {
+                const responses = await Promise.all(scheduleDates(SCHEDULE_START, SCHEDULE_END).map(date =>
+                    fetch(`/api/proxy/schedule/wc/${date}?tz=pt`).then(r => r.ok ? r.json() : {games: []}).catch(() => ({games: []}))
+                ));
+                const games = responses
+                    .flatMap(data => Array.isArray(data.games) ? data.games : [])
+                    .filter(isTeamGame)
+                    .sort((a, b) => new Date(a.game_time || a.game_date || 0) - new Date(b.game_time || b.game_date || 0));
+
+                count.textContent = `${games.length} ${games.length === 1 ? 'match' : 'matches'}`;
+                container.innerHTML = games.length
+                    ? games.map(renderGame).join('')
+                    : '<div class="event-league-meta py-3">No matches found for this team yet.</div>';
+            } catch (error) {
+                count.textContent = 'Unavailable';
+                container.innerHTML = '<div class="event-league-meta py-3">Matches are unavailable right now.</div>';
+            }
+        }
+
+        loadTeamGames();
+    </script>
+</body>
+</html>

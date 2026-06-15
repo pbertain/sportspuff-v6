@@ -35,6 +35,71 @@ _cache_ttl = {
     'scores': 61,     # 61 seconds - background thread refreshes every 60s
 }
 
+WC_TEAM_CODES_BY_NAME = {
+    'Algeria': 'alg',
+    'Argentina': 'arg',
+    'Australia': 'aus',
+    'Austria': 'aut',
+    'Belgium': 'bel',
+    'Bosnia and Herzegovina': 'bih',
+    'Bosnia-Herzegovina': 'bih',
+    'Brazil': 'bra',
+    'Cabo Verde': 'cpv',
+    'Cape Verde': 'cpv',
+    'Canada': 'can',
+    'Colombia': 'col',
+    'Congo DR': 'cod',
+    'DR Congo': 'cod',
+    'Democratic Republic of the Congo': 'cod',
+    'Croatia': 'cro',
+    'Curaçao': 'cuw',
+    'Curacao': 'cuw',
+    'Czech Republic': 'cze',
+    'Czechia': 'cze',
+    "Côte d'Ivoire": 'civ',
+    "Cote d'Ivoire": 'civ',
+    'Ivory Coast': 'civ',
+    'Ecuador': 'ecu',
+    'Egypt': 'egy',
+    'England': 'eng',
+    'France': 'fra',
+    'Germany': 'ger',
+    'Ghana': 'gha',
+    'Haiti': 'hai',
+    'IR Iran': 'irn',
+    'Iran': 'irn',
+    'Iraq': 'irq',
+    'Japan': 'jpn',
+    'Jordan': 'jor',
+    'Korea Republic': 'kor',
+    'South Korea': 'kor',
+    'Mexico': 'mex',
+    'Morocco': 'mar',
+    'Netherlands': 'ned',
+    'New Zealand': 'nzl',
+    'Norway': 'nor',
+    'Panama': 'pan',
+    'Paraguay': 'par',
+    'Portugal': 'por',
+    'Qatar': 'qat',
+    'Saudi Arabia': 'ksa',
+    'Scotland': 'sco',
+    'Senegal': 'sen',
+    'South Africa': 'rsa',
+    'Spain': 'esp',
+    'Sweden': 'swe',
+    'Switzerland': 'sui',
+    'Tunisia': 'tun',
+    'Türkiye': 'tur',
+    'Turkey': 'tur',
+    'USA': 'usa',
+    'United States': 'usa',
+    'Uruguay': 'uru',
+    'Uzbekistan': 'uzb',
+}
+
+WC_TEAM_BALL_BASE_URL = 'https://www.splitsp.lat/logos/wc/teamballs'
+
 def get_cached_response(cache_key, cache_type, allow_expired=False):
     """Get cached response if still valid, or expired if allow_expired=True"""
     with _api_cache_lock:
@@ -806,6 +871,7 @@ def league_page(league_name):
             'event_league_page.html',
             league_name=league_upper,
             league_config=event_leagues[league_upper],
+            wc_team_codes=WC_TEAM_CODES_BY_NAME,
             API_BASE_URL=API_BASE_URL,
         )
 
@@ -1142,6 +1208,78 @@ def get_team_abbreviation(team_name, league):
         return words[0][:3].upper()
     
     return ''
+
+
+def _wc_team_code_for_name(team_name):
+    clean_name = ' '.join(str(team_name or '').split())
+    return WC_TEAM_CODES_BY_NAME.get(clean_name, '')
+
+
+def _wc_team_ball_logo_url(team_code):
+    return f"{WC_TEAM_BALL_BASE_URL}/{team_code.lower()}_ball_logo.png"
+
+
+def _wc_teams_from_standings(data):
+    teams = list(data.get('teams') or [])
+    if teams:
+        return teams
+
+    for group in data.get('groups') or []:
+        for team in group.get('teams') or []:
+            with_group = dict(team)
+            with_group.setdefault('group', group.get('group'))
+            teams.append(with_group)
+    return teams
+
+
+@app.route('/team/wc/<team_code>')
+def world_cup_team_detail(team_code):
+    """Show a World Cup team page backed by sportspuff-api standings data."""
+    requested_code = str(team_code or '').strip().lower()
+    if not requested_code:
+        flash('World Cup team not found', 'error')
+        return redirect(url_for('league_page', league_name='WC'))
+
+    try:
+        standings = _fetch_api_json('/api/v1/standings/wc', timeout=15)
+        teams = _wc_teams_from_standings(standings if isinstance(standings, dict) else {})
+        selected_team = None
+
+        for team in teams:
+            standard_code = _wc_team_code_for_name(team.get('team_name')) or str(team.get('abbreviation') or '').lower()
+            if standard_code.lower() == requested_code or str(team.get('abbreviation') or '').lower() == requested_code:
+                selected_team = dict(team)
+                selected_team['standard_code'] = standard_code.lower()
+                break
+
+        if not selected_team:
+            flash('World Cup team not found', 'error')
+            return redirect(url_for('league_page', league_name='WC'))
+
+        selected_group = str(selected_team.get('group') or '').strip()
+        group_teams = [
+            dict(team)
+            for team in teams
+            if str(team.get('group') or '').strip().upper() == selected_group.upper()
+        ]
+        group_teams.sort(key=lambda team: (
+            int(team.get('group_rank') or 999),
+            str(team.get('team_name') or '')
+        ))
+
+        selected_team['ball_logo_url'] = _wc_team_ball_logo_url(selected_team['standard_code'])
+        selected_team['team_league'] = 'World Cup'
+
+        return render_template(
+            'world_cup_team_detail.html',
+            team=selected_team,
+            group_teams=group_teams,
+            wc_schedule_start='2026-06-11',
+            wc_schedule_end='2026-07-19',
+        )
+    except Exception as e:
+        logger.error(f"Error loading World Cup team {team_code}: {e}", exc_info=True)
+        return render_template('error.html', message=str(e))
 
 @app.route('/teams')
 def teams():

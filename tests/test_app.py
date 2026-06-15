@@ -488,9 +488,95 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("/api/proxy/standings/${league}", template)
         for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
             self.assertIn(column, template)
-        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr))", css)
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", css)
         self.assertIn("grid-template-columns: 1fr", css)
+        self.assertIn("WC_TEAM_CODES", template)
+        self.assertIn("worldCupTeamCode(team)", template)
+        self.assertIn('href="/team/wc/${encodeURIComponent(teamCode)}"', template)
+        self.assertIn(".wc-team-link", css)
+
+    @patch("app._fetch_api_json")
+    def test_world_cup_team_page_uses_standard_code_ball_logo(self, mock_fetch):
+        mock_fetch.return_value = {
+            "teams": [
+                {
+                    "team_name": "Morocco",
+                    "abbreviation": "MAR",
+                    "group": "E",
+                    "group_rank": 1,
+                    "matches": 1,
+                    "wins": 1,
+                    "draws": 0,
+                    "losses": 0,
+                    "goals_for": 2,
+                    "goals_against": 0,
+                    "goal_difference": 2,
+                    "points": 3,
+                    "record": "1-0-0",
+                },
+                {
+                    "team_name": "Japan",
+                    "abbreviation": "JPN",
+                    "group": "E",
+                    "group_rank": 2,
+                    "matches": 1,
+                    "wins": 1,
+                    "draws": 0,
+                    "losses": 0,
+                    "goals_for": 1,
+                    "goals_against": 0,
+                    "goal_difference": 1,
+                    "points": 3,
+                    "record": "1-0-0",
+                },
+                {
+                    "team_name": "South Africa",
+                    "abbreviation": "SOU",
+                    "group": "E",
+                    "group_rank": 3,
+                    "matches": 1,
+                    "wins": 0,
+                    "draws": 0,
+                    "losses": 1,
+                    "goals_for": 0,
+                    "goals_against": 1,
+                    "goal_difference": -1,
+                    "points": 0,
+                    "record": "0-0-1",
+                },
+                {
+                    "team_name": "Norway",
+                    "abbreviation": "NOR",
+                    "group": "E",
+                    "group_rank": 4,
+                    "matches": 1,
+                    "wins": 0,
+                    "draws": 0,
+                    "losses": 1,
+                    "goals_for": 0,
+                    "goals_against": 2,
+                    "goal_difference": -2,
+                    "points": 0,
+                    "record": "0-0-1",
+                }
+            ]
+        }
+
+        response = app.test_client().get("/team/wc/rsa")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("South Africa", html)
+        self.assertIn("Group E Standings", html)
+        self.assertIn("Morocco", html)
+        self.assertIn("Norway", html)
+        self.assertIn('class="is-current-team"', html)
+        self.assertIn("https://www.splitsp.lat/logos/wc/teamballs/rsa_ball_logo.png", html)
+        self.assertIn("const TEAM_CODE = \"rsa\"", html)
+        self.assertIn("/api/proxy/schedule/wc/${date}?tz=pt", html)
+        self.assertIn("function isTeamGame", html)
+        mock_fetch.assert_called_once_with("/api/v1/standings/wc", timeout=15)
 
     @patch("app._fetch_api_json")
     def test_proxy_standings_exposes_world_cup_groups(self, mock_fetch):
