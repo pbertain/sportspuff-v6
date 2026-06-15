@@ -496,9 +496,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn('href="/team/wc/${encodeURIComponent(teamCode)}"', template)
         self.assertIn(".wc-team-link", css)
 
+    @patch("app.set_cached_response")
+    @patch("app.get_cached_response", return_value=None)
     @patch("app._fetch_api_json")
-    def test_world_cup_team_page_uses_standard_code_ball_logo(self, mock_fetch):
-        mock_fetch.return_value = {
+    def test_world_cup_team_page_uses_standard_code_ball_logo(self, mock_fetch, _mock_cache, _mock_set_cache):
+        standings_data = {
             "teams": [
                 {
                     "team_name": "Morocco",
@@ -562,6 +564,52 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 }
             ]
         }
+        schedule_games = [
+            {
+                "game_date": "2026-06-11",
+                "game_status": "final",
+                "is_final": True,
+                "home_team": "South Africa",
+                "home_team_abbrev": "SOU",
+                "home_score": 2,
+                "visitor_team": "Norway",
+                "visitor_team_abbrev": "NOR",
+                "visitor_score": 1,
+                "game_type": "group_matchday_1",
+            },
+            {
+                "game_date": "2026-06-18",
+                "game_status": "scheduled",
+                "is_final": False,
+                "home_team": "Japan",
+                "home_team_abbrev": "JPN",
+                "home_score": None,
+                "visitor_team": "South Africa",
+                "visitor_team_abbrev": "SOU",
+                "visitor_score": None,
+                "game_type": "group_matchday_2",
+            },
+            {
+                "game_date": "2026-06-24",
+                "game_status": "scheduled",
+                "is_final": False,
+                "home_team": "South Africa",
+                "home_team_abbrev": "SOU",
+                "home_score": None,
+                "visitor_team": "Morocco",
+                "visitor_team_abbrev": "MAR",
+                "visitor_score": None,
+                "game_type": "group_matchday_3",
+            },
+        ]
+
+        def fake_fetch(path, timeout=15):
+            if path == "/api/v1/standings/wc":
+                return standings_data
+            date = path.split("/api/v1/schedule/wc/", 1)[1].split("?", 1)[0]
+            return {"games": [game for game in schedule_games if game["game_date"] == date]}
+
+        mock_fetch.side_effect = fake_fetch
 
         response = app.test_client().get("/team/wc/rsa")
 
@@ -577,10 +625,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("Norway", html)
         self.assertIn('class="is-current-team"', html)
         self.assertIn("https://www.splitsp.lat/logos/wc/teamballs/rsa_ball_logo.png", html)
-        self.assertIn("const TEAM_CODE = \"rsa\"", html)
-        self.assertIn("/api/proxy/schedule/wc/${date}?tz=pt", html)
-        self.assertIn("function isTeamGame", html)
-        mock_fetch.assert_called_once_with("/api/v1/standings/wc", timeout=15)
+        self.assertIn("3 matches", html)
+        self.assertIn("Norway <span>1 - 2</span> South Africa", html)
+        self.assertIn("Morocco <span>vs</span> South Africa", html)
+        self.assertIn("group matchday 3", html)
+        self.assertGreaterEqual(mock_fetch.call_count, 2)
 
     @patch("app._fetch_api_json")
     def test_proxy_standings_exposes_world_cup_groups(self, mock_fetch):
@@ -634,6 +683,15 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "activeEventContext(leagueLower, pickedDate)",
         ]:
             self.assertIn(snippet, template)
+
+    def test_shared_header_dropdown_stays_above_page_content(self):
+        css = (PROJECT_ROOT / "static/css/main.css").read_text()
+
+        self.assertIn(".navbar", css)
+        self.assertIn("z-index: 6000", css)
+        self.assertIn("overflow: visible", css)
+        self.assertIn(".navbar-nav .dropdown-menu", css)
+        self.assertIn("z-index: 6200", css)
 
     def test_homepage_groups_tennis_and_skips_team_logos_for_players(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()

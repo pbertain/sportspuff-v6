@@ -367,24 +367,36 @@ main, .main-content {
   min-height: 120px;
   display: flex;
   align-items: flex-end;
+  overflow: visible;
+  position: relative;
+  z-index: 6000;
 }
 
-.navbar .container {
+.navbar .container,
+.navbar .container-fluid {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  overflow: visible;
 }
 
 .navbar-main-panel {
   align-items: flex-end;
   gap: 1rem;
   justify-content: flex-end;
+  overflow: visible;
 }
 
 .navbar-nav {
   display: flex;
   align-items: flex-end;
   margin-bottom: 0;
+  overflow: visible;
+}
+
+.navbar-nav .dropdown {
+  position: relative;
+  z-index: 6100;
 }
 
 .navbar-brand {
@@ -425,6 +437,9 @@ main, .main-content {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-height: min(78vh, 560px);
+  overflow-y: auto;
+  z-index: 6200;
 }
 
 .navbar-nav .dropdown-item {
@@ -1005,8 +1020,11 @@ main, .main-content {
   background: rgba(7, 31, 22, 0.56);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  height: 100%;
   padding: 16px;
+}
+
+.wc-team-matches-panel {
+  min-height: 320px;
 }
 
 .wc-team-panel h2 {
@@ -1051,7 +1069,7 @@ main, .main-content {
 .wc-team-group-table {
   border-collapse: collapse;
   font-size: 0.72rem;
-  min-width: 430px;
+  min-width: 620px;
   width: 100%;
 }
 

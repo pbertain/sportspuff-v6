@@ -15,7 +15,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 from dotenv import load_dotenv
 
@@ -99,6 +99,8 @@ WC_TEAM_CODES_BY_NAME = {
 }
 
 WC_TEAM_BALL_BASE_URL = 'https://www.splitsp.lat/logos/wc/teamballs'
+WC_GROUP_STAGE_START = '2026-06-11'
+WC_GROUP_STAGE_END = '2026-06-27'
 
 def get_cached_response(cache_key, cache_type, allow_expired=False):
     """Get cached response if still valid, or expired if allow_expired=True"""
@@ -1232,6 +1234,63 @@ def _wc_teams_from_standings(data):
     return teams
 
 
+def _wc_schedule_dates(start=WC_GROUP_STAGE_START, end=WC_GROUP_STAGE_END):
+    dates = []
+    cursor = datetime.strptime(start, '%Y-%m-%d').date()
+    last = datetime.strptime(end, '%Y-%m-%d').date()
+    while cursor <= last:
+        dates.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return dates
+
+
+def _normalize_wc_name(value):
+    return ' '.join(str(value or '').lower().replace('-', ' ').split())
+
+
+def _wc_standard_code_for_name(team_name, fallback_abbrev=''):
+    return _wc_team_code_for_name(team_name) or str(fallback_abbrev or '').strip().lower()
+
+
+def _wc_game_involves_team(game, team):
+    selected_code = str(team.get('standard_code') or '').lower()
+    selected_name = _normalize_wc_name(team.get('team_name'))
+    home_code = _wc_standard_code_for_name(game.get('home_team'), game.get('home_team_abbrev'))
+    visitor_code = _wc_standard_code_for_name(game.get('visitor_team'), game.get('visitor_team_abbrev'))
+    return (
+        home_code == selected_code or
+        visitor_code == selected_code or
+        _normalize_wc_name(game.get('home_team')) == selected_name or
+        _normalize_wc_name(game.get('visitor_team')) == selected_name
+    )
+
+
+def _fetch_wc_team_games(team):
+    games = []
+
+    def fetch_day(date):
+        cache_key = f'schedule:wc:{date}:pt'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return cached.get('games', [])
+        data = _fetch_api_json(f'/api/v1/schedule/wc/{date}?tz=pt', timeout=15)
+        if isinstance(data, dict) and 'error' not in data:
+            set_cached_response(cache_key, data)
+            return data.get('games', [])
+        return []
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = [executor.submit(fetch_day, date) for date in _wc_schedule_dates()]
+        for future in as_completed(futures):
+            try:
+                games.extend(game for game in future.result() if _wc_game_involves_team(game, team))
+            except Exception as e:
+                logger.warning(f"Unable to fetch a World Cup schedule date for {team.get('team_name')}: {e}")
+
+    games.sort(key=lambda game: game.get('game_time') or game.get('game_date') or '')
+    return games
+
+
 @app.route('/team/wc/<team_code>')
 def world_cup_team_detail(team_code):
     """Show a World Cup team page backed by sportspuff-api standings data."""
@@ -1269,13 +1328,13 @@ def world_cup_team_detail(team_code):
 
         selected_team['ball_logo_url'] = _wc_team_ball_logo_url(selected_team['standard_code'])
         selected_team['team_league'] = 'World Cup'
+        team_games = _fetch_wc_team_games(selected_team)
 
         return render_template(
             'world_cup_team_detail.html',
             team=selected_team,
             group_teams=group_teams,
-            wc_schedule_start='2026-06-11',
-            wc_schedule_end='2026-07-19',
+            team_games=team_games,
         )
     except Exception as e:
         logger.error(f"Error loading World Cup team {team_code}: {e}", exc_info=True)
