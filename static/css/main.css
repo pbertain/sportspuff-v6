@@ -946,21 +946,47 @@ main, .main-content {
   text-decoration: underline;
 }
 
-.wc-advancing-team td {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.14), rgba(212, 175, 55, 0.05));
+.wc-team-ball {
+  display: inline-block;
+  height: 18px;
+  margin-right: 5px;
+  object-fit: contain;
+  vertical-align: middle;
+  width: 18px;
 }
 
-.wc-advancing-team .wc-team-code,
-.wc-advancing-team .wc-team-link {
-  box-shadow: inset 0 0 0 1px rgba(255, 215, 96, 0.55);
+.wc-advancing-top2 td {
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.22), rgba(46, 204, 113, 0.06));
 }
 
-.wc-advancing-team .wc-team-link {
+.wc-advancing-top2 .wc-team-code,
+.wc-advancing-top2 .wc-team-link {
+  box-shadow: inset 0 0 0 1px rgba(105, 230, 145, 0.55);
+}
+
+.wc-advancing-top2 .wc-team-link {
   border-radius: 4px;
 }
 
-.wc-advancing-team .wc-rank {
-  color: #ffd965;
+.wc-advancing-top2 .wc-rank {
+  color: #6ce39a;
+}
+
+.wc-advancing-third td {
+  background: linear-gradient(90deg, rgba(245, 176, 65, 0.22), rgba(245, 176, 65, 0.06));
+}
+
+.wc-advancing-third .wc-team-code,
+.wc-advancing-third .wc-team-link {
+  box-shadow: inset 0 0 0 1px rgba(255, 198, 109, 0.55);
+}
+
+.wc-advancing-third .wc-team-link {
+  border-radius: 4px;
+}
+
+.wc-advancing-third .wc-rank {
+  color: #ffc66d;
 }
 
 .cycling-anniversary-banner {
