@@ -54,9 +54,13 @@
             {% endfor %}
         {% endfor %}
         {% if marquee_teams %}
+        {% set unit_count = marquee_teams|length %}
+        {% set reps = (60 + unit_count - 1) // unit_count %}
+        {% if reps % 2 != 0 %}{% set reps = reps + 1 %}{% endif %}
+        {% if reps < 2 %}{% set reps = 2 %}{% endif %}
         <div class="team-marquee mb-4" aria-hidden="true">
-            <div class="team-marquee-track" style="animation-duration: {{ (marquee_teams|length * 1.25)|round(2) }}s">
-                {% for _ in range(2) %}
+            <div class="team-marquee-track" style="animation-duration: {{ (reps * unit_count * 0.625)|round(2) }}s">
+                {% for _ in range(reps) %}
                     {% for team in marquee_teams %}
                         <a class="team-marquee-item" href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" title="{{ team.real_team_name }}">
                             <img class="team-marquee-logo" src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" loading="lazy" onerror="this.style.display='none';">
