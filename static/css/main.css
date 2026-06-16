@@ -285,7 +285,6 @@ body[data-tournament-theme] .stat-card:hover {
 .tournament-theme-control {
   display: flex;
   align-items: center;
-  margin-left: 1rem;
 }
 
 .tournament-theme-control .form-select {
@@ -330,6 +329,26 @@ main, .main-content {
   box-shadow: none;
   margin-bottom: 0;
   margin-top: 0;
+}
+
+.site-footer-content {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.site-footer-brand {
+  grid-column: 2;
+}
+
+.site-footer-brand p {
+  margin-bottom: 0;
+}
+
+.site-footer-theme-control {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .card {
@@ -481,11 +500,24 @@ main, .main-content {
 
   .tournament-theme-control {
     align-items: flex-start;
-    margin: 0.5rem 0;
   }
 
   .tournament-theme-control .form-select {
     width: min(100%, 240px);
+  }
+
+  .site-footer-content {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .site-footer-brand,
+  .site-footer-theme-control {
+    grid-column: 1;
+  }
+
+  .site-footer-theme-control {
+    justify-self: center;
   }
 }
 

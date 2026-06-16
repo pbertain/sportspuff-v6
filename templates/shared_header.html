@@ -33,32 +33,6 @@
                 <a class="nav-link" href="{{ API_BASE_URL }}" target="_blank">API</a>
                 <a class="nav-link {% if request.endpoint == 'admin_panel' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a>
             </div>
-            <div class="tournament-theme-control">
-                <label class="visually-hidden" for="tournament-theme-select">Theme</label>
-                <select id="tournament-theme-select" class="form-select form-select-sm" aria-label="Theme">
-                    <option value="">Sportspuff</option>
-                    <optgroup label="Sports">
-                        <option value="baseball">Baseball</option>
-                        <option value="basketball">Basketball</option>
-                        <option value="cricket">Cricket</option>
-                        <option value="cycling">Cycling</option>
-                        <option value="football">Football</option>
-                        <option value="hockey">Hockey</option>
-                        <option value="soccer">Soccer</option>
-                        <option value="tennis">Tennis</option>
-                    </optgroup>
-                    <optgroup label="Tours">
-                        <option value="atp">ATP</option>
-                        <option value="wta">WTA</option>
-                    </optgroup>
-                    <optgroup label="Events">
-                        <option value="australian-open">Australian Open</option>
-                        <option value="roland-garros">Roland Garros</option>
-                        <option value="us-open">US Open</option>
-                        <option value="wimbledon">Wimbledon</option>
-                    </optgroup>
-                </select>
-            </div>
         </div>
     </div>
 </nav>

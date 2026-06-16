@@ -374,8 +374,14 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("#leagues-menu", index_template)
         self.assertIn("z-index: 3000", index_template)
 
-    def test_shared_header_exposes_expected_theme_options(self):
+    def test_shared_footer_exposes_expected_theme_options(self):
+        footer = (PROJECT_ROOT / "templates/shared_footer.html").read_text()
+
+        self.assertIn('id="tournament-theme-select"', footer)
+        self.assertIn("site-footer-theme-control", footer)
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
+        self.assertIn('class="collapse navbar-collapse navbar-main-panel"', header)
+        self.assertNotIn('id="tournament-theme-select"', header)
 
         for theme in [
             "baseball",
@@ -393,9 +399,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "us-open",
             "australian-open",
         ]:
-            self.assertIn(f'value="{theme}"', header)
-        self.assertIn('class="collapse navbar-collapse navbar-main-panel"', header)
-        self.assertIn('<div class="tournament-theme-control">', header)
+            self.assertIn(f'value="{theme}"', footer)
 
     def test_shared_header_links_to_event_leagues(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
