@@ -55,7 +55,7 @@
         {% endfor %}
         {% if marquee_teams %}
         <div class="team-marquee mb-4" aria-hidden="true">
-            <div class="team-marquee-track">
+            <div class="team-marquee-track" style="animation-duration: {{ (marquee_teams|length * 1.25)|round(2) }}s">
                 {% for _ in range(2) %}
                     {% for team in marquee_teams %}
                         <a class="team-marquee-item" href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" title="{{ team.real_team_name }}">
