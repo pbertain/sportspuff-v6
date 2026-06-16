@@ -12,7 +12,7 @@
 <body style="--event-accent: {{ league_config.accent }};">
     {% include 'shared_header.html' %}
 
-    <div class="container event-league-shell my-4">
+    <div class="container event-league-shell event-league-shell--{{ league_config.mode }} my-4">
         <div class="event-league-hero mb-4">
             <div class="d-flex flex-wrap align-items-center gap-3">
                 <img class="event-league-logo" src="{{ league_config.logo_url }}" alt="{{ league_config.display_name }} logo" onerror="this.style.display='none';">
@@ -354,7 +354,7 @@
                     const teamUrl = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : '';
                     const advancementPath = String(team.advancement_path || '').toLowerCase();
                     const rowClass = team.currently_advancing
-                        ? (advancementPath === 'best_third_place' ? 'wc-advancing-third' : 'wc-advancing-top2')
+                        ? `wc-advancing-team ${advancementPath === 'best_third_place' ? 'wc-advancing-third' : 'wc-advancing-top2'}`
                         : '';
                     const abbrev = String(team.abbreviation || '').trim();
                     const ballLogoHtml = abbrev

@@ -319,6 +319,19 @@ main, .main-content {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.site-footer {
+  background: var(--primary-gradient) !important;
+}
+
+.site-footer .site-footer-inner {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
 .card {
   background: var(--card-bg);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -730,6 +743,11 @@ main, .main-content {
   max-width: 1180px;
 }
 
+.event-league-shell--world-cup {
+  max-width: none;
+  width: calc(100% - clamp(1rem, 3vw, 3rem));
+}
+
 .event-league-hero {
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-left: 5px solid var(--event-accent, var(--golden-yellow));
@@ -904,7 +922,7 @@ main, .main-content {
 }
 
 .wc-team {
-  min-width: 7.5rem;
+  min-width: 9rem;
 }
 
 .wc-team-code {
@@ -1008,6 +1026,10 @@ main, .main-content {
 
 .wc-advancing-top2 td {
   background: linear-gradient(90deg, rgba(46, 204, 113, 0.22), rgba(46, 204, 113, 0.06));
+}
+
+.wc-advancing-team .wc-team-link {
+  font-weight: 850;
 }
 
 .wc-advancing-top2 .wc-team-code,
