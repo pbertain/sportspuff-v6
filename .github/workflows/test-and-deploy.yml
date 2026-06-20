@@ -80,6 +80,7 @@ jobs:
           -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
+        ANSIBLE_REMOTE_TMP: /tmp/.ansible/tmp
 
   deploy-prod:
     needs: test
@@ -121,3 +122,4 @@ jobs:
           -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"
       env:
         ANSIBLE_HOST_KEY_CHECKING: False
+        ANSIBLE_REMOTE_TMP: /tmp/.ansible/tmp
