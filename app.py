@@ -10,13 +10,14 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import json
+import csv
 import requests
 import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
-from functools import wraps
+from functools import wraps, lru_cache
 from dotenv import load_dotenv
 
 # Set up logging
@@ -102,6 +103,250 @@ WC_TEAM_BALL_BASE_URL = 'https://www.splitsp.lat/logos/wc/teamballs'
 WC_GROUP_STAGE_START = '2026-06-11'
 WC_GROUP_STAGE_END = '2026-06-27'
 
+
+def _clean_csv_value(value):
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned if cleaned else None
+
+
+def _csv_int(value):
+    cleaned = _clean_csv_value(value)
+    if cleaned is None:
+        return None
+    try:
+        return int(float(cleaned))
+    except (TypeError, ValueError):
+        return None
+
+
+def _csv_path(filename):
+    return os.path.join(os.path.dirname(__file__), filename)
+
+
+@lru_cache(maxsize=1)
+def _read_csv_rows(filename):
+    with open(_csv_path(filename), newline='', encoding='utf-8-sig') as handle:
+        return tuple(dict(row) for row in csv.DictReader(handle))
+
+
+def _build_team_colors(rows):
+    team_colors = {}
+    for team in rows:
+        league_proper = team.get('league_name_proper')
+        if not league_proper:
+            continue
+        team_colors.setdefault(league_proper, {})
+
+        logo_filename = team.get('logo_filename')
+        league_lower = (team.get('league_name') or league_proper).lower()
+        logo_url = '/static/images/no-logo.png'
+        if logo_filename:
+            logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{logo_filename}'
+
+        real_name = team.get('real_team_name') or ''
+        full_name = team.get('full_team_name') or real_name
+        abbrev = team.get('team_abbreviation') or get_team_abbreviation(real_name, league_proper)
+        team_data = {
+            'color_1': team.get('team_color_1'),
+            'color_2': team.get('team_color_2'),
+            'color_3': team.get('team_color_3'),
+            'logo_url': logo_url,
+            'abbreviation': abbrev,
+            'full_team_name': full_name,
+            'real_team_name': real_name,
+        }
+
+        team_colors[league_proper][real_name] = team_data
+        if full_name and full_name != real_name:
+            team_colors[league_proper][full_name] = team_data
+
+        if 'Los Angeles' in real_name:
+            team_colors[league_proper][real_name.replace('Los Angeles', 'LA')] = team_data
+        elif real_name.startswith('LA '):
+            team_colors[league_proper][real_name.replace('LA ', 'Los Angeles ')] = team_data
+
+        if 'New York' in real_name:
+            team_colors[league_proper][real_name.replace('New York', 'NY')] = team_data
+        elif real_name.startswith('NY '):
+            team_colors[league_proper][real_name.replace('NY ', 'New York ')] = team_data
+
+        if 'San Francisco' in real_name:
+            team_colors[league_proper][real_name.replace('San Francisco', 'SF')] = team_data
+        elif real_name.startswith('SF '):
+            team_colors[league_proper][real_name.replace('SF ', 'San Francisco ')] = team_data
+
+        if league_proper == 'NFL':
+            nfl_abbrev_map = {
+                'ARI': 'Arizona Cardinals', 'ATL': 'Atlanta Falcons', 'BAL': 'Baltimore Ravens',
+                'BUF': 'Buffalo Bills', 'CAR': 'Carolina Panthers', 'CHI': 'Chicago Bears',
+                'CIN': 'Cincinnati Bengals', 'CLE': 'Cleveland Browns', 'DAL': 'Dallas Cowboys',
+                'DEN': 'Denver Broncos', 'DET': 'Detroit Lions', 'GB': 'Green Bay Packers',
+                'HOU': 'Houston Texans', 'IND': 'Indianapolis Colts', 'JAX': 'Jacksonville Jaguars',
+                'KC': 'Kansas City Chiefs', 'LV': 'Las Vegas Raiders', 'LAC': 'Los Angeles Chargers',
+                'LAR': 'Los Angeles Rams', 'MIA': 'Miami Dolphins', 'MIN': 'Minnesota Vikings',
+                'NE': 'New England Patriots', 'NO': 'New Orleans Saints', 'NYG': 'New York Giants',
+                'NYJ': 'New York Jets', 'PHI': 'Philadelphia Eagles', 'PIT': 'Pittsburgh Steelers',
+                'SF': 'San Francisco 49ers', 'SEA': 'Seattle Seahawks', 'TB': 'Tampa Bay Buccaneers',
+                'TEN': 'Tennessee Titans', 'WSH': 'Washington Commanders', 'WAS': 'Washington Commanders',
+            }
+            for abbrev_key, mapped_name in nfl_abbrev_map.items():
+                if mapped_name != real_name and mapped_name != full_name:
+                    continue
+                team_colors[league_proper][abbrev_key] = team_data
+                team_name_only = real_name.split()[-1] if real_name else ''
+                if not team_name_only:
+                    continue
+                team_colors[league_proper][team_name_only] = team_data
+                city_part = ' '.join(real_name.split()[:-1])
+                if city_part:
+                    team_colors[league_proper][f"{city_part} {team_name_only}"] = team_data
+                    if city_part == 'New England':
+                        team_colors[league_proper]['NE Patriots'] = team_data
+                        team_colors[league_proper]['New England'] = team_data
+                    elif city_part == 'Kansas City':
+                        team_colors[league_proper]['KC Chiefs'] = team_data
+                        team_colors[league_proper]['Kansas City'] = team_data
+                    elif city_part == 'Tampa Bay':
+                        team_colors[league_proper]['TB Buccaneers'] = team_data
+                        team_colors[league_proper]['Tampa Bay'] = team_data
+                    elif city_part == 'Green Bay':
+                        team_colors[league_proper]['GB Packers'] = team_data
+                        team_colors[league_proper]['Green Bay'] = team_data
+                    elif city_part == 'Las Vegas':
+                        team_colors[league_proper]['LV Raiders'] = team_data
+                        team_colors[league_proper]['Las Vegas'] = team_data
+                    elif 'Los Angeles' in city_part:
+                        team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
+                        if 'Chargers' in full_name:
+                            team_colors[league_proper]['LAC'] = team_data
+                        elif 'Rams' in full_name:
+                            team_colors[league_proper]['LAR'] = team_data
+    return team_colors
+
+
+@lru_cache(maxsize=1)
+def _fallback_catalog():
+    leagues = {
+        _csv_int(row.get('league_id')): {
+            'league_name': (row.get('league_name') or '').lower(),
+            'league_name_proper': row.get('league_name_proper'),
+            'current_champion_id': _csv_int(row.get('current_champion_id')),
+        }
+        for row in _read_csv_rows('info-leagues.csv')
+    }
+    conferences = {
+        _csv_int(row.get('conference_id')): _clean_csv_value(row.get('conference_name'))
+        for row in _read_csv_rows('info-conferences.csv')
+    }
+    divisions = {
+        _csv_int(row.get('division_id')): _clean_csv_value(row.get('division_name'))
+        for row in _read_csv_rows('info-divisions.csv')
+    }
+    stadiums_by_id = {}
+    for row in _read_csv_rows('info-stadiums.csv'):
+        stadium_id = _csv_int(row.get('stadium_id'))
+        if stadium_id is None:
+            continue
+        stadiums_by_id[stadium_id] = {
+            'stadium_id': stadium_id,
+            'full_stadium_name': row.get('full_stadium_name'),
+            'stadium_name': row.get('stadium_name'),
+            'location_name': row.get('location_name'),
+            'city_name': row.get('city_name'),
+            'full_state_name': row.get('full_state_name'),
+            'state_name': row.get('state_name'),
+            'country': row.get('country'),
+            'capacity': _csv_int(row.get('capacity')),
+            'surface': _clean_csv_value(row.get('surface')),
+            'year_opened': _csv_int(row.get('year_opened')),
+            'roof_type': _clean_csv_value(row.get('roof_type')),
+            'team_count': 0,
+        }
+
+    teams = []
+    teams_by_id = {}
+    teams_by_lookup = {}
+    teams_by_league = {}
+    teams_by_stadium = {}
+    league_counts = {}
+    for row in _read_csv_rows('info-teams.csv'):
+        league_id = _csv_int(row.get('league_id'))
+        league = leagues.get(league_id)
+        if not league:
+            continue
+        team_id = _csv_int(row.get('team_id'))
+        stadium_id = _csv_int(row.get('stadium_id'))
+        stadium = stadiums_by_id.get(stadium_id)
+        real_team_name = row.get('real_team_name')
+        league_name_proper = league['league_name_proper']
+        team = {
+            'team_id': team_id,
+            'full_team_name': row.get('full_team_name'),
+            'team_name': row.get('team_name'),
+            'real_team_name': real_team_name,
+            'league_id': league_id,
+            'division_id': _csv_int(row.get('division_id')),
+            'conference_id': _csv_int(row.get('conference_id')),
+            'team_league_id': _csv_int(row.get('team_league_id')),
+            'city_name': row.get('city_name'),
+            'state_name': row.get('state_name'),
+            'country': row.get('country'),
+            'stadium_id': stadium_id,
+            'logo_filename': row.get('logo_filename'),
+            'team_color_1': row.get('team_color_1'),
+            'team_color_2': row.get('team_color_2'),
+            'team_color_3': row.get('team_color_3'),
+            'team_abbreviation': get_team_abbreviation(real_team_name, league_name_proper),
+            'team_league': league_name_proper,
+            'league_name': league['league_name'],
+            'league_name_proper': league_name_proper,
+            'conference_name': conferences.get(_csv_int(row.get('conference_id'))),
+            'division_name': divisions.get(_csv_int(row.get('division_id'))),
+            'team_wins': None,
+            'team_losses': None,
+            'team_ties': None,
+            's_stadium_id': stadium_id,
+            'full_stadium_name': stadium.get('full_stadium_name') if stadium else None,
+            'stadium_city': stadium.get('city_name') if stadium else None,
+            'stadium_state': stadium.get('state_name') if stadium else None,
+            'capacity': stadium.get('capacity') if stadium else None,
+            'surface': stadium.get('surface') if stadium else None,
+            'roof_type': stadium.get('roof_type') if stadium else None,
+            'year_opened': stadium.get('year_opened') if stadium else None,
+            'location_name': stadium.get('location_name') if stadium else None,
+        }
+        teams.append(team)
+        if team_id is not None:
+            teams_by_id[team_id] = team
+        teams_by_lookup[(league_name_proper.lower(), real_team_name.replace(' ', '_').lower())] = team
+        teams_by_league.setdefault(league_name_proper, []).append(team)
+        league_counts[league_name_proper] = league_counts.get(league_name_proper, 0) + 1
+        if stadium_id is not None:
+            teams_by_stadium.setdefault(stadium_id, []).append(team)
+            if stadium_id in stadiums_by_id:
+                stadiums_by_id[stadium_id]['team_count'] += 1
+
+    league_stats = [
+        {'league': league_name, 'count': count}
+        for league_name, count in sorted(league_counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    return {
+        'teams': teams,
+        'team_count': len(teams),
+        'stadium_count': len(stadiums_by_id),
+        'linked_count': sum(1 for team in teams if team.get('stadium_id') is not None),
+        'league_stats': league_stats,
+        'team_colors': _build_team_colors(teams),
+        'teams_by_id': teams_by_id,
+        'teams_by_lookup': teams_by_lookup,
+        'teams_by_league': teams_by_league,
+        'stadiums_by_id': stadiums_by_id,
+        'teams_by_stadium': teams_by_stadium,
+    }
+
 def get_cached_response(cache_key, cache_type, allow_expired=False):
     """Get cached response if still valid, or expired if allow_expired=True"""
     with _api_cache_lock:
@@ -185,6 +430,12 @@ def _empty_all_scores_response():
 
 
 def _fetch_league_schedule_and_scores(lg, api_date, tz, api_base_url=None, timeout=15, include_scores=True):
+    if _should_skip_live_api_fetch(lg, api_date):
+        today = _iso_today() if api_date == 'today' else api_date
+        return {
+            'schedule': {'date': today, 'games': []},
+            'scores': {'date': today, 'scores': []},
+        }
     league_data = {'schedule': {'games': []}, 'scores': {'scores': []}}
     try:
         league_data['schedule'] = _fetch_api_json(
@@ -312,6 +563,8 @@ def _fetch_mls_standings(api_base_url):
 
 def _fetch_nfl_standings(api_base_url):
     """Fetch NFL standings keyed by team name and abbreviation."""
+    if _should_skip_live_api_fetch('NFL', 'today'):
+        return {}
     try:
         response = requests.get(f'{api_base_url}/api/v1/standings/nfl', timeout=10)
         if response.status_code != 200:
@@ -465,7 +718,7 @@ SEASON_DATES = {
         'types': [
             {'name': 'Preseason', 'start': '2025-09-21', 'end': '2025-10-03'},
             {'name': 'Regular Season', 'start': '2025-10-07', 'end': '2026-04-17'},
-            {'name': 'Playoffs', 'start': '2026-04-19', 'end': '2026-06-20'},
+            {'name': 'Playoffs', 'start': '2026-04-19', 'end': '2026-06-19'},
         ]
     },
     'MLS': {
@@ -491,6 +744,23 @@ SEASON_DATES = {
     },
 }
 
+
+def _iso_today():
+    return datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+
+def _league_is_in_active_window(league, date_value=None):
+    league_upper = (league or '').upper()
+    season = SEASON_DATES.get(league_upper)
+    if not season:
+        return True
+    probe = _iso_today() if not date_value or date_value == 'today' else date_value
+    return any(window['start'] <= probe <= window['end'] for window in season.get('types', []))
+
+
+def _should_skip_live_api_fetch(league, api_date='today'):
+    return (league or '').upper() == 'NFL' and api_date == 'today' and not _league_is_in_active_window('NFL')
+
 @app.route('/api/season-info/<league>')
 def season_info(league):
     """Return season date info for any league"""
@@ -504,9 +774,30 @@ def season_info(league):
             response = requests.get(f'{API_BASE_URL}/api/v1/season-info/{league.lower()}', timeout=10)
             response.raise_for_status()
             data = response.json()
+            if (
+                league_upper == 'MLC'
+                and data.get('current_phase') in (None, '', 'Off Season', 'Offseason')
+                and not data.get('season_types')
+            ):
+                schedule = _fetch_api_json(f'/api/v1/schedule/{league.lower()}/today?tz=pt', timeout=10)
+                standings = _fetch_api_json(f'/api/v1/standings/{league.lower()}', timeout=10)
+                schedule_games = list((schedule or {}).get('games') or [])
+                standings_rows = list((standings or {}).get('teams') or (standings or {}).get('standings') or [])
+                has_live_rows = any(
+                    (int(team.get('matches') or 0) > 0)
+                    or (int(team.get('wins') or 0) > 0)
+                    or (int(team.get('losses') or 0) > 0)
+                    for team in standings_rows
+                )
+                if schedule_games or has_live_rows:
+                    data['current_phase'] = 'Regular Season'
+                    data['season_types'] = [{
+                        'name': 'Regular Season',
+                        'display': 'Regular Season underway',
+                    }]
             fmt = lambda d: datetime.strptime(d, '%Y-%m-%d').strftime('%b %-d') if d else ''
             for st in data.get('season_types', []):
-                st['display'] = f"{st['name']}: {fmt(st.get('start_date',''))} - {fmt(st.get('end_date',''))}"
+                st['display'] = st.get('display') or f"{st['name']}: {fmt(st.get('start_date',''))} - {fmt(st.get('end_date',''))}"
             set_cached_response(cache_key, data)
             return jsonify(data)
         except Exception as e:
@@ -575,17 +866,20 @@ def index():
     conn = get_db_connection()
     if not conn:
         logger.warning("get_db_connection() returned None - database unavailable")
-        # Fallback data when database is not available
-        return render_template('index.html', 
-                             team_count=0,
-                             stadium_count=0,
-                             linked_count=0,
-                             league_stats=[],
-                             logo_mapping=LOGO_MAPPING,
-                             nba_team_colors={},
-                             team_colors={},
-                             API_BASE_URL=API_BASE_URL,
-                             db_available=False)
+        fallback = _fallback_catalog()
+        return render_template(
+            'index.html',
+            team_count=fallback['team_count'],
+            stadium_count=fallback['stadium_count'],
+            linked_count=fallback['linked_count'],
+            league_stats=fallback['league_stats'],
+            logo_mapping=LOGO_MAPPING,
+            nba_team_colors=fallback['team_colors'].get('NBA', {}),
+            team_colors=fallback['team_colors'],
+            API_BASE_URL=API_BASE_URL,
+            db_available=False,
+            using_fallback_catalog=True,
+        )
     
     logger.info("Database connection obtained, executing queries")
     try:
@@ -629,140 +923,7 @@ def index():
         # Create a mapping of league -> team name -> colors and logo
         # Use full_team_name as primary key (has proper capitalization and spaces)
         # Also create variations for common name differences (e.g., "LA Clippers" vs "Los Angeles Clippers")
-        team_colors = {}
-        for team in all_teams:
-            league_proper = team['league_name_proper']
-            if league_proper not in team_colors:
-                team_colors[league_proper] = {}
-            
-            # Build logo URL using splitsp.lat format: {team_name}_logo.png
-            logo_url = '/static/images/no-logo.png'
-            if team['logo_filename']:
-                league_lower = team['league_name'].lower()
-                # Use splitsp.lat for all logos
-                logo_url = f'https://www.splitsp.lat/logos/{league_lower}/{team["logo_filename"]}'
-            
-            # Get team abbreviation - use from database if available, otherwise generate
-            abbrev = team.get('team_abbreviation')
-            if not abbrev:
-                abbrev = get_team_abbreviation(team['real_team_name'], league_proper)
-            
-            # Use real_team_name as primary key (has spaces between words)
-            full_name = team['full_team_name']
-            real_name = team['real_team_name']
-            
-            team_data = {
-                'color_1': team['team_color_1'],
-                'color_2': team['team_color_2'],
-                'color_3': team['team_color_3'],
-                'logo_url': logo_url,
-                'abbreviation': abbrev,
-                'full_team_name': full_name,  # Store full team name as backup
-                'real_team_name': real_name   # Store real team name for display (has spaces)
-            }
-            
-            # Map real_team_name (primary) - this has spaces between words
-            team_colors[league_proper][real_name] = team_data
-            
-            # Also map full_team_name for backward compatibility
-            if full_name and full_name != real_name:
-                team_colors[league_proper][full_name] = team_data
-            
-            # Map common variations using real_team_name (which has spaces)
-            # Los Angeles variations
-            if 'Los Angeles' in real_name:
-                # Map "LA Clippers" to "Los Angeles Clippers"
-                team_colors[league_proper][real_name.replace('Los Angeles', 'LA')] = team_data
-            elif real_name.startswith('LA '):
-                # Map "Los Angeles Clippers" to "LA Clippers"
-                team_colors[league_proper][real_name.replace('LA ', 'Los Angeles ')] = team_data
-            
-            # New York variations
-            if 'New York' in real_name:
-                team_colors[league_proper][real_name.replace('New York', 'NY')] = team_data
-            elif real_name.startswith('NY '):
-                team_colors[league_proper][real_name.replace('NY ', 'New York ')] = team_data
-            
-            # San Francisco variations
-            if 'San Francisco' in real_name:
-                team_colors[league_proper][real_name.replace('San Francisco', 'SF')] = team_data
-            elif real_name.startswith('SF '):
-                team_colors[league_proper][real_name.replace('SF ', 'San Francisco ')] = team_data
-            
-            # NFL-specific mappings: Map abbreviations and common variations
-            if league_proper == 'NFL':
-                # NFL team abbreviation mappings (API often returns abbreviations)
-                nfl_abbrev_map = {
-                    'ARI': 'Arizona Cardinals',
-                    'ATL': 'Atlanta Falcons',
-                    'BAL': 'Baltimore Ravens',
-                    'BUF': 'Buffalo Bills',
-                    'CAR': 'Carolina Panthers',
-                    'CHI': 'Chicago Bears',
-                    'CIN': 'Cincinnati Bengals',
-                    'CLE': 'Cleveland Browns',
-                    'DAL': 'Dallas Cowboys',
-                    'DEN': 'Denver Broncos',
-                    'DET': 'Detroit Lions',
-                    'GB': 'Green Bay Packers',
-                    'HOU': 'Houston Texans',
-                    'IND': 'Indianapolis Colts',
-                    'JAX': 'Jacksonville Jaguars',
-                    'KC': 'Kansas City Chiefs',
-                    'LV': 'Las Vegas Raiders',
-                    'LAC': 'Los Angeles Chargers',
-                    'LAR': 'Los Angeles Rams',
-                    'MIA': 'Miami Dolphins',
-                    'MIN': 'Minnesota Vikings',
-                    'NE': 'New England Patriots',
-                    'NO': 'New Orleans Saints',
-                    'NYG': 'New York Giants',
-                    'NYJ': 'New York Jets',
-                    'PHI': 'Philadelphia Eagles',
-                    'PIT': 'Pittsburgh Steelers',
-                    'SF': 'San Francisco 49ers',
-                    'SEA': 'Seattle Seahawks',
-                    'TB': 'Tampa Bay Buccaneers',
-                    'TEN': 'Tennessee Titans',
-                    'WSH': 'Washington Commanders',
-                    'WAS': 'Washington Commanders'  # Alternative abbreviation
-                }
-                
-                # Map abbreviations to real team name (which has spaces)
-                for abbrev, mapped_name in nfl_abbrev_map.items():
-                    if mapped_name == real_name or mapped_name == full_name:
-                        # Map abbreviation to this team
-                        team_colors[league_proper][abbrev] = team_data
-                        # Also map just the team name part (e.g., "Cardinals", "Eagles")
-                        team_name_only = real_name.split()[-1]  # Last word
-                        if team_name_only:
-                            team_colors[league_proper][team_name_only] = team_data
-                            # Also map "City Team" format (e.g., "Arizona Cardinals")
-                            city_part = ' '.join(real_name.split()[:-1])
-                            if city_part:
-                                team_colors[league_proper][f"{city_part} {team_name_only}"] = team_data
-                                # Map common city abbreviations
-                                if city_part == 'New England':
-                                    team_colors[league_proper]['NE Patriots'] = team_data
-                                    team_colors[league_proper]['New England'] = team_data
-                                elif city_part == 'Kansas City':
-                                    team_colors[league_proper]['KC Chiefs'] = team_data
-                                    team_colors[league_proper]['Kansas City'] = team_data
-                                elif city_part == 'Tampa Bay':
-                                    team_colors[league_proper]['TB Buccaneers'] = team_data
-                                    team_colors[league_proper]['Tampa Bay'] = team_data
-                                elif city_part == 'Green Bay':
-                                    team_colors[league_proper]['GB Packers'] = team_data
-                                    team_colors[league_proper]['Green Bay'] = team_data
-                                elif city_part == 'Las Vegas':
-                                    team_colors[league_proper]['LV Raiders'] = team_data
-                                    team_colors[league_proper]['Las Vegas'] = team_data
-                                elif 'Los Angeles' in city_part:
-                                    team_colors[league_proper][full_name.replace('Los Angeles', 'LA')] = team_data
-                                    if 'Chargers' in full_name:
-                                        team_colors[league_proper]['LAC'] = team_data
-                                    elif 'Rams' in full_name:
-                                        team_colors[league_proper]['LAR'] = team_data
+        team_colors = _build_team_colors(all_teams)
         
         # Keep nba_team_colors for backward compatibility
         nba_team_colors = team_colors.get('NBA', {})
@@ -779,7 +940,8 @@ def index():
                              nba_team_colors=nba_team_colors,
                              team_colors=team_colors,
                              API_BASE_URL=API_BASE_URL,
-                             db_available=True)
+                             db_available=True,
+                             using_fallback_catalog=False)
     
     except Exception as e:
         logger.error(f'Error loading dashboard: {e}', exc_info=True)
@@ -789,22 +951,29 @@ def index():
                 conn.close()
             except:
                 pass
-        return render_template('index.html', 
-                             team_count=0,
-                             stadium_count=0,
-                             linked_count=0,
-                             league_stats=[],
-                             logo_mapping=LOGO_MAPPING,
-                             nba_team_colors={},
-                             team_colors={'NBA': {}, 'NHL': {}},
-                             API_BASE_URL=API_BASE_URL,
-                             db_available=False)
+        fallback = _fallback_catalog()
+        return render_template(
+            'index.html',
+            team_count=fallback['team_count'],
+            stadium_count=fallback['stadium_count'],
+            linked_count=fallback['linked_count'],
+            league_stats=fallback['league_stats'],
+            logo_mapping=LOGO_MAPPING,
+            nba_team_colors=fallback['team_colors'].get('NBA', {}),
+            team_colors=fallback['team_colors'],
+            API_BASE_URL=API_BASE_URL,
+            db_available=False,
+            using_fallback_catalog=True,
+        )
 
 @app.route('/admin')
 def admin_panel():
     """Admin panel showing statistics and management options"""
     conn = get_db_connection()
     if not conn:
+        fallback_teams = [dict(team) for team in _fallback_catalog()['teams_by_league'].get(league_upper, [])]
+        if fallback_teams:
+            return _render_regular_league_page(league_upper, fallback_teams)
         return render_template('error.html', message='Database connection failed')
     
     try:
@@ -833,6 +1002,134 @@ def admin_panel():
     
     except Exception as e:
         return render_template('error.html', message=str(e))
+
+
+def _render_regular_league_page(league_name, teams):
+    organized_teams = {}
+    for team in teams:
+        conference = team.get('conference_name') or 'No Conference'
+        division = team.get('division_name') or 'No Division'
+        organized_teams.setdefault(conference, {}).setdefault(division, [])
+        team['abbreviation'] = team.get('abbreviation') or team.get('team_abbreviation') or get_team_abbreviation(team['real_team_name'], league_name)
+        organized_teams[conference][division].append(team)
+
+    nfl_division_grid = []
+
+    def _record_for_team(records, team):
+        return records.get(team['real_team_name']) or records.get(team.get('abbreviation'))
+
+    def _apply_records(records, include_points=False):
+        for conference in organized_teams:
+            for division in organized_teams[conference]:
+                for team in organized_teams[conference][division]:
+                    rec = _record_for_team(records, team)
+                    if not rec:
+                        continue
+                    team['team_wins'] = rec.get('wins', team.get('team_wins'))
+                    team['team_losses'] = rec.get('losses', team.get('team_losses'))
+                    team['team_ties'] = rec.get('ties', team.get('team_ties') or 0)
+                    if include_points:
+                        team['standings_points'] = rec.get('points')
+
+    def _sort_by_record_with_gb():
+        for conference in organized_teams:
+            for division in organized_teams[conference]:
+                teams_list = organized_teams[conference][division]
+                teams_list.sort(
+                    key=lambda t: (
+                        -(t.get('team_wins') or 0),
+                        (t.get('team_losses') or 0),
+                        -(t.get('team_ties') or 0),
+                        t.get('real_team_name') or '',
+                    )
+                )
+                if teams_list and teams_list[0].get('team_wins') is not None:
+                    leader_wins = teams_list[0].get('team_wins') or 0
+                    leader_losses = teams_list[0].get('team_losses') or 0
+                    for team in teams_list:
+                        tw = team.get('team_wins') or 0
+                        tl = team.get('team_losses') or 0
+                        gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
+                        team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
+
+    def _sort_by_points():
+        for conference in organized_teams:
+            for division in organized_teams[conference]:
+                teams_list = organized_teams[conference][division]
+                for team in teams_list:
+                    if team.get('standings_points') is None:
+                        team['standings_points'] = ((team.get('team_wins') or 0) * 2) + (team.get('team_ties') or 0)
+                teams_list.sort(
+                    key=lambda t: (
+                        -(t.get('standings_points') or 0),
+                        -(t.get('team_wins') or 0),
+                        (t.get('team_losses') or 0),
+                        t.get('real_team_name') or '',
+                    )
+                )
+
+    if league_name == 'MLB':
+        _sort_by_record_with_gb()
+    if league_name == 'NBA':
+        _apply_records(_fetch_league_standings(API_BASE_URL, 'nba') or {})
+        _sort_by_record_with_gb()
+    if league_name == 'NHL':
+        _apply_records(_fetch_league_standings(API_BASE_URL, 'nhl') or {}, include_points=True)
+        _sort_by_points()
+    if league_name == 'MLS':
+        mls_records = (_fetch_mls_standings(API_BASE_URL) or {}).get('teams', {})
+        for conference in organized_teams:
+            for division in organized_teams[conference]:
+                teams_list = organized_teams[conference][division]
+                for team in teams_list:
+                    rec = mls_records.get(team['real_team_name']) or mls_records.get(team['abbreviation'])
+                    if rec:
+                        team['team_wins'] = int(rec.get('wins') or team.get('team_wins') or 0)
+                        team['team_losses'] = int(rec.get('losses') or team.get('team_losses') or 0)
+                        team['team_ties'] = int(rec.get('draws') or team.get('team_ties') or 0)
+                        team['mls_points'] = int(rec.get('points') or ((team['team_wins'] * 3) + team['team_ties']))
+                    else:
+                        team['mls_points'] = (team.get('team_wins') or 0) * 3 + (team.get('team_ties') or 0)
+                teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
+    if league_name == 'NFL':
+        _apply_records(_fetch_nfl_standings(API_BASE_URL) or {})
+        _sort_by_record_with_gb()
+        nfl_order = [
+            [('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')],
+            [('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')],
+        ]
+        nfl_division_grid = [
+            [
+                {
+                    'conference': conference,
+                    'division': division,
+                    'teams': organized_teams.get(conference, {}).get(division, []),
+                }
+                for conference, division in row
+            ]
+            for row in nfl_order
+        ]
+    if league_name == 'WNBA':
+        wnba_records = _fetch_wnba_standings(API_BASE_URL) or {}
+        for conference in organized_teams:
+            for division in organized_teams[conference]:
+                teams_list = organized_teams[conference][division]
+                for team in teams_list:
+                    rec = wnba_records.get(team['real_team_name'])
+                    if rec:
+                        team['team_wins'] = rec['wins']
+                        team['team_losses'] = rec['losses']
+                        team['games_behind'] = rec['games_back']
+                teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
+
+    return render_template(
+        'league_page.html',
+        league_name=league_name,
+        organized_teams=organized_teams,
+        nfl_division_grid=nfl_division_grid,
+        logo_mapping=LOGO_MAPPING,
+        league_info=None,
+    )
 
 @app.route('/league/<league_name>')
 def league_page(league_name):
@@ -910,167 +1207,11 @@ def league_page(league_name):
         """
         cursor.execute(teams_query, [league_name])
         teams = cursor.fetchall()
-        
-        # Organize teams by conference and division
-        organized_teams = {}
-        for team in teams:
-            conference = team['conference_name'] or 'No Conference'
-            division = team['division_name'] or 'No Division'
-            
-            if conference not in organized_teams:
-                organized_teams[conference] = {}
-            if division not in organized_teams[conference]:
-                organized_teams[conference][division] = []
-            
-            team['abbreviation'] = get_team_abbreviation(team['real_team_name'], league_name)
-            organized_teams[conference][division].append(team)
 
-        nfl_division_grid = []
-
-        def _record_for_team(records, team):
-            return records.get(team['real_team_name']) or records.get(team.get('abbreviation'))
-
-        def _apply_records(records, include_points=False):
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    for team in organized_teams[conference][division]:
-                        rec = _record_for_team(records, team)
-                        if not rec:
-                            continue
-                        team['team_wins'] = rec.get('wins', team.get('team_wins'))
-                        team['team_losses'] = rec.get('losses', team.get('team_losses'))
-                        team['team_ties'] = rec.get('ties', team.get('team_ties') or 0)
-                        if include_points:
-                            team['standings_points'] = rec.get('points')
-
-        def _sort_by_record_with_gb():
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    teams_list = organized_teams[conference][division]
-                    teams_list.sort(
-                        key=lambda t: (
-                            -(t.get('team_wins') or 0),
-                            (t.get('team_losses') or 0),
-                            -(t.get('team_ties') or 0),
-                            t.get('real_team_name') or '',
-                        )
-                    )
-                    if teams_list and teams_list[0].get('team_wins') is not None:
-                        leader_wins = teams_list[0].get('team_wins') or 0
-                        leader_losses = teams_list[0].get('team_losses') or 0
-                        for team in teams_list:
-                            tw = team.get('team_wins') or 0
-                            tl = team.get('team_losses') or 0
-                            gb = ((leader_wins - tw) + (tl - leader_losses)) / 2.0
-                            team['games_behind'] = '-' if gb == 0 else f'{gb:.1f}'.rstrip('0').rstrip('.')
-
-        def _sort_by_points():
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    teams_list = organized_teams[conference][division]
-                    for team in teams_list:
-                        if team.get('standings_points') is None:
-                            team['standings_points'] = ((team.get('team_wins') or 0) * 2) + (team.get('team_ties') or 0)
-                    teams_list.sort(
-                        key=lambda t: (
-                            -(t.get('standings_points') or 0),
-                            -(t.get('team_wins') or 0),
-                            (t.get('team_losses') or 0),
-                            t.get('real_team_name') or '',
-                        )
-                    )
-
-        # For MLB (and other leagues with standings), sort teams within each division by wins desc
-        # and compute Games Behind (GB)
-        if league_name == 'MLB':
-            _sort_by_record_with_gb()
-
-        if league_name == 'NBA':
-            nba_records = _fetch_league_standings(API_BASE_URL, 'nba') or {}
-            _apply_records(nba_records)
-            _sort_by_record_with_gb()
-
-        if league_name == 'NHL':
-            nhl_records = _fetch_league_standings(API_BASE_URL, 'nhl') or {}
-            _apply_records(nhl_records, include_points=True)
-            _sort_by_points()
-
-        # For MLS, sort teams within each conference by points (3*W + 1*T) desc
-        if league_name == 'MLS':
-            mls_records = _fetch_mls_standings(API_BASE_URL) or {}
-            mls_teams = mls_records.get('teams', {})
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    teams_list = organized_teams[conference][division]
-                    for team in teams_list:
-                        rec = mls_teams.get(team['real_team_name']) or mls_teams.get(team['abbreviation'])
-                        if rec:
-                            team['team_wins'] = int(rec.get('wins') or team.get('team_wins') or 0)
-                            team['team_losses'] = int(rec.get('losses') or team.get('team_losses') or 0)
-                            team['team_ties'] = int(rec.get('draws') or team.get('team_ties') or 0)
-                            team['mls_points'] = int(rec.get('points') or ((team['team_wins'] * 3) + team['team_ties']))
-                            continue
-                        w = team.get('team_wins') or 0
-                        t = team.get('team_ties') or 0
-                        team['mls_points'] = w * 3 + t
-                    teams_list.sort(key=lambda t: (t.get('mls_points') or 0), reverse=True)
-
-        if league_name == 'NFL':
-            nfl_records = _fetch_nfl_standings(API_BASE_URL) or {}
-            _apply_records(nfl_records)
-            _sort_by_record_with_gb()
-
-            nfl_order = [
-                [('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')],
-                [('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')],
-            ]
-            nfl_division_grid = [
-                [
-                    {
-                        'conference': conference,
-                        'division': division,
-                        'teams': organized_teams.get(conference, {}).get(division, []),
-                    }
-                    for conference, division in row
-                ]
-                for row in nfl_order
-            ]
-
-        # For WNBA, fetch live records from sportspuff-api and sort by wins desc
-        if league_name == 'WNBA':
-            wnba_records = _fetch_wnba_standings(API_BASE_URL) or {}
-            for conference in organized_teams:
-                for division in organized_teams[conference]:
-                    teams_list = organized_teams[conference][division]
-                    for team in teams_list:
-                        rec = wnba_records.get(team['real_team_name'])
-                        if rec:
-                            team['team_wins'] = rec['wins']
-                            team['team_losses'] = rec['losses']
-                            team['games_behind'] = rec['games_back']
-                    teams_list.sort(key=lambda t: (t.get('team_wins') or 0), reverse=True)
-
-        # Get league info including champion details
-        league_query = """
-            SELECT l.league_name_proper, l.league_name, l.logo_filename, l.team_count,
-                   l.current_champion_id, c.real_team_name as champion_name, c.logo_filename as champion_logo,
-                   c.team_color_1 as champion_color_1, c.team_color_2 as champion_color_2, c.team_color_3 as champion_color_3
-            FROM leagues l
-            LEFT JOIN teams c ON l.current_champion_id = c.team_id
-            WHERE LOWER(l.league_name_proper) = LOWER(%s)
-        """
-        cursor.execute(league_query, [league_name])
-        league_info = cursor.fetchone()
-        
         cursor.close()
         conn.close()
-        
-        return render_template('league_page.html', 
-                             league_name=league_name,
-                             organized_teams=organized_teams,
-                             nfl_division_grid=nfl_division_grid,
-                             logo_mapping=LOGO_MAPPING,
-                             league_info=league_info)
+
+        return _render_regular_league_page(league_upper, teams)
     
     except Exception as e:
         return render_template('error.html', message=str(e))
@@ -1354,14 +1495,39 @@ def teams():
 
     conn = get_db_connection()
     if not conn:
-        # Return empty teams list when database is not available
-        return render_template('teams.html',
-                             teams=[],
-                             pagination=None,
-                             league_filter=league_filter,
-                             search=search,
-                             logo_mapping=LOGO_MAPPING,
-                             db_available=False)
+        fallback = _fallback_catalog()
+        filtered = [dict(team) for team in fallback['teams']]
+        if league_filter:
+            filtered = [team for team in filtered if team.get('league_name_proper', '').lower() == league_filter.lower()]
+        if search:
+            needle = search.lower()
+            filtered = [
+                team for team in filtered
+                if needle in (team.get('real_team_name') or '').lower()
+                or needle in (team.get('city_name') or '').lower()
+            ]
+        if linked_filter == 'true':
+            filtered = [team for team in filtered if team.get('stadium_id') is not None]
+        elif linked_filter == 'false':
+            filtered = [team for team in filtered if team.get('stadium_id') is None]
+        total_count = len(filtered)
+        offset = (page - 1) * per_page
+        page_rows = filtered[offset: offset + per_page]
+        leagues = sorted(fallback['teams_by_league'].keys())
+        return render_template(
+            'teams.html',
+            teams=page_rows,
+            leagues=leagues,
+            divisions=[],
+            current_league=league_filter,
+            league_filter=league_filter,
+            search=search,
+            page=page,
+            total_pages=(total_count + per_page - 1) // per_page,
+            total_count=total_count,
+            logo_mapping=LOGO_MAPPING,
+            db_available=False,
+        )
 
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -1464,7 +1630,25 @@ def stadiums():
     
     conn = get_db_connection()
     if not conn:
-        return render_template('error.html', message="Database connection failed")
+        fallback = _fallback_catalog()
+        rows = list(fallback['stadiums_by_id'].values())
+        if search:
+            needle = search.lower()
+            rows = [
+                stadium for stadium in rows
+                if needle in (stadium.get('full_stadium_name') or '').lower()
+                or needle in (stadium.get('city_name') or '').lower()
+            ]
+        total_count = len(rows)
+        offset = (page - 1) * per_page
+        return render_template(
+            'stadiums.html',
+            stadiums=rows[offset: offset + per_page],
+            search=search,
+            page=page,
+            total_pages=(total_count + per_page - 1) // per_page,
+            total_count=total_count,
+        )
     
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -1519,6 +1703,9 @@ def team_detail_by_name(league_name, team_name):
     """Show team details by league and team name"""
     conn = get_db_connection()
     if not conn:
+        team = _fallback_catalog()['teams_by_lookup'].get((league_name.lower(), team_name.lower()))
+        if team:
+            return render_template('team_detail_horizontal.html', team=team)
         return render_template("error.html", message="Database connection failed")
 
     try:
@@ -1565,6 +1752,9 @@ def team_detail(team_id):
     """Show team details"""
     conn = get_db_connection()
     if not conn:
+        team = _fallback_catalog()['teams_by_id'].get(team_id)
+        if team:
+            return render_template('team_detail_horizontal.html', team=team)
         return render_template('error.html', message="Database connection failed")
     
     try:
@@ -1610,6 +1800,14 @@ def stadium_detail(stadium_id):
     """Show stadium details"""
     conn = get_db_connection()
     if not conn:
+        fallback = _fallback_catalog()
+        stadium = fallback['stadiums_by_id'].get(stadium_id)
+        if stadium:
+            return render_template(
+                'stadium_detail_horizontal.html',
+                stadium=stadium,
+                teams=fallback['teams_by_stadium'].get(stadium_id, []),
+            )
         return render_template('error.html', message="Database connection failed")
     
     try:
@@ -2052,7 +2250,11 @@ def get_logo(team_id):
                 return f'https://www.splitsp.lat/logos/{league}/{logo_filename}'
         except:
             pass
-    
+
+    fallback_team = _fallback_catalog()['teams_by_id'].get(_csv_int(team_id))
+    if fallback_team and fallback_team.get('logo_filename'):
+        return f"https://www.splitsp.lat/logos/{fallback_team['team_league'].lower()}/{fallback_team['logo_filename']}"
+
     return '/static/images/no-logo.png'
 
 @app.template_filter('get_league_logo')
@@ -2130,6 +2332,9 @@ def proxy_schedule(league, date):
         else:
             cache_key = f'schedule:{league}:{date}:{tz}'
             api_date = date
+
+        if _should_skip_live_api_fetch(league, api_date):
+            return jsonify({'date': _iso_today(), 'games': []}), 200
 
         cached_response = get_cached_response(cache_key, 'schedule')
         if cached_response:
@@ -2252,6 +2457,9 @@ def nfl_team_records():
         cached = get_cached_response(cache_key, 'schedule')
         if cached:
             return jsonify(cached), 200
+
+        if _should_skip_live_api_fetch('NFL', 'today'):
+            return jsonify({'teams': {}}), 200
 
         team_records = _fetch_nfl_standings(API_BASE_URL) or {}
 
@@ -2472,6 +2680,9 @@ def proxy_scores(league, date):
         else:
             cache_key = f'scores:{league}:{date}:{tz}'
             api_date = date
+
+        if _should_skip_live_api_fetch(league, api_date):
+            return jsonify({'date': _iso_today(), 'scores': []}), 200
 
         cached_response = get_cached_response(cache_key, 'scores')
         if cached_response:

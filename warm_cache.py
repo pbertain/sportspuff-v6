@@ -29,11 +29,22 @@ load_dotenv()
 # Leagues to warm cache for
 LEAGUES = ['nba', 'nhl', 'nfl', 'mlb', 'mls', 'wnba']
 TIMEZONES = ['pst', 'est', 'cst', 'mst']  # Common timezones
+NFL_ACTIVE_WINDOWS = (
+    ('2026-08-06', '2026-08-28'),
+    ('2026-09-10', '2027-01-03'),
+    ('2027-01-09', '2027-01-31'),
+    ('2027-02-07', '2027-02-07'),
+)
 
 # Base URL for the Flask app (running locally)
 # Default to dev port, but can be overridden via environment variable
 # For prod, set CACHE_WARMER_BASE_URL=http://localhost:34180
 BASE_URL = os.getenv('CACHE_WARMER_BASE_URL', 'http://localhost:34181')
+
+
+def _nfl_in_active_window(today_iso=None):
+    probe = today_iso or datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    return any(start <= probe <= end for start, end in NFL_ACTIVE_WINDOWS)
 
 def warm_cache():
     """Warm the cache by calling proxy endpoints"""
@@ -50,6 +61,11 @@ def warm_cache():
             return True  # Exit successfully, just skip this run
     
     logger.info(f"Starting cache warming process (game hours: {is_game_hours})")
+
+    leagues = list(LEAGUES)
+    if not _nfl_in_active_window():
+        leagues = [league for league in leagues if league != 'nfl']
+        logger.info("Skipping NFL cache warming because the league is currently in the offseason")
     
     success_count = 0
     error_count = 0
@@ -59,7 +75,7 @@ def warm_cache():
     if is_game_hours:
         logger.info("Game hours detected - warming scores more frequently")
         # Warm scores first (most important during games)
-        for league in LEAGUES:
+        for league in leagues:
             for tz in TIMEZONES:
                 try:
                     scores_url = f"{BASE_URL}/api/proxy/scores/{league}/today?tz={tz}"
@@ -90,7 +106,7 @@ def warm_cache():
     else:
         logger.info("Off-hours detected - warming schedules (scores less critical)")
         # During off-hours, focus on schedules (scores don't change much)
-        for league in LEAGUES:
+        for league in leagues:
             for tz in TIMEZONES:
                 try:
                     schedule_url = f"{BASE_URL}/api/proxy/schedule/{league}/today?tz={tz}"
@@ -129,4 +145,3 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Fatal error in cache warming: {e}", exc_info=True)
         sys.exit(1)
-

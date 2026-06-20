@@ -510,76 +510,126 @@
                     .catch(e => console.warn('Failed to load IPL standings:', e));
             </script>
             {% elif league_name == 'MLC' %}
-            <!-- MLC: Standings table + East and West divisions side by side -->
-            <div id="mlc-standings" class="row mb-4" style="display: none;">
+            <!-- MLC: Single-column standings cards with playoff line after the top four -->
+            <div id="mlc-standings" class="row mb-4">
                 <div class="col-12 col-lg-8 mx-auto">
-                    <div class="card" style="background: rgba(26, 82, 118, 0.1); border: 1px solid rgba(26, 82, 118, 0.3);">
-                        <div class="card-body">
-                            <h4 class="text-center" style="color: var(--mlc-accent);">MLC Standings</h4>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover align-middle mb-0" style="color: #F5F0FF;">
-                                    <thead><tr>
-                                        <th>#</th><th>Team</th><th>M</th><th>W</th><th>L</th><th>NR</th><th>Pts</th><th>NRR</th>
-                                    </tr></thead>
-                                    <tbody id="mlc-standings-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="mlc-cards-container" class="teams-list"></div>
                 </div>
             </div>
             <script>
                 fetch('/api/cricket/standings/mlc')
                     .then(r => r.json())
                     .then(data => {
-                        if (!data.standings || data.standings.length === 0) return;
-                        const tbody = document.getElementById('mlc-standings-body');
-                        data.standings.forEach(t => {
-                            const nrrClass = parseFloat(t.nrr) >= 0 ? 'text-success' : 'text-danger';
-                            const wins = Number(t.wins || 0);
-                            const losses = Number(t.losses || 0);
-                            const noResults = Number(t.no_result ?? t.no_results ?? t.nr ?? t.noResult ?? 0);
-                            const points = (wins * 2) + noResults;
-                            tbody.innerHTML += `<tr>
-                                <td>${t.rank}</td>
-                                <td><strong>${t.abbreviation}</strong> ${t.team_name}</td>
-                                <td>${t.matches}</td><td>${wins}</td><td>${losses}</td><td>${noResults}</td>
-                                <td><strong>${points}</strong></td>
-                                <td class="${nrrClass}">${t.nrr}</td>
-                            </tr>`;
+                        const cardsContainer = document.getElementById('mlc-cards-container');
+                        const standingsRows = Array.isArray(data.standings) ? data.standings : [];
+                        const teamLookup = {};
+                        {% for conference_name, divisions in organized_teams.items() %}
+                            {% for division_name, teams in divisions.items() %}
+                                {% for team in teams %}
+                                teamLookup['{{ team.real_team_name|lower }}'] = {
+                                    name: '{{ team.real_team_name }}',
+                                    abbreviation: '{{ team.abbreviation }}',
+                                    url: '{{ url_for("team_detail_by_name", league_name=league_name.lower(), team_name=team.real_team_name.replace(" ", "_")) }}',
+                                    logo: '{{ team.team_id | get_logo }}',
+                                    color1: '{{ team.team_color_1 or "#f8f9fa" }}',
+                                    color2: '{{ team.team_color_2 or "#000000" }}',
+                                    color3: '{{ team.team_color_3 or "#666666" }}',
+                                    stadium: '{{ team.full_stadium_name or "" }}',
+                                    stadiumId: '{{ team.s_stadium_id or "" }}',
+                                    stadiumCity: '{{ team.stadium_city.title() if team.stadium_city else "" }}',
+                                    stadiumState: '{{ team.stadium_state.upper() if team.stadium_state else "" }}'
+                                };
+                                {% endfor %}
+                            {% endfor %}
+                        {% endfor %}
+
+                        const standingsByName = new Map();
+                        standingsRows.forEach(team => standingsByName.set(String(team.team_name || '').toLowerCase(), team));
+
+                        const mergedRows = Object.values(teamLookup).map(localTeam => {
+                            const apiTeam = standingsByName.get(localTeam.name.toLowerCase()) || {};
+                            return {
+                                team_name: localTeam.name,
+                                abbreviation: apiTeam.abbreviation || localTeam.abbreviation,
+                                rank: apiTeam.rank,
+                                matches: Number(apiTeam.matches || 0),
+                                wins: Number(apiTeam.wins || 0),
+                                losses: Number(apiTeam.losses || 0),
+                                no_result: Number(apiTeam.no_result ?? apiTeam.no_results ?? apiTeam.nr ?? apiTeam.noResult ?? 0),
+                                points: Number(apiTeam.points ?? ((apiTeam.wins || 0) * 2) + (apiTeam.no_result ?? apiTeam.no_results ?? apiTeam.nr ?? apiTeam.noResult ?? 0)),
+                                nrr: apiTeam.nrr ?? '0.000',
+                                url: localTeam.url,
+                                logo: localTeam.logo,
+                                color1: localTeam.color1,
+                                color2: localTeam.color2,
+                                color3: localTeam.color3,
+                                stadium: localTeam.stadium,
+                                stadiumId: localTeam.stadiumId,
+                                stadiumCity: localTeam.stadiumCity,
+                                stadiumState: localTeam.stadiumState
+                            };
                         });
-                        document.getElementById('mlc-standings').style.display = '';
+
+                        standingsRows.forEach(apiTeam => {
+                            const key = String(apiTeam.team_name || '').toLowerCase();
+                            if (teamLookup[key]) return;
+                            mergedRows.push({
+                                team_name: apiTeam.team_name,
+                                abbreviation: apiTeam.abbreviation || '',
+                                rank: apiTeam.rank,
+                                matches: Number(apiTeam.matches || 0),
+                                wins: Number(apiTeam.wins || 0),
+                                losses: Number(apiTeam.losses || 0),
+                                no_result: Number(apiTeam.no_result ?? apiTeam.no_results ?? apiTeam.nr ?? apiTeam.noResult ?? 0),
+                                points: Number(apiTeam.points ?? ((apiTeam.wins || 0) * 2) + (apiTeam.no_result ?? apiTeam.no_results ?? apiTeam.nr ?? apiTeam.noResult ?? 0)),
+                                nrr: apiTeam.nrr ?? '0.000',
+                                url: '#',
+                                logo: '',
+                                color1: '#f8f9fa',
+                                color2: '#000000',
+                                color3: '#666666',
+                                stadium: '',
+                                stadiumId: '',
+                                stadiumCity: '',
+                                stadiumState: ''
+                            });
+                        });
+
+                        mergedRows.sort((a, b) => {
+                            const rankA = Number.isFinite(Number(a.rank)) ? Number(a.rank) : 999;
+                            const rankB = Number.isFinite(Number(b.rank)) ? Number(b.rank) : 999;
+                            if (rankA !== rankB) return rankA - rankB;
+                            if (b.points !== a.points) return b.points - a.points;
+                            if (b.wins !== a.wins) return b.wins - a.wins;
+                            return String(a.team_name).localeCompare(String(b.team_name));
+                        });
+
+                        if (mergedRows.length === 0) {
+                            cardsContainer.innerHTML = '<div class="text-center text-muted py-4">Standings are currently unavailable. Please check back later.</div>';
+                            return;
+                        }
+
+                        mergedRows.forEach((team, idx) => {
+                            const nrrValue = String(team.nrr ?? '0.000');
+                            const nrrClass = parseFloat(nrrValue) >= 0 ? 'text-success' : 'text-danger';
+                            const stadiumLink = team.stadiumId ? `<span onclick="event.preventDefault(); window.location='/stadium/${team.stadiumId}';" style="text-decoration: underline; cursor: pointer;">${team.stadium}</span>` : (team.stadium || '');
+                            cardsContainer.innerHTML += `
+                                ${idx === 4 ? '<div style="border-top: 4px solid #c62828; margin: 14px 0 6px;"></div><div style="text-align: center; font-size: 0.8rem; color: #ef9a9a; margin-bottom: 10px; letter-spacing: 0.04em; text-transform: uppercase;">Playoff Qualification Line</div>' : ''}
+                                <a href="${team.url || '#'}" class="team-item" style="background-color: ${team.color1 || '#f8f9fa'}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
+                                    <div style="flex-shrink: 0;">
+                                        <img src="${team.logo || ''}" alt="${team.team_name} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="color: ${team.color2 || '#000'}; font-weight: 700; font-size: 1.05rem;">#${idx + 1} ${team.team_name}</div>
+                                        <div style="color: ${team.color2 || '#000'}; font-weight: 700; font-size: 0.85rem; opacity: 0.8;">${team.abbreviation || ''} &middot; ${team.wins}W-${team.losses}L-${team.no_result}NR &middot; Pts ${team.points} &middot; NRR <span class="${nrrClass}">${nrrValue}</span></div>
+                                        <div style="color: ${team.color3 || '#666666'}; font-size: 0.82rem;">Matches ${team.matches}</div>
+                                        ${team.stadium ? `<div style="color: ${team.color3 || '#666666'}; font-size: 0.85rem;">${stadiumLink}</div><div style="color: ${team.color3 || '#666666'}; font-size: 0.8rem;">${team.stadiumCity}, ${team.stadiumState}</div>` : ''}
+                                    </div>
+                                </a>`;
+                        });
                     })
                     .catch(e => console.warn('Failed to load MLC standings:', e));
             </script>
-            {% for conference_name, divisions in organized_teams.items() %}
-            <div class="row mb-4 conference-section">
-                <div class="col-12">
-                    <h2 class="conference-title">{{ conference_name }}</h2>
-                    <div class="row">
-                        {% for division_name, teams in divisions.items() %}
-                        <div class="col-lg-6 col-md-6 mb-4">
-                            <div class="division-box">
-                                <h3 class="division-title">{{ division_name }}</h3>
-                                <div class="teams-list">
-                                    {% for team in teams %}
-                                    <a href="{{ url_for('team_detail_by_name', league_name=league_name.lower(), team_name=team.real_team_name.replace(' ', '_')) }}" class="team-item" style="background-color: {{ team.team_color_1 or '#f8f9fa' }}; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;">
-                                        <div style="flex-shrink: 0;">
-                                            <img src="{{ team.team_id | get_logo }}" alt="{{ team.real_team_name }} logo" style="width: 56px; height: 56px; object-fit: contain; background: rgba(255,255,255,0.9); border-radius: 8px; padding: 4px;" onerror="this.style.display='none';">
-                                        </div>
-                                        <div style="flex: 1; min-width: 0;">
-                                            {{ team_card_text(team, league_name) }}
-                                        </div>
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
             {% else %}
             <!-- Other leagues: Standard layout with conference boxes -->
             {% for conference_name, divisions in organized_teams.items() %}

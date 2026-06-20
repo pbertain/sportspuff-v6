@@ -13,11 +13,10 @@
     {% include 'shared_header.html' %}
 
     <div class="container my-5">
-        {% if not db_available %}
-        <div class="alert alert-warning text-center mb-4">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Database Not Available</strong> - The application is running in demo mode. 
-            Database setup is pending. Teams and stadiums will appear once the database is configured.
+        {% if using_fallback_catalog %}
+        <div class="alert alert-info text-center mb-4">
+            <i class="fas fa-database me-2"></i>
+            <strong>Catalog fallback active.</strong> Live schedules and scores are still coming from the API while team and stadium details are being served from the built-in data files.
         </div>
         {% endif %}
 
@@ -394,9 +393,22 @@
             }
             const info = seasonInfoCache[leagueLower];
             const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
+            const offseasonChampions = {
+                nba: {
+                    logo: '/static/images/logos/nba/new_york_knicks_logo.png',
+                    message: 'The Knicks won the championship'
+                },
+                nhl: {
+                    logo: '/static/images/logos/nhl/carolina_hurricanes_logo.png',
+                    message: 'The Hurricanes won the Stanley Cup'
+                }
+            };
             // Off-season: prefer 'last X won the YYYY <league>' if the API gave us a champion;
             // otherwise fall back to 'Regular season starts <date>'.
             if (phase === 'Off Season') {
+                if (offseasonChampions[leagueLower]) {
+                    return `Offseason — ${offseasonChampions[leagueLower].message}`;
+                }
                 const champion = info && info.last_champion;
                 if (champion && champion.year && (champion.abbreviation || champion.team)) {
                     const who = champion.abbreviation || champion.team;
@@ -421,8 +433,14 @@
             const isWcBreak = (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate));
             const eventContext = activeEventContext(leagueLower, pickedDate);
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
+            const offseasonChampions = {
+                nba: '/static/images/logos/nba/new_york_knicks_logo.png',
+                nhl: '/static/images/logos/nhl/carolina_hurricanes_logo.png'
+            };
+            const info = seasonInfoCache[leagueLower];
+            const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
             const upper = leagueLower.toUpperCase();
-            const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || '';
+            const logo = (phase === 'Off Season' && offseasonChampions[leagueLower]) || eventContext?.asset || LEAGUE_LOGOS[upper] || '';
             const name = eventContext?.label || upper;
             const brandClass = eventContext?.className || '';
             const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';

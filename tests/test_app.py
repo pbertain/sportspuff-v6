@@ -29,6 +29,7 @@ from app import (  # noqa: E402
     _fetch_api_json,
     _fetch_nfl_standings,
     _normalize_timezone,
+    _should_skip_live_api_fetch,
 )
 
 
@@ -66,12 +67,12 @@ class TestPageSmoke(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
-    def test_index_demo_mode_loads_with_theme_switcher(self):
+    def test_index_fallback_catalog_loads_with_theme_switcher(self):
         with patch("app.get_db_connection", return_value=None):
             response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Database Not Available", response.data)
+        self.assertIn(b"Catalog fallback active", response.data)
         self.assertIn(b'id="tournament-theme-select"', response.data)
         self.assertIn(b"static/js/tournament-theme.js", response.data)
         self.assertIn(b"All 12 leagues", response.data)
@@ -441,6 +442,14 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("${wins}W-${losses}L-${noResults}NR", template)
         self.assertIn("NR", template)
 
+    def test_mlc_standings_use_single_column_cards_and_playoff_line(self):
+        template = (PROJECT_ROOT / "templates/league_page.html").read_text()
+
+        self.assertIn("id=\"mlc-cards-container\"", template)
+        self.assertIn("Playoff Qualification Line", template)
+        self.assertIn("mergedRows", template)
+        self.assertIn("Object.values(teamLookup)", template)
+
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()
         app_source = (PROJECT_ROOT / "app.py").read_text()
@@ -731,8 +740,17 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("const visitorLogo = isTennis ? ''", template)
         self.assertIn("${isTennis ? '' : `", template)
 
+    def test_homepage_offseason_champion_banners_are_overridden_for_nba_and_nhl(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn("The Knicks won the championship", template)
+        self.assertIn("The Hurricanes won the Stanley Cup", template)
+        self.assertIn("/static/images/logos/nba/new_york_knicks_logo.png", template)
+        self.assertIn("/static/images/logos/nhl/carolina_hurricanes_logo.png", template)
+
+    @patch("app._should_skip_live_api_fetch", return_value=False)
     @patch("app.requests.get")
-    def test_fetch_nfl_standings_keys_by_name_and_abbreviation(self, mock_get):
+    def test_fetch_nfl_standings_keys_by_name_and_abbreviation(self, mock_get, _mock_skip):
         response = MagicMock()
         response.status_code = 200
         response.json.return_value = {
@@ -746,6 +764,31 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         self.assertEqual(records["Buffalo Bills"], {"wins": 13, "losses": 4, "ties": 0})
         self.assertEqual(records["BUF"], {"wins": 13, "losses": 4, "ties": 0})
+
+    @patch("app._fetch_api_json")
+    @patch("app.requests.get")
+    def test_mlc_season_info_falls_back_to_schedule_and_standings_when_endpoint_is_stale(self, mock_get, mock_fetch_api_json):
+        response = MagicMock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "year": 2026,
+            "current_phase": "Off Season",
+            "season_types": [],
+        }
+        mock_get.return_value = response
+        mock_fetch_api_json.side_effect = [
+            {"games": [{"game_id": "mlc-1"}]},
+            {"teams": [{"team_name": "Texas Super Kings", "matches": 1, "wins": 1, "losses": 0}]},
+        ]
+
+        data = app.test_client().get("/api/season-info/MLC").get_json()
+
+        self.assertEqual(data["current_phase"], "Regular Season")
+        self.assertEqual(data["season_types"][0]["display"], "Regular Season underway")
+
+    def test_nfl_live_fetches_are_skipped_during_offseason_today(self):
+        self.assertTrue(_should_skip_live_api_fetch("NFL", "today"))
+        self.assertFalse(_should_skip_live_api_fetch("NFL", "2026-09-10"))
 
 
 class TestDatabaseAndConfig(unittest.TestCase):
