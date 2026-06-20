@@ -429,28 +429,43 @@
             if (isToday) return 'No games scheduled tonight';
             return `No games on ${fmtPrettyDate(pickedDate)}`;
         }
+        function offseasonChampionOverride(leagueLower) {
+            const overrides = {
+                nba: {
+                    teamLogo: '/static/images/logos/nba/new_york_knicks_logo.png',
+                    teamName: 'Knicks',
+                    suffix: 'won the championship'
+                },
+                nhl: {
+                    teamLogo: '/static/images/logos/nhl/carolina_hurricanes_logo.png',
+                    teamName: 'Hurricanes',
+                    suffix: 'won the Stanley Cup'
+                }
+            };
+            return overrides[leagueLower] || null;
+        }
         function emptyBannerHtml(leagueLower, pickedDate, isToday) {
             const isWcBreak = (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate));
             const eventContext = activeEventContext(leagueLower, pickedDate);
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
-            const offseasonChampions = {
-                nba: '/static/images/logos/nba/new_york_knicks_logo.png',
-                nhl: '/static/images/logos/nhl/carolina_hurricanes_logo.png'
-            };
+            const championOverride = offseasonChampionOverride(leagueLower);
             const info = seasonInfoCache[leagueLower];
             const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
             const upper = leagueLower.toUpperCase();
-            const logo = (phase === 'Off Season' && offseasonChampions[leagueLower]) || eventContext?.asset || LEAGUE_LOGOS[upper] || '';
+            const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || '';
             const name = eventContext?.label || upper;
             const brandClass = eventContext?.className || '';
             const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';
+            const messageHtml = (phase === 'Off Season' && championOverride)
+                ? `Offseason &mdash; <span class="league-empty-champion">${championOverride.teamLogo ? `<img class="league-empty-champion-logo" src="${championOverride.teamLogo}" alt="${escapeHtml(championOverride.teamName)}" onerror="this.style.display='none';">` : ''}<span>${escapeHtml(championOverride.teamName)}</span></span> ${escapeHtml(championOverride.suffix)}`
+                : escapeHtml(message);
             return `
                 <div class="league-empty-banner league-empty-${leagueLower} ${brandClass}">
                     ${logo ? `<img class="league-empty-logo" src="${logo}" alt="${escapeHtml(name)}" onerror="this.style.display='none';">` : ''}
                     <div class="league-empty-name">${escapeHtml(name)}</div>
                     <div class="league-empty-sep">&middot;</div>
                     ${icon}
-                    <div class="league-empty-message">${escapeHtml(message)}</div>
+                    <div class="league-empty-message">${messageHtml}</div>
                 </div>`;
         }
 
@@ -2040,6 +2055,22 @@
         .league-empty-message {
             font-size: 0.98rem;
             color: rgba(255, 255, 255, 0.88);
+        }
+        .league-empty-champion {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.96);
+        }
+        .league-empty-champion-logo {
+            height: 22px;
+            width: 22px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 4px;
+            padding: 2px;
+            vertical-align: middle;
         }
         .league-empty-icon {
             color: rgba(255, 255, 255, 0.9);

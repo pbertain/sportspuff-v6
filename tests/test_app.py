@@ -747,6 +747,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("The Hurricanes won the Stanley Cup", template)
         self.assertIn("/static/images/logos/nba/new_york_knicks_logo.png", template)
         self.assertIn("/static/images/logos/nhl/carolina_hurricanes_logo.png", template)
+        self.assertIn("function offseasonChampionOverride", template)
+        self.assertIn("const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || ''", template)
+        self.assertIn("league-empty-champion-logo", template)
 
     @patch("app._should_skip_live_api_fetch", return_value=False)
     @patch("app.requests.get")
