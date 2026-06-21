@@ -458,6 +458,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function formatTimedPeriodStatus", template)
         self.assertIn("return `${periodPrefix}${period} ${clock}`", template)
         self.assertIn("/api/proxy/scores/wc/today?tz=${timezone}&fresh=1", template)
+        self.assertIn("function resolvedOffseasonChampion", template)
+        self.assertIn("league-empty-champion-row", template)
+        self.assertIn("findLeagueTeamData(champion.abbreviation, leagueUpper)", template)
+        self.assertIn("game.home_score,", template)
+        self.assertIn("game.result", template)
 
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()
@@ -761,11 +766,13 @@ class TestTournamentThemeAssets(unittest.TestCase):
     def test_homepage_offseason_champion_banners_are_overridden_for_nba_and_nhl(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()
 
-        self.assertIn("The Knicks won the championship", template)
-        self.assertIn("The Hurricanes won the Stanley Cup", template)
+        self.assertIn("teamName: 'Knicks'", template)
+        self.assertIn("teamName: 'Hurricanes'", template)
+        self.assertIn("suffix: 'won the championship'", template)
+        self.assertIn("suffix: 'won the Stanley Cup'", template)
         self.assertIn("/static/images/logos/nba/new_york_knicks_logo.png", template)
         self.assertIn("/static/images/logos/nhl/carolina_hurricanes_logo.png", template)
-        self.assertIn("function offseasonChampionOverride", template)
+        self.assertIn("function resolvedOffseasonChampion", template)
         self.assertIn("const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || ''", template)
         self.assertIn("league-empty-champion-logo", template)
 

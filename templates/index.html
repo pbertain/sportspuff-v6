@@ -279,6 +279,51 @@
                 || (teamAbbrev ? recordMap[teamAbbrev] : null)
                 || null;
         }
+        function findLeagueTeamData(teamName, leagueUpper) {
+            const teams = allTeamColors && allTeamColors[leagueUpper];
+            if (!teams || teamName === undefined || teamName === null) return null;
+            const needle = String(teamName).trim();
+            if (!teams || !needle) return null;
+            if (teams[needle]) return teams[needle];
+            const lowerNeedle = needle.toLowerCase();
+            for (const [key, data] of Object.entries(teams)) {
+                if (key.toLowerCase() === lowerNeedle) return data;
+            }
+            return null;
+        }
+        function resolvedOffseasonChampion(leagueLower, info) {
+            const overrides = {
+                nba: {
+                    teamLogo: '/static/images/logos/nba/new_york_knicks_logo.png',
+                    teamName: 'Knicks',
+                    suffix: 'won the championship'
+                },
+                nhl: {
+                    teamLogo: '/static/images/logos/nhl/carolina_hurricanes_logo.png',
+                    teamName: 'Hurricanes',
+                    suffix: 'won the Stanley Cup'
+                }
+            };
+            if (overrides[leagueLower]) return overrides[leagueLower];
+
+            const champion = info && info.last_champion;
+            if (!champion || !champion.year) return null;
+
+            const leagueUpper = leagueLower.toUpperCase();
+            const displayName = champion.abbreviation || champion.team || champion.name || '';
+            if (!displayName) return null;
+
+            const teamData = findLeagueTeamData(champion.team, leagueUpper)
+                || findLeagueTeamData(champion.name, leagueUpper)
+                || findLeagueTeamData(champion.abbreviation, leagueUpper)
+                || findLeagueTeamData(displayName, leagueUpper);
+
+            return {
+                teamLogo: teamData?.logo_url || '',
+                teamName: displayName,
+                suffix: `won the ${champion.year} ${leagueUpper}`
+            };
+        }
         function updateLeaguesButtonLabel() {
             const btn = document.getElementById('leagues-btn');
             if (!btn) return;
@@ -419,26 +464,12 @@
             }
             const info = seasonInfoCache[leagueLower];
             const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
-            const offseasonChampions = {
-                nba: {
-                    logo: '/static/images/logos/nba/new_york_knicks_logo.png',
-                    message: 'The Knicks won the championship'
-                },
-                nhl: {
-                    logo: '/static/images/logos/nhl/carolina_hurricanes_logo.png',
-                    message: 'The Hurricanes won the Stanley Cup'
-                }
-            };
             // Off-season: prefer 'last X won the YYYY <league>' if the API gave us a champion;
             // otherwise fall back to 'Regular season starts <date>'.
             if (phase === 'Off Season') {
-                if (offseasonChampions[leagueLower]) {
-                    return `Offseason — ${offseasonChampions[leagueLower].message}`;
-                }
-                const champion = info && info.last_champion;
-                if (champion && champion.year && (champion.abbreviation || champion.team)) {
-                    const who = champion.abbreviation || champion.team;
-                    return `Offseason — ${who} won the ${champion.year} ${leagueLower.toUpperCase()}`;
+                const championDisplay = resolvedOffseasonChampion(leagueLower, info);
+                if (championDisplay) {
+                    return `Offseason — ${championDisplay.teamName} ${championDisplay.suffix}`;
                 }
                 const next = nextRegularSeasonStart(info, pickedDate);
                 return next ? `Offseason — Regular season starts ${fmtPrettyDate(next)}` : 'Offseason';
@@ -455,35 +486,20 @@
             if (isToday) return 'No games scheduled tonight';
             return `No games on ${fmtPrettyDate(pickedDate)}`;
         }
-        function offseasonChampionOverride(leagueLower) {
-            const overrides = {
-                nba: {
-                    teamLogo: '/static/images/logos/nba/new_york_knicks_logo.png',
-                    teamName: 'Knicks',
-                    suffix: 'won the championship'
-                },
-                nhl: {
-                    teamLogo: '/static/images/logos/nhl/carolina_hurricanes_logo.png',
-                    teamName: 'Hurricanes',
-                    suffix: 'won the Stanley Cup'
-                }
-            };
-            return overrides[leagueLower] || null;
-        }
         function emptyBannerHtml(leagueLower, pickedDate, isToday) {
             const isWcBreak = (leagueLower === 'mls' && isMlsWorldCupBreak(pickedDate));
             const eventContext = activeEventContext(leagueLower, pickedDate);
             const message = emptyBannerMessage(leagueLower, pickedDate, isToday);
-            const championOverride = offseasonChampionOverride(leagueLower);
             const info = seasonInfoCache[leagueLower];
             const phase = info ? phaseForDate(info, pickedDate) : 'Regular Season';
+            const championOverride = phase === 'Off Season' ? resolvedOffseasonChampion(leagueLower, info) : null;
             const upper = leagueLower.toUpperCase();
             const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || '';
             const name = eventContext?.label || upper;
             const brandClass = eventContext?.className || '';
             const icon = isWcBreak ? '<i class="fas fa-futbol league-empty-icon"></i>' : '';
             const messageHtml = (phase === 'Off Season' && championOverride)
-                ? `Offseason &mdash; <span class="league-empty-champion">${championOverride.teamLogo ? `<img class="league-empty-champion-logo" src="${championOverride.teamLogo}" alt="${escapeHtml(championOverride.teamName)}" onerror="this.style.display='none';">` : ''}<span>${escapeHtml(championOverride.teamName)}</span></span> ${escapeHtml(championOverride.suffix)}`
+                ? `<span class="league-empty-champion-row"><span class="league-empty-champion-prefix">Offseason &mdash;</span><span class="league-empty-champion">${championOverride.teamLogo ? `<img class="league-empty-champion-logo" src="${championOverride.teamLogo}" alt="${escapeHtml(championOverride.teamName)}" onerror="this.style.display='none';">` : ''}<span>${escapeHtml(championOverride.teamName)}</span></span><span class="league-empty-champion-suffix">${escapeHtml(championOverride.suffix)}</span></span>`
                 : escapeHtml(message);
             return `
                 <div class="league-empty-banner league-empty-${leagueLower} ${brandClass}">
@@ -1123,8 +1139,13 @@
                     const isTennis = gameLeague === 'ATP' || gameLeague === 'WTA';
                     const isCyclingEvent = gameLeague === 'CYCLING';
                     const isWorldCup = gameLeague === 'WC';
-                    const hasCricketScore = isCricket && (game.cricket_home_score || game.cricket_away_score);
-                    const hasCricketLive = isCricket && isInProgress && game.cricket_result;
+                    const hasCricketScore = isCricket && [
+                        game.cricket_home_score,
+                        game.cricket_away_score,
+                        game.home_score,
+                        game.visitor_score
+                    ].some(value => value !== undefined && value !== null && String(value).trim() !== '');
+                    const hasCricketLive = isCricket && isInProgress && (game.cricket_result || game.result);
                     const hasScore = !isTennis && !isCyclingEvent && (
                         hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
                         && (isFinal || isInProgress || game.home_score > 0 || game.visitor_score > 0)));
@@ -2232,21 +2253,34 @@
             font-size: 0.98rem;
             color: rgba(255, 255, 255, 0.88);
         }
+        .league-empty-champion-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
         .league-empty-champion {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             font-weight: 600;
             color: rgba(255, 255, 255, 0.96);
+            line-height: 1;
         }
         .league-empty-champion-logo {
             height: 22px;
             width: 22px;
+            display: block;
+            flex-shrink: 0;
             object-fit: contain;
             background: rgba(255, 255, 255, 0.92);
             border-radius: 4px;
             padding: 2px;
             vertical-align: middle;
+        }
+        .league-empty-champion-prefix,
+        .league-empty-champion-suffix {
+            line-height: 1.2;
         }
         .league-empty-icon {
             color: rgba(255, 255, 255, 0.9);
