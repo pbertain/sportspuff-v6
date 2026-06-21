@@ -641,6 +641,44 @@ def _fetch_league_standings(api_base_url, league):
         return None
 
 
+def _fetch_team_records_map(api_base_url, league):
+    """Fetch standings keyed by team name/abbreviation for homepage record display."""
+    league_lower = str(league or '').lower()
+    try:
+        data = _fetch_api_json(f'/api/v1/standings/{league_lower}', timeout=10, api_base_url=api_base_url)
+        rows = list((data or {}).get('teams') or (data or {}).get('standings') or [])
+        records = {}
+        for row in rows:
+            name = (row.get('team_name') or row.get('name') or '').strip()
+            abbrev = (row.get('abbreviation') or row.get('team_abbreviation') or '').strip()
+            wins = int(row.get('wins') or 0)
+            losses = int(row.get('losses') or 0)
+            draws = int(row.get('draws') or row.get('ties') or 0)
+            no_result = int(row.get('no_result') or row.get('no_results') or row.get('nr') or row.get('noResult') or 0)
+            record = {
+                'wins': wins,
+                'losses': losses,
+                'ties': draws,
+                'draws': draws,
+                'no_result': no_result,
+                'points': row.get('points'),
+                'record': row.get('record'),
+            }
+            if league_lower == 'wc':
+                record['record'] = record['record'] or f'{wins}-{draws}-{losses}'
+            elif league_lower in ('ipl', 'mlc'):
+                record['record'] = record['record'] or f'{wins}-{losses}-{no_result}'
+            else:
+                record['record'] = record['record'] or f'{wins}-{losses}'
+            if name:
+                records[name] = record
+            if abbrev:
+                records[abbrev] = record
+        return records
+    except Exception:
+        return None
+
+
 def _background_cache_refresh(api_base_url):
     """Background thread: refresh cache every 60 seconds."""
     timezones = ['pt', 'et', 'ct', 'mt']
@@ -2475,6 +2513,24 @@ def nfl_team_records():
         logger.error(f"Unexpected error fetching NFL team records: {e}", exc_info=True)
         return jsonify({'teams': {}}), 200
 
+
+@app.route('/api/wc/team-records')
+def wc_team_records():
+    """Fetch World Cup team records from sportspuff-api standings."""
+    try:
+        cache_key = 'wc_team_records'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached), 200
+
+        team_records = _fetch_team_records_map(API_BASE_URL, 'wc') or {}
+        result = {'teams': team_records}
+        set_cached_response(cache_key, result)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Unexpected error fetching WC team records: {e}", exc_info=True)
+        return jsonify({'teams': {}}), 200
+
 @app.route('/api/wnba/season-info')
 def wnba_season_info():
     """Fetch WNBA season info (dates for preseason, regular season, postseason) from sportspuff-api."""
@@ -2522,6 +2578,24 @@ def cricket_standings(league):
     except Exception as e:
         logger.error(f"Error fetching {league} standings: {e}")
         return jsonify({'standings': [], 'available': False}), 200
+
+
+@app.route('/api/mlc/team-records')
+def mlc_team_records():
+    """Fetch MLC team records from sportspuff-api standings."""
+    try:
+        cache_key = 'mlc_team_records'
+        cached = get_cached_response(cache_key, 'schedule')
+        if cached:
+            return jsonify(cached), 200
+
+        team_records = _fetch_team_records_map(API_BASE_URL, 'mlc') or {}
+        result = {'teams': team_records}
+        set_cached_response(cache_key, result)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Unexpected error fetching MLC team records: {e}", exc_info=True)
+        return jsonify({'teams': {}}), 200
 
 @app.route('/api/ipl/standings')
 def ipl_standings():
@@ -2673,6 +2747,7 @@ def proxy_scores(league, date):
     try:
         # Get timezone from query parameter, default to 'pt'
         tz = _normalize_timezone(request.args.get('tz', 'pt'))
+        force_fresh = request.args.get('fresh') == '1'
 
         if date.lower() == 'today':
             cache_key = f'scores:{league}:today:{tz}'
@@ -2684,7 +2759,7 @@ def proxy_scores(league, date):
         if _should_skip_live_api_fetch(league, api_date):
             return jsonify({'date': _iso_today(), 'scores': []}), 200
 
-        cached_response = get_cached_response(cache_key, 'scores')
+        cached_response = None if force_fresh else get_cached_response(cache_key, 'scores')
         if cached_response:
             return jsonify(cached_response)
 

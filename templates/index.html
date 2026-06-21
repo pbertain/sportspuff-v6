@@ -253,6 +253,32 @@
             document.querySelectorAll('.league-checkbox:checked').forEach(cb => set.add(cb.value));
             return set;
         }
+        function formatTimedPeriodStatus(game, gameLeague) {
+            const period = parseInt(game.current_period, 10);
+            const clock = String(game.time_remaining || '').trim();
+            if (!Number.isFinite(period) || !clock) return '';
+            if (gameLeague === 'MLB') {
+                const halfRaw = clock.toLowerCase();
+                const half = halfRaw.includes('top') ? 'Top' :
+                             halfRaw.includes('mid') ? 'Mid' :
+                             halfRaw.includes('bot') ? 'Bot' :
+                             halfRaw.includes('end') ? 'End' : '';
+                return half ? `${half} ${period}` : `Inn ${period}`;
+            }
+            if (period > 4) {
+                const otCount = period - 4;
+                return `${otCount === 1 ? 'OT' : `${otCount}OT`} ${clock}`;
+            }
+            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
+            return `${periodPrefix}${period} ${clock}`;
+        }
+
+        function lookupTeamRecord(recordMap, teamName, teamAbbrev) {
+            if (!recordMap || typeof recordMap !== 'object') return null;
+            return recordMap[teamName]
+                || (teamAbbrev ? recordMap[teamAbbrev] : null)
+                || null;
+        }
         function updateLeaguesButtonLabel() {
             const btn = document.getElementById('leagues-btn');
             if (!btn) return;
@@ -622,6 +648,8 @@
                 let nflTeamRecords = {}; // Initialize NFL team records - will be populated if needed
                 let nhlPlayoffSeries = {}; // NHL playoff series records
                 let mlbTeamRecords = {}; // MLB team records from database
+                let wcTeamRecords = {};
+                let mlcTeamRecords = {};
                 
                 async function fetchWithFallback(proxyUrl, directUrl) {
                     try {
@@ -667,21 +695,27 @@
                                 nflTeamRecords = cachedData.nflRecords || {};
                                 nhlPlayoffSeries = cachedData.nhlSeries || {};
                                 mlbTeamRecords = cachedData.mlbRecords || {};
+                                wcTeamRecords = cachedData.wcRecords || {};
+                                mlcTeamRecords = cachedData.mlcRecords || {};
                                 // Render cached data immediately, then refresh
                             }
                         } catch(e) {}
                     }
 
                     // Fetch supplemental data and league data in parallel
-                    const [nflRes, nhlRes, mlbRes, allData] = await Promise.all([
+                    const [nflRes, nhlRes, mlbRes, wcRes, mlcRes, allData] = await Promise.all([
                         fetch('/api/nfl/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch('/api/nhl/playoff-series').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch('/api/mlb/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/wc/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                        fetch('/api/mlc/team-records').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch(`/api/proxy/all-scores/${apiDate}?tz=${timezone}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                     ]);
                     nflTeamRecords = nflRes.teams || {};
                     nhlPlayoffSeries = nhlRes.series || {};
                     mlbTeamRecords = mlbRes.teams || {};
+                    wcTeamRecords = wcRes.teams || {};
+                    mlcTeamRecords = mlcRes.teams || {};
 
                     let allGames = [];
                     let allScores = [];
@@ -700,6 +734,17 @@
                     scheduleData = { date: dateStr, games: allGames };
                     scoresData = { date: dateStr, scores: allScores };
 
+                    if (isToday && activeLeagues.has('wc')) {
+                        try {
+                            const freshWcScores = await fetch(`/api/proxy/scores/wc/today?tz=${timezone}&fresh=1`).then(r => r.ok ? r.json() : { scores: [] });
+                            const otherScores = (scoresData.scores || []).filter(g => (g.league || g.sport) !== 'wc');
+                            const wcScores = (freshWcScores.scores || []).map(g => ({ ...g, league: 'wc', sport: 'wc' }));
+                            scoresData = { date: freshWcScores.date || scoresData.date, scores: [...otherScores, ...wcScores] };
+                        } catch (e) {
+                            console.warn('Failed to refresh WC scores with fresh fetch:', e);
+                        }
+                    }
+
                     // Cache for next load
                     try {
                         localStorage.setItem(cacheKey, JSON.stringify({
@@ -708,7 +753,9 @@
                             scores: scoresData,
                             nflRecords: nflTeamRecords,
                             nhlSeries: nhlPlayoffSeries,
-                            mlbRecords: mlbTeamRecords
+                            mlbRecords: mlbTeamRecords,
+                            wcRecords: wcTeamRecords,
+                            mlcRecords: mlcTeamRecords
                         }));
                     } catch(e) {}
                 } else {
@@ -728,9 +775,31 @@
                             console.warn('Error fetching NFL team records:', error);
                         }
                     }
+                    if (league === 'wc') {
+                        try {
+                            const wcRecordsResponse = await fetch('/api/wc/team-records');
+                            if (wcRecordsResponse.ok) {
+                                const wcRecordsData = await wcRecordsResponse.json();
+                                wcTeamRecords = wcRecordsData.teams || {};
+                            }
+                        } catch (error) {
+                            console.warn('Error fetching WC team records:', error);
+                        }
+                    }
+                    if (league === 'mlc') {
+                        try {
+                            const mlcRecordsResponse = await fetch('/api/mlc/team-records');
+                            if (mlcRecordsResponse.ok) {
+                                const mlcRecordsData = await mlcRecordsResponse.json();
+                                mlcTeamRecords = mlcRecordsData.teams || {};
+                            }
+                        } catch (error) {
+                            console.warn('Error fetching MLC team records:', error);
+                        }
+                    }
                     
                     const scheduleProxy = proxyScheduleUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
-                    const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}`;
+                    const scoresProxy = proxyScoresUrl.replace(/\/nba\//, `/${league}/`) + `?tz=${timezone}${league === 'wc' && isToday ? '&fresh=1' : ''}`;
                     const scheduleDirect = `${API_BASE}/schedule/${league}/${apiDate}?tz=${timezone}`;
                     const scoresDirect = `${API_BASE}/scores/${league}/${apiDate}?tz=${timezone}`;
                     
@@ -1217,10 +1286,7 @@
                                          halfRaw.includes('end') ? 'End' : halfRaw;
                             statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
                         } else if (game.current_period && game.time_remaining) {
-                            const period = parseInt(game.current_period);
-                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
-                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                            statusDisplay = formatTimedPeriodStatus(game, gameLeague) || 'Live';
                         } else {
                             statusDisplay = 'Live';
                         }
@@ -1234,10 +1300,7 @@
                                          halfRaw.includes('end') ? 'End' : halfRaw;
                             statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
                         } else {
-                            const period = parseInt(game.current_period);
-                            const periodPrefix = gameLeague === 'NHL' ? 'P' : 'Q';
-                            let periodDisplay = period > 4 ? (period - 4 === 1 ? 'OT' : `${period - 4}OT`) : `${periodPrefix} ${period}`;
-                            statusDisplay = `${periodDisplay} - ${game.time_remaining}`;
+                            statusDisplay = formatTimedPeriodStatus(game, gameLeague) || 'Live';
                         }
                     } else if (isScheduled && game.game_time) {
                         let gameDate;
@@ -1343,6 +1406,22 @@
                         } else if (game.home_wins && game.home_losses) {
                             homeRecord = `${game.home_wins}-${game.home_losses}`;
                         }
+                    } else if (gameLeague === 'WC') {
+                        const visitorAbbrev = getWorldCupTeamAbbrev(game.visitor_team);
+                        const homeAbbrev = getWorldCupTeamAbbrev(game.home_team);
+                        const vRec = lookupTeamRecord(wcTeamRecords, game.visitor_team, visitorAbbrev);
+                        const hRec = lookupTeamRecord(wcTeamRecords, game.home_team, homeAbbrev);
+                        visitorRecord = vRec?.record || (vRec ? `${vRec.wins}-${vRec.draws}-${vRec.losses}` : '');
+                        homeRecord = hRec?.record || (hRec ? `${hRec.wins}-${hRec.draws}-${hRec.losses}` : '');
+                    } else if (gameLeague === 'MLC' || gameLeague === 'IPL') {
+                        const visitorAbbrev = game.visitor_team_abbrev || '';
+                        const homeAbbrev = game.home_team_abbrev || '';
+                        const vRec = lookupTeamRecord(mlcTeamRecords, game.visitor_team, visitorAbbrev);
+                        const hRec = lookupTeamRecord(mlcTeamRecords, game.home_team, homeAbbrev);
+                        const visitorNr = vRec?.no_result ?? game.visitor_no_result ?? 0;
+                        const homeNr = hRec?.no_result ?? game.home_no_result ?? 0;
+                        if (vRec) visitorRecord = `${vRec.wins}-${vRec.losses}-${visitorNr}`;
+                        if (hRec) homeRecord = `${hRec.wins}-${hRec.losses}-${homeNr}`;
                     } else {
                         // Other leagues: W-L
                         visitorRecord = (game.visitor_wins !== undefined && game.visitor_losses !== undefined)
@@ -1376,8 +1455,8 @@
                                 scoreDisplay = `<span style="font-size:0.8rem">${resultText}</span>`;
                             } else if (vScore || hScore) {
                                 scoreDisplay = `<span style="font-size:0.9rem">${vScore || 'batting'}</span><br><span style="font-size:0.9rem">${hScore || 'batting'}</span>`;
-                            } else if (game.cricket_result) {
-                                scoreDisplay = `<span style="font-size:0.8rem">${game.cricket_result}</span>`;
+                            } else if (game.cricket_result || game.result) {
+                                scoreDisplay = `<span style="font-size:0.8rem">${game.cricket_result || game.result}</span>`;
                             } else {
                                 scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }
@@ -1510,6 +1589,14 @@
                             home_wins: (() => {
                                 if (scoreData?.home_wins !== undefined) return scoreData.home_wins;
                                 if (game.home_wins !== undefined) return game.home_wins;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.home_team, game.home_team_abbrev || '');
+                                    if (rec) return rec.wins;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.home_team, getWorldCupTeamAbbrev(game.home_team));
+                                    if (rec) return rec.wins;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     // Try matching by various team name formats
                                     const homeTeamName = game.home_team;
@@ -1525,6 +1612,14 @@
                             home_losses: (() => {
                                 if (scoreData?.home_losses !== undefined) return scoreData.home_losses;
                                 if (game.home_losses !== undefined) return game.home_losses;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.home_team, game.home_team_abbrev || '');
+                                    if (rec) return rec.losses;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.home_team, getWorldCupTeamAbbrev(game.home_team));
+                                    if (rec) return rec.losses;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const homeTeamName = game.home_team;
                                     const homeTeamAbbrev = game.home_team_abbrev || '';
@@ -1539,6 +1634,14 @@
                             home_ties: (() => {
                                 if (scoreData?.home_ties !== undefined && scoreData?.home_ties !== null) return scoreData.home_ties;
                                 if (game.home_ties !== undefined && game.home_ties !== null) return game.home_ties;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.home_team, game.home_team_abbrev || '');
+                                    if (rec) return rec.no_result ?? 0;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.home_team, getWorldCupTeamAbbrev(game.home_team));
+                                    if (rec) return rec.draws ?? rec.ties ?? 0;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const homeTeamName = game.home_team;
                                     const homeTeamAbbrev = game.home_team_abbrev || '';
@@ -1553,6 +1656,14 @@
                             visitor_wins: (() => {
                                 if (scoreData?.visitor_wins !== undefined) return scoreData.visitor_wins;
                                 if (game.visitor_wins !== undefined) return game.visitor_wins;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.visitor_team, game.visitor_team_abbrev || '');
+                                    if (rec) return rec.wins;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.visitor_team, getWorldCupTeamAbbrev(game.visitor_team));
+                                    if (rec) return rec.wins;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
@@ -1567,6 +1678,14 @@
                             visitor_losses: (() => {
                                 if (scoreData?.visitor_losses !== undefined) return scoreData.visitor_losses;
                                 if (game.visitor_losses !== undefined) return game.visitor_losses;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.visitor_team, game.visitor_team_abbrev || '');
+                                    if (rec) return rec.losses;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.visitor_team, getWorldCupTeamAbbrev(game.visitor_team));
+                                    if (rec) return rec.losses;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
@@ -1581,6 +1700,14 @@
                             visitor_ties: (() => {
                                 if (scoreData?.visitor_ties !== undefined && scoreData?.visitor_ties !== null) return scoreData.visitor_ties;
                                 if (game.visitor_ties !== undefined && game.visitor_ties !== null) return game.visitor_ties;
+                                if (gameLeague === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(mlcTeamRecords, game.visitor_team, game.visitor_team_abbrev || '');
+                                    if (rec) return rec.no_result ?? 0;
+                                }
+                                if (gameLeague === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                    const rec = lookupTeamRecord(wcTeamRecords, game.visitor_team, getWorldCupTeamAbbrev(game.visitor_team));
+                                    if (rec) return rec.draws ?? rec.ties ?? 0;
+                                }
                                 if (gameLeague === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                     const visitorTeamName = game.visitor_team;
                                     const visitorTeamAbbrev = game.visitor_team_abbrev || '';
@@ -1660,18 +1787,30 @@
                                 cricket_winner: scoreGame.cricket_winner || '',
                                 cricket_result: scoreGame.cricket_result || '',
                                 // For NFL, try to get records from Tank01 API if not in score data
-                                home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins : null),
-                                home_losses: scoreGame.home_losses !== undefined && scoreGame.home_losses !== null ? scoreGame.home_losses : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].losses : null),
-                                home_ties: scoreGame.home_ties !== undefined && scoreGame.home_ties !== null ? scoreGame.home_ties : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].ties : null),
-                                visitor_wins: scoreGame.visitor_wins !== undefined && scoreGame.visitor_wins !== null ? scoreGame.visitor_wins : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].wins : null),
-                                visitor_losses: scoreGame.visitor_losses !== undefined && scoreGame.visitor_losses !== null ? scoreGame.visitor_losses : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].losses : null),
-                                visitor_ties: scoreGame.visitor_ties !== undefined && scoreGame.visitor_ties !== null ? scoreGame.visitor_ties : 
-                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].ties : null),
+                                home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.home_team, getWorldCupTeamAbbrev(scoreGame.home_team))?.wins ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.home_team, scoreGame.home_team_abbrev || '')?.wins ?? null) : null))),
+                                home_losses: scoreGame.home_losses !== undefined && scoreGame.home_losses !== null ? scoreGame.home_losses :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].losses :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.home_team, getWorldCupTeamAbbrev(scoreGame.home_team))?.losses ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.home_team, scoreGame.home_team_abbrev || '')?.losses ?? null) : null))),
+                                home_ties: scoreGame.home_ties !== undefined && scoreGame.home_ties !== null ? scoreGame.home_ties :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].ties :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.home_team, getWorldCupTeamAbbrev(scoreGame.home_team))?.draws ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.home_team, scoreGame.home_team_abbrev || '')?.no_result ?? null) : null))),
+                                visitor_wins: scoreGame.visitor_wins !== undefined && scoreGame.visitor_wins !== null ? scoreGame.visitor_wins :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].wins :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.visitor_team, getWorldCupTeamAbbrev(scoreGame.visitor_team))?.wins ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.visitor_team, scoreGame.visitor_team_abbrev || '')?.wins ?? null) : null))),
+                                visitor_losses: scoreGame.visitor_losses !== undefined && scoreGame.visitor_losses !== null ? scoreGame.visitor_losses :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].losses :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.visitor_team, getWorldCupTeamAbbrev(scoreGame.visitor_team))?.losses ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.visitor_team, scoreGame.visitor_team_abbrev || '')?.losses ?? null) : null))),
+                                visitor_ties: scoreGame.visitor_ties !== undefined && scoreGame.visitor_ties !== null ? scoreGame.visitor_ties :
+                                    (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.visitor_team] ? nflTeamRecords[scoreGame.visitor_team].ties :
+                                    (scoreLeague === 'wc' ? (lookupTeamRecord(wcTeamRecords, scoreGame.visitor_team, getWorldCupTeamAbbrev(scoreGame.visitor_team))?.draws ?? null) :
+                                    (scoreLeague === 'mlc' ? (lookupTeamRecord(mlcTeamRecords, scoreGame.visitor_team, scoreGame.visitor_team_abbrev || '')?.no_result ?? null) : null))),
                                 home_otl: scoreGame.home_otl !== undefined && scoreGame.home_otl !== null ? scoreGame.home_otl : null,
                                 visitor_otl: scoreGame.visitor_otl !== undefined && scoreGame.visitor_otl !== null ? scoreGame.visitor_otl : null,
                                 // Also keep old field names for backward compatibility
@@ -1729,7 +1868,7 @@
                             if (scoreGame.visitor_losses !== undefined) {
                                 existing.visitor_losses = scoreGame.visitor_losses;
                             }
-                            // For NFL, update records from Tank01 API if missing
+                            // For NFL, WC, and MLC update records from standings if missing
                             if (existing.league === 'nfl' && Object.keys(nflTeamRecords).length > 0) {
                                 if ((!existing.home_wins || existing.home_wins === null) && nflTeamRecords[scoreGame.home_team]) {
                                     existing.home_wins = nflTeamRecords[scoreGame.home_team].wins;
@@ -1748,6 +1887,32 @@
                                     existing.visitor_wins = nflTeamRecords[scoreGame.visitor_team_abbrev].wins;
                                     existing.visitor_losses = nflTeamRecords[scoreGame.visitor_team_abbrev].losses;
                                     existing.visitor_ties = nflTeamRecords[scoreGame.visitor_team_abbrev].ties;
+                                }
+                            } else if (existing.league === 'wc' && Object.keys(wcTeamRecords).length > 0) {
+                                const homeRec = lookupTeamRecord(wcTeamRecords, scoreGame.home_team, getWorldCupTeamAbbrev(scoreGame.home_team));
+                                const visitorRec = lookupTeamRecord(wcTeamRecords, scoreGame.visitor_team, getWorldCupTeamAbbrev(scoreGame.visitor_team));
+                                if (homeRec) {
+                                    existing.home_wins = homeRec.wins;
+                                    existing.home_losses = homeRec.losses;
+                                    existing.home_ties = homeRec.draws ?? homeRec.ties ?? 0;
+                                }
+                                if (visitorRec) {
+                                    existing.visitor_wins = visitorRec.wins;
+                                    existing.visitor_losses = visitorRec.losses;
+                                    existing.visitor_ties = visitorRec.draws ?? visitorRec.ties ?? 0;
+                                }
+                            } else if (existing.league === 'mlc' && Object.keys(mlcTeamRecords).length > 0) {
+                                const homeRec = lookupTeamRecord(mlcTeamRecords, scoreGame.home_team, scoreGame.home_team_abbrev || '');
+                                const visitorRec = lookupTeamRecord(mlcTeamRecords, scoreGame.visitor_team, scoreGame.visitor_team_abbrev || '');
+                                if (homeRec) {
+                                    existing.home_wins = homeRec.wins;
+                                    existing.home_losses = homeRec.losses;
+                                    existing.home_ties = homeRec.no_result ?? 0;
+                                }
+                                if (visitorRec) {
+                                    existing.visitor_wins = visitorRec.wins;
+                                    existing.visitor_losses = visitorRec.losses;
+                                    existing.visitor_ties = visitorRec.no_result ?? 0;
                                 }
                             }
                             // Update OTL from scores - API uses home_otl/visitor_otl
@@ -1982,11 +2147,22 @@
 
             document.getElementById('timezone-select').addEventListener('change', loadScoresAndSchedules);
 
-            // Auto-refresh every 60 seconds if page is visible AND viewing today
+            // Auto-refresh a WC-only homepage view every 20s; broader views stay on 60s.
             setInterval(() => {
                 if (document.hidden) return;
                 const todayStr = new Date().toISOString().slice(0, 10);
                 if (datePickerEl.value && datePickerEl.value !== todayStr) return;
+                const activeLeagues = getActiveLeagues();
+                if (activeLeagues.size === 1 && activeLeagues.has('wc')) {
+                    loadScoresAndSchedules({ showLoading: false });
+                    return;
+                }
+            }, 20000);
+            setInterval(() => {
+                if (document.hidden) return;
+                const todayStr = new Date().toISOString().slice(0, 10);
+                if (datePickerEl.value && datePickerEl.value !== todayStr) return;
+                if (getActiveLeagues().has('wc')) return;
                 loadScoresAndSchedules({ showLoading: false });
             }, 60000);
         });

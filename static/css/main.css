@@ -1422,6 +1422,14 @@ main, .main-content {
   white-space: nowrap;
 }
 
+.league-schedule-record {
+  color: rgba(245, 245, 245, 0.72);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.15;
+  margin-top: 2px;
+}
+
 .league-schedule-score {
   color: var(--golden-yellow);
   font-size: 1rem;

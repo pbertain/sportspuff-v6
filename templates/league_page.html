@@ -378,7 +378,7 @@
                                 {% endfor %}
                             {% endfor %}
                         </div>
-                        <h2 class="conference-title">{{ conference_name }}</h2>
+                        <h2 class="conference-title">{% if conference_name == 'AL' %}American League{% elif conference_name == 'NL' %}National League{% else %}{{ conference_name }}{% endif %}</h2>
                         {% for division_name, teams in divisions.items() %}
                         <div class="division-box">
                             <h3 class="division-title">{{ division_name }}</h3>
@@ -415,7 +415,7 @@
                                 {% endfor %}
                             {% endfor %}
                         </div>
-                        <h2 class="conference-title">{{ conference_name }}</h2>
+                        <h2 class="conference-title">{% if conference_name == 'AL' %}American League{% elif conference_name == 'NL' %}National League{% else %}{{ conference_name }}{% endif %}</h2>
                     <div class="row">
                         {% for division_name, teams in divisions.items() %}
                         <div class="col-lg-4 col-md-6 mb-4">
@@ -703,10 +703,30 @@
                 return game.game_id || [game.home_team, game.visitor_team, game.game_time].filter(Boolean).join('|');
             }
 
+            function formatTimedPeriodStatus(game) {
+                const period = parseInt(game.current_period, 10);
+                const clock = String(game.time_remaining || '').trim();
+                if (!Number.isFinite(period) || !clock) return '';
+                if (LEAGUE === 'MLB') {
+                    const halfRaw = clock.toLowerCase();
+                    const half = halfRaw.includes('top') ? 'Top' :
+                                 halfRaw.includes('mid') ? 'Mid' :
+                                 halfRaw.includes('bot') ? 'Bot' :
+                                 halfRaw.includes('end') ? 'End' : '';
+                    return half ? `${half} ${period}` : `Inn ${period}`;
+                }
+                if (period > 4) {
+                    const otCount = period - 4;
+                    return `${otCount === 1 ? 'OT' : `${otCount}OT`} ${clock}`;
+                }
+                return `${LEAGUE === 'NHL' ? 'P' : 'Q'}${period} ${clock}`;
+            }
+
             function statusText(game) {
                 const status = String(game.game_status || '').toLowerCase();
                 if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
-                if (['in_progress', 'live', 'active'].includes(status)) return game.time_remaining || 'Live';
+                if (['in_progress', 'live', 'active'].includes(status)) return formatTimedPeriodStatus(game) || game.time_remaining || 'Live';
+                if (game.current_period && game.time_remaining) return formatTimedPeriodStatus(game) || game.time_remaining || 'Live';
                 if (game.game_time) {
                     const d = new Date(game.game_time);
                     if (!Number.isNaN(d.getTime())) {
@@ -728,12 +748,35 @@
 
             function scoreText(game) {
                 const isCricket = LEAGUE === 'IPL' || LEAGUE === 'MLC';
-                if (isCricket && (game.cricket_away_score || game.cricket_home_score)) {
+                if (isCricket && (game.cricket_away_score || game.cricket_home_score || game.visitor_score || game.home_score)) {
                     return cricketScoreLines(game);
                 }
                 const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
                     && (game.is_final || Number(game.home_score) > 0 || Number(game.visitor_score) > 0);
                 return escapeHtml(hasScore ? `${game.visitor_score} - ${game.home_score}` : 'vs');
+            }
+
+            function recordText(game, side) {
+                const wins = Number(game[`${side}_wins`]);
+                const losses = Number(game[`${side}_losses`]);
+                if (!Number.isFinite(wins) || !Number.isFinite(losses)) return '';
+                if (LEAGUE === 'MLC' || LEAGUE === 'IPL') {
+                    const noResult = Number(game[`${side}_no_result`] ?? 0);
+                    return `${wins}-${losses}-${noResult}`;
+                }
+                if (LEAGUE === 'WC' || LEAGUE === 'MLS') {
+                    const draws = Number(game[`${side}_ties`] ?? game[`${side}_draws`] ?? 0);
+                    return `${wins}-${draws}-${losses}`;
+                }
+                if (LEAGUE === 'NFL') {
+                    const ties = Number(game[`${side}_ties`] ?? 0);
+                    return `${wins}-${losses}-${ties}`;
+                }
+                if (LEAGUE === 'NHL') {
+                    const otl = Number(game[`${side}_otl`] ?? 0);
+                    return `${wins}-${losses}-${otl}`;
+                }
+                return `${wins}-${losses}`;
             }
 
             function emptyMessage(picked, seasonInfo) {
@@ -764,13 +807,15 @@
                 const visitor = game.visitor_team || game.away_team || 'TBD';
                 const home = game.home_team || 'TBD';
                 const score = scoreText(game);
+                const visitorRecord = recordText(game, 'visitor');
+                const homeRecord = recordText(game, 'home');
                 return `<div class="league-schedule-game">
-                    <div class="league-schedule-team text-start">${escapeHtml(visitor)}</div>
+                    <div class="league-schedule-team text-start">${escapeHtml(visitor)}${visitorRecord ? `<div class="league-schedule-record">${escapeHtml(visitorRecord)}</div>` : ''}</div>
                     <div class="league-schedule-score">
                         <div>${score}</div>
                         <span>${escapeHtml(statusText(game))}</span>
                     </div>
-                    <div class="league-schedule-team text-end">${escapeHtml(home)}</div>
+                    <div class="league-schedule-team text-end">${escapeHtml(home)}${homeRecord ? `<div class="league-schedule-record">${escapeHtml(homeRecord)}</div>` : ''}</div>
                 </div>`;
             }
 
@@ -785,10 +830,13 @@
                 results.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
                 try {
-                    const [seasonInfo, scheduleRes, scoresRes] = await Promise.all([
+                    const [seasonInfo, scheduleRes, scoresRes, mlcRecordsRes] = await Promise.all([
                         fetch(`/api/season-info/${leagueLower}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                         fetch(`/api/proxy/schedule/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { games: [] }),
-                        fetch(`/api/proxy/scores/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { scores: [] })
+                        fetch(`/api/proxy/scores/${leagueLower}/${apiDate}?tz=${encodeURIComponent(timezone)}`).then(r => r.ok ? r.json() : { scores: [] }),
+                        LEAGUE === 'MLC'
+                            ? fetch('/api/mlc/team-records').then(r => r.ok ? r.json() : { teams: {} }).catch(() => ({ teams: {} }))
+                            : Promise.resolve({ teams: {} })
                     ]);
                     renderSeasonContext(seasonInfo);
                     const byId = {};
@@ -797,12 +845,30 @@
                         const key = gameKey(score);
                         byId[key] = {...(byId[key] || {}), ...score};
                     });
+                    const mlcRecords = mlcRecordsRes.teams || {};
                     const games = Object.values(byId).sort((a, b) => {
                         if (a.game_time && b.game_time) return new Date(a.game_time) - new Date(b.game_time);
                         if (a.game_time) return -1;
                         if (b.game_time) return 1;
                         return 0;
                     });
+
+                    if (LEAGUE === 'MLC') {
+                        games.forEach(game => {
+                            const homeRecord = mlcRecords[game.home_team_abbrev] || mlcRecords[game.home_team] || {};
+                            const visitorRecord = mlcRecords[game.visitor_team_abbrev] || mlcRecords[game.visitor_team] || {};
+                            if (homeRecord.wins !== undefined) {
+                                game.home_wins = homeRecord.wins;
+                                game.home_losses = homeRecord.losses;
+                                game.home_no_result = homeRecord.no_result ?? 0;
+                            }
+                            if (visitorRecord.wins !== undefined) {
+                                game.visitor_wins = visitorRecord.wins;
+                                game.visitor_losses = visitorRecord.losses;
+                                game.visitor_no_result = visitorRecord.no_result ?? 0;
+                            }
+                        });
+                    }
 
                     if (games.length === 0) {
                         results.innerHTML = `<div class="league-schedule-empty">${escapeHtml(emptyMessage(picked, seasonInfo))}</div>`;

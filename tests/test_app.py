@@ -450,6 +450,15 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("mergedRows", template)
         self.assertIn("Object.values(teamLookup)", template)
 
+    def test_homepage_fetches_wc_and_mlc_records_and_uses_compact_live_period_status(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn("fetch('/api/wc/team-records')", template)
+        self.assertIn("fetch('/api/mlc/team-records')", template)
+        self.assertIn("function formatTimedPeriodStatus", template)
+        self.assertIn("return `${periodPrefix}${period} ${clock}`", template)
+        self.assertIn("/api/proxy/scores/wc/today?tz=${timezone}&fresh=1", template)
+
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()
         app_source = (PROJECT_ROOT / "app.py").read_text()
@@ -460,6 +469,15 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("[('AFC', 'East'), ('AFC', 'West'), ('NFC', 'East'), ('NFC', 'West')]", app_source)
         self.assertIn("[('AFC', 'North'), ('AFC', 'South'), ('NFC', 'North'), ('NFC', 'South')]", app_source)
         self.assertIn("{{ team.team_wins }}W-{{ team.team_ties or 0 }}D-{{ team.team_losses }}L", template)
+
+    def test_league_page_expands_mlb_league_names_and_enriches_mlc_schedule_records(self):
+        template = (PROJECT_ROOT / "templates/league_page.html").read_text()
+
+        self.assertIn("American League", template)
+        self.assertIn("National League", template)
+        self.assertIn("fetch('/api/mlc/team-records')", template)
+        self.assertIn("league-schedule-record", template)
+        self.assertIn("formatTimedPeriodStatus", template)
 
     def test_league_page_standings_records_and_readable_card_lines(self):
         template = (PROJECT_ROOT / "templates/league_page.html").read_text()
