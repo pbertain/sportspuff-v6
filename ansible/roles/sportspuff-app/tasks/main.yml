@@ -90,9 +90,13 @@
 - name: Set postgres user password (idempotent; (re)applies the configured value)
   become: yes
   become_user: postgres
-  command: >-
-    psql -v ON_ERROR_STOP=1
-    -c "ALTER USER {{ db_user }} PASSWORD '{{ db_password | replace(\"'\", \"''\") }}';"
+  shell: >-
+    psql -v ON_ERROR_STOP=1 --set=db_password="$DB_PASSWORD"
+    -c "ALTER USER {{ db_user }} PASSWORD :'db_password';"
+  args:
+    executable: /bin/bash
+  environment:
+    DB_PASSWORD: "{{ db_password }}"
   changed_when: false
   no_log: true
 
