@@ -77,6 +77,7 @@
                     <h2 class="league-schedule-title mb-1">Schedule &amp; Scores</h2>
                     <div class="league-schedule-meta">Games for {{ league_name }}</div>
                     <div id="league-schedule-context" class="league-schedule-context"></div>
+                    <div id="league-schedule-freshness" class="league-schedule-freshness" style="display: none;"></div>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-end">
                     <div>
@@ -803,6 +804,50 @@
                 target.textContent = [info.year, phase, dates].filter(Boolean).join(' · ');
             }
 
+            function freshnessTimestamp(meta) {
+                return meta?.as_of || meta?.fetched_at || meta?.source_updated_at || '';
+            }
+
+            function freshnessAgeText(meta) {
+                const age = Number(meta?.cache_age_seconds);
+                if (!Number.isFinite(age) || age < 0) return '';
+                if (age < 60) return `${Math.round(age)}s ago`;
+                if (age < 3600) return `${Math.round(age / 60)}m ago`;
+                if (age < 86400) return `${Math.round(age / 3600)}h ago`;
+                return `${Math.round(age / 86400)}d ago`;
+            }
+
+            function freshnessLabel(name, payload) {
+                const meta = payload?.meta;
+                const timestamp = freshnessTimestamp(meta);
+                const ageText = freshnessAgeText(meta);
+                if (!timestamp && !ageText) return '';
+                let text = name;
+                if (ageText) {
+                    text += ` ${ageText}`;
+                } else {
+                    const parsed = new Date(timestamp);
+                    text += Number.isNaN(parsed.getTime())
+                        ? ` ${timestamp}`
+                        : ` ${parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}`;
+                }
+                if (meta?.stale) text += ' (stale)';
+                return text;
+            }
+
+            function renderFreshnessLine(parts) {
+                const target = document.getElementById('league-schedule-freshness');
+                if (!target) return;
+                const labels = parts.filter(Boolean);
+                if (labels.length === 0) {
+                    target.style.display = 'none';
+                    target.textContent = '';
+                    return;
+                }
+                target.textContent = `Updated: ${labels.join(' • ')}`;
+                target.style.display = '';
+            }
+
             function renderGame(game) {
                 const visitor = game.visitor_team || game.away_team || 'TBD';
                 const home = game.home_team || 'TBD';
@@ -839,6 +884,11 @@
                             : Promise.resolve({ teams: {} })
                     ]);
                     renderSeasonContext(seasonInfo);
+                    renderFreshnessLine([
+                        freshnessLabel('scores', scoresRes),
+                        freshnessLabel('schedule', scheduleRes),
+                        freshnessLabel('season', seasonInfo),
+                    ]);
                     const byId = {};
                     (scheduleRes.games || []).forEach(game => { byId[gameKey(game)] = game; });
                     (scoresRes.scores || []).forEach(score => {

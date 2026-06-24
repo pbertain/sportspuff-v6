@@ -92,6 +92,7 @@ class TestPageSmoke(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn(title.encode(), response.data)
             self.assertIn(b"id=\"event-date-picker\"", response.data)
+            self.assertIn(b"id=\"event-data-freshness\"", response.data)
             db.assert_not_called()
 
     def test_regular_league_page_exposes_schedule_module(self):
@@ -131,6 +132,7 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b'id="league-date-picker"', response.data)
         self.assertIn(b'id="league-timezone-select"', response.data)
         self.assertIn(b'id="league-schedule-context"', response.data)
+        self.assertIn(b'id="league-schedule-freshness"', response.data)
         self.assertIn(b"/api/proxy/schedule/", response.data)
         self.assertIn(b"/api/proxy/scores/", response.data)
         self.assertIn(b"/api/season-info/", response.data)
@@ -543,9 +545,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         standings_data = {
             "teams": [
                 {
-                    "team_name": "Morocco",
-                    "abbreviation": "MAR",
-                    "group": "E",
+                    "team_name": "Mexico",
+                    "abbreviation": "MEX",
+                    "group": "A",
                     "group_rank": 1,
                     "matches": 1,
                     "wins": 1,
@@ -558,9 +560,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
                     "record": "1-0-0",
                 },
                 {
-                    "team_name": "Japan",
-                    "abbreviation": "JPN",
-                    "group": "E",
+                    "team_name": "South Korea",
+                    "abbreviation": "KOR",
+                    "group": "A",
                     "group_rank": 2,
                     "matches": 1,
                     "wins": 1,
@@ -574,8 +576,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 },
                 {
                     "team_name": "South Africa",
-                    "abbreviation": "SOU",
-                    "group": "E",
+                    "abbreviation": "RSA",
+                    "group": "A",
                     "group_rank": 3,
                     "matches": 1,
                     "wins": 0,
@@ -588,9 +590,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
                     "record": "0-0-1",
                 },
                 {
-                    "team_name": "Norway",
-                    "abbreviation": "NOR",
-                    "group": "E",
+                    "team_name": "Czech Republic",
+                    "abbreviation": "CZE",
+                    "group": "A",
                     "group_rank": 4,
                     "matches": 1,
                     "wins": 0,
@@ -610,10 +612,10 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 "game_status": "final",
                 "is_final": True,
                 "home_team": "South Africa",
-                "home_team_abbrev": "SOU",
+                "home_team_abbrev": "RSA",
                 "home_score": 2,
-                "visitor_team": "Norway",
-                "visitor_team_abbrev": "NOR",
+                "visitor_team": "Mexico",
+                "visitor_team_abbrev": "MEX",
                 "visitor_score": 1,
                 "game_type": "group_matchday_1",
             },
@@ -621,11 +623,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 "game_date": "2026-06-18",
                 "game_status": "scheduled",
                 "is_final": False,
-                "home_team": "Japan",
-                "home_team_abbrev": "JPN",
+                "home_team": "South Korea",
+                "home_team_abbrev": "KOR",
                 "home_score": None,
                 "visitor_team": "South Africa",
-                "visitor_team_abbrev": "SOU",
+                "visitor_team_abbrev": "RSA",
                 "visitor_score": None,
                 "game_type": "group_matchday_2",
             },
@@ -634,10 +636,10 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 "game_status": "scheduled",
                 "is_final": False,
                 "home_team": "South Africa",
-                "home_team_abbrev": "SOU",
+                "home_team_abbrev": "RSA",
                 "home_score": None,
-                "visitor_team": "Morocco",
-                "visitor_team_abbrev": "MAR",
+                "visitor_team": "Czech Republic",
+                "visitor_team_abbrev": "CZE",
                 "visitor_score": None,
                 "game_type": "group_matchday_3",
             },
@@ -656,18 +658,18 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn("South Africa", html)
-        self.assertIn("Group E Standings", html)
+        self.assertIn("Group A Standings", html)
         for label in ["Games Played", "Wins", "Draws", "Losses", "Goals For", "Goals Against", "Goal Difference", "Points"]:
             self.assertIn(label, html)
         for column in ["GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
             self.assertIn(column, html)
-        self.assertIn("Morocco", html)
-        self.assertIn("Norway", html)
+        self.assertIn("Mexico", html)
+        self.assertIn("South Korea", html)
         self.assertIn('class="is-current-team"', html)
         self.assertIn("https://www.splitsp.lat/logos/wc/teamballs/rsa_ball_logo.png", html)
         self.assertIn("3 matches", html)
-        self.assertIn("Norway <span>1 - 2</span> South Africa", html)
-        self.assertIn("Morocco <span>vs</span> South Africa", html)
+        self.assertIn("Mexico <span>1 - 2</span> South Africa", html)
+        self.assertIn("Czech Republic <span>vs</span> South Africa", html)
         self.assertIn("group matchday 3", html)
         self.assertGreaterEqual(mock_fetch.call_count, 2)
 
@@ -706,8 +708,62 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["groups"][0]["group"], "A")
         self.assertEqual(data["groups"][0]["teams"][0]["team_name"], "Mexico")
         mock_fetch.assert_called_once_with("/api/v1/standings/wc", timeout=15)
-        mock_cache.assert_called_once_with("standings:wc:groups-v2", "schedule")
-        self.assertEqual(mock_set_cache.call_args.args[0], "standings:wc:groups-v2")
+        mock_cache.assert_called_once_with("standings:wc:groups-v3", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "standings:wc:groups-v3")
+
+    @patch("app._fetch_api_json")
+    def test_proxy_standings_normalizes_swapped_world_cup_groups(self, mock_fetch):
+        mock_fetch.return_value = {
+            "groups": [
+                {
+                    "group": "C",
+                    "teams": [
+                        {"group_rank": 1, "team_name": "United States", "abbreviation": "USA", "points": 4},
+                        {"group_rank": 2, "team_name": "Paraguay", "abbreviation": "PAR", "points": 3},
+                        {"group_rank": 3, "team_name": "Australia", "abbreviation": "AUS", "points": 1},
+                        {"group_rank": 4, "team_name": "Turkey", "abbreviation": "TUR", "points": 0},
+                    ],
+                },
+                {
+                    "group": "D",
+                    "teams": [
+                        {"group_rank": 1, "team_name": "Brazil", "abbreviation": "BRA", "points": 6},
+                        {"group_rank": 2, "team_name": "Morocco", "abbreviation": "MAR", "points": 3},
+                        {"group_rank": 3, "team_name": "Scotland", "abbreviation": "SCO", "points": 1},
+                        {"group_rank": 4, "team_name": "Haiti", "abbreviation": "HAI", "points": 1},
+                    ],
+                },
+                {
+                    "group": "K",
+                    "teams": [
+                        {"group_rank": 1, "team_name": "England", "abbreviation": "ENG", "points": 4},
+                        {"group_rank": 2, "team_name": "Croatia", "abbreviation": "CRO", "points": 3},
+                        {"group_rank": 3, "team_name": "Ghana", "abbreviation": "GHA", "points": 1},
+                        {"group_rank": 4, "team_name": "Panama", "abbreviation": "PAN", "points": 0},
+                    ],
+                },
+                {
+                    "group": "L",
+                    "teams": [
+                        {"group_rank": 1, "team_name": "Portugal", "abbreviation": "POR", "points": 4},
+                        {"group_rank": 2, "team_name": "Colombia", "abbreviation": "COL", "points": 4},
+                        {"group_rank": 3, "team_name": "DR Congo", "abbreviation": "COD", "points": 1},
+                        {"group_rank": 4, "team_name": "Uzbekistan", "abbreviation": "UZB", "points": 0},
+                    ],
+                },
+            ],
+            "teams": [],
+        }
+        with patch("app.get_cached_response", return_value=None), patch("app.set_cached_response"):
+            response = app.test_client().get("/api/proxy/standings/wc")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        groups = {group["group"]: [team["abbreviation"] for team in group["teams"]] for group in data["groups"]}
+        self.assertEqual(groups["C"], ["BRA", "MAR", "SCO", "HAI"])
+        self.assertEqual(groups["D"], ["USA", "PAR", "AUS", "TUR"])
+        self.assertEqual(groups["K"], ["POR", "COL", "COD", "UZB"])
+        self.assertEqual(groups["L"], ["ENG", "CRO", "GHA", "PAN"])
 
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()

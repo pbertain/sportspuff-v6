@@ -1393,6 +1393,14 @@ main, .main-content {
   margin-top: 0.2rem;
 }
 
+.league-schedule-freshness,
+.event-data-freshness {
+  color: rgba(245, 245, 245, 0.74);
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 0.3rem;
+}
+
 .league-schedule-count {
   margin-bottom: 0.75rem;
 }

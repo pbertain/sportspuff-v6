@@ -102,6 +102,80 @@ WC_TEAM_CODES_BY_NAME = {
 WC_TEAM_BALL_BASE_URL = 'https://www.splitsp.lat/logos/wc/teamballs'
 WC_GROUP_STAGE_START = '2026-06-11'
 WC_GROUP_STAGE_END = '2026-06-27'
+WC_CANONICAL_GROUPS = {
+    'A': {'MEX', 'RSA', 'KOR', 'CZE'},
+    'B': {'CAN', 'BIH', 'QAT', 'SUI'},
+    'C': {'BRA', 'MAR', 'HAI', 'SCO'},
+    'D': {'USA', 'PAR', 'AUS', 'TUR'},
+    'E': {'GER', 'CUW', 'CIV', 'ECU'},
+    'F': {'NED', 'JPN', 'SWE', 'TUN'},
+    'G': {'BEL', 'EGY', 'IRN', 'NZL'},
+    'H': {'ESP', 'CPV', 'KSA', 'URU'},
+    'I': {'FRA', 'SEN', 'IRQ', 'NOR'},
+    'J': {'ARG', 'ALG', 'AUT', 'JOR'},
+    'K': {'POR', 'COD', 'UZB', 'COL'},
+    'L': {'ENG', 'CRO', 'GHA', 'PAN'},
+}
+WC_CANONICAL_GROUP_BY_CODE = {
+    code: group
+    for group, codes in WC_CANONICAL_GROUPS.items()
+    for code in codes
+}
+WC_CANONICAL_GROUP_BY_NAME = {
+    'mexico': 'A',
+    'south africa': 'A',
+    'south korea': 'A',
+    'czech republic': 'A',
+    'czechia': 'A',
+    'canada': 'B',
+    'bosnia and herzegovina': 'B',
+    'bosnia-herzegovina': 'B',
+    'qatar': 'B',
+    'switzerland': 'B',
+    'brazil': 'C',
+    'morocco': 'C',
+    'haiti': 'C',
+    'scotland': 'C',
+    'united states': 'D',
+    'usa': 'D',
+    'paraguay': 'D',
+    'australia': 'D',
+    'turkey': 'D',
+    'türkiye': 'D',
+    'germany': 'E',
+    'curacao': 'E',
+    'curaçao': 'E',
+    'ivory coast': 'E',
+    'ecuador': 'E',
+    'netherlands': 'F',
+    'japan': 'F',
+    'sweden': 'F',
+    'tunisia': 'F',
+    'belgium': 'G',
+    'egypt': 'G',
+    'iran': 'G',
+    'new zealand': 'G',
+    'spain': 'H',
+    'cape verde': 'H',
+    'saudi arabia': 'H',
+    'uruguay': 'H',
+    'france': 'I',
+    'senegal': 'I',
+    'iraq': 'I',
+    'norway': 'I',
+    'argentina': 'J',
+    'algeria': 'J',
+    'austria': 'J',
+    'jordan': 'J',
+    'portugal': 'K',
+    'dr congo': 'K',
+    'uzbekistan': 'K',
+    'colombia': 'K',
+    'england': 'L',
+    'croatia': 'L',
+    'ghana': 'L',
+    'panama': 'L',
+}
 
 
 def _clean_csv_value(value):
@@ -1430,6 +1504,48 @@ def _normalize_wc_name(value):
     return ' '.join(str(value or '').lower().replace('-', ' ').split())
 
 
+def _canonical_wc_group_for_team(team):
+    abbrev = str(team.get('abbreviation') or team.get('team_abbreviation') or '').strip().upper()
+    if abbrev in WC_CANONICAL_GROUP_BY_CODE:
+        return WC_CANONICAL_GROUP_BY_CODE[abbrev]
+    return WC_CANONICAL_GROUP_BY_NAME.get(_normalize_wc_name(team.get('team_name') or team.get('name')))
+
+
+def _normalize_wc_standings(data):
+    if not isinstance(data, dict):
+        return data
+
+    normalized = dict(data)
+    teams = []
+    for team in _wc_teams_from_standings(data):
+        row = dict(team)
+        canonical_group = _canonical_wc_group_for_team(row)
+        if canonical_group:
+            row['group'] = canonical_group
+        teams.append(row)
+
+    if teams:
+        normalized['teams'] = teams
+        groups = []
+        for group_name in 'ABCDEFGHIJKL':
+            group_teams = [dict(team) for team in teams if str(team.get('group') or '').upper() == group_name]
+            if not group_teams:
+                continue
+            group_teams.sort(
+                key=lambda team: (
+                    int(team.get('group_rank') or 999),
+                    -int(team.get('points') or 0),
+                    -int(team.get('goal_difference') or 0),
+                    -int(team.get('goals_for') or 0),
+                    str(team.get('team_name') or ''),
+                )
+            )
+            groups.append({'group': group_name, 'teams': group_teams})
+        normalized['groups'] = groups
+
+    return normalized
+
+
 def _wc_standard_code_for_name(team_name, fallback_abbrev=''):
     return _wc_team_code_for_name(team_name) or str(fallback_abbrev or '').strip().lower()
 
@@ -1483,6 +1599,7 @@ def world_cup_team_detail(team_code):
 
     try:
         standings = _fetch_api_json('/api/v1/standings/wc', timeout=15)
+        standings = _normalize_wc_standings(standings if isinstance(standings, dict) else {})
         teams = _wc_teams_from_standings(standings if isinstance(standings, dict) else {})
         selected_team = None
 
@@ -2459,7 +2576,7 @@ def proxy_standings(league):
 
     # World Cup standings changed shape to include full group data; version the key
     # so deployments do not keep serving older truncated group payloads.
-    cache_key = f'standings:{league_lower}:groups-v2' if league_lower == 'wc' else f'standings:{league_lower}'
+    cache_key = f'standings:{league_lower}:groups-v3' if league_lower == 'wc' else f'standings:{league_lower}'
     cached_response = get_cached_response(cache_key, 'schedule')
     if cached_response:
         return jsonify(cached_response)
@@ -2469,6 +2586,9 @@ def proxy_standings(league):
         if isinstance(data, dict) and 'error' in data:
             logger.error(f"Standings API returned error for {league_lower}: {data['error']}")
             return jsonify(data), 500
+
+        if league_lower == 'wc':
+            data = _normalize_wc_standings(data)
 
         set_cached_response(cache_key, data)
         return jsonify(data)
