@@ -10,6 +10,7 @@
     name:
       - python3
       - python3-pip
+      - python3-psycopg2
       - python3-venv
       - python3-full
       - python3-dev
@@ -90,14 +91,11 @@
 - name: Set postgres user password (idempotent; (re)applies the configured value)
   become: yes
   become_user: postgres
-  shell: >-
-    psql -v ON_ERROR_STOP=1 --set=db_password="$DB_PASSWORD"
-    -c "ALTER USER {{ db_user }} PASSWORD :'db_password';"
-  args:
-    executable: /bin/bash
-  environment:
-    DB_PASSWORD: "{{ db_password }}"
-  changed_when: false
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    login_unix_socket: /var/run/postgresql
+    state: present
   no_log: true
 
 - name: Check if {{ db_name }} database exists
