@@ -1139,12 +1139,9 @@
                     const isTennis = gameLeague === 'ATP' || gameLeague === 'WTA';
                     const isCyclingEvent = gameLeague === 'CYCLING';
                     const isWorldCup = gameLeague === 'WC';
-                    const hasCricketScore = isCricket && [
-                        game.cricket_home_score,
-                        game.cricket_away_score,
-                        game.home_score,
-                        game.visitor_score
-                    ].some(value => value !== undefined && value !== null && String(value).trim() !== '');
+                    const cricketAwayScore = isCricket ? cricketInningsText(game, 'away') : '';
+                    const cricketHomeScore = isCricket ? cricketInningsText(game, 'home') : '';
+                    const hasCricketScore = isCricket && (cricketAwayScore || cricketHomeScore);
                     const hasCricketLive = isCricket && isInProgress && (game.cricket_result || game.result);
                     const hasScore = !isTennis && !isCyclingEvent && (
                         hasCricketScore || hasCricketLive || (game.home_score !== undefined && game.visitor_score !== undefined
@@ -1152,6 +1149,47 @@
 
                     function firstValue(...values) {
                         return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+                    }
+
+                    function cricketSideValue(game, side, suffix) {
+                        const prefixes = side === 'away'
+                            ? ['cricket_away', 'visitor', 'away']
+                            : ['cricket_home', 'home'];
+                        return firstValue(...prefixes.map(prefix => game[`${prefix}_${suffix}`]));
+                    }
+
+                    function formatCricketOvers(value) {
+                        const text = String(value ?? '').trim();
+                        if (!text) return '';
+                        if (/\bov\b/i.test(text) || /\bover(s)?\b/i.test(text)) return text;
+                        return `${text} ov`;
+                    }
+
+                    function cricketInningsText(game, side) {
+                        const rawScore = cricketSideValue(game, side, 'score');
+                        const rawRuns = cricketSideValue(game, side, 'runs');
+                        const wickets = cricketSideValue(game, side, 'wickets') || cricketSideValue(game, side, 'wkts') || cricketSideValue(game, side, 'wicket');
+                        const overs = cricketSideValue(game, side, 'overs') || cricketSideValue(game, side, 'overs_bowled') || cricketSideValue(game, side, 'over');
+                        const rawText = String(rawScore ?? rawRuns ?? '').trim();
+                        if (!rawText) return '';
+
+                        if (/\/\d+\s*\([^)]+\)/.test(rawText)) return rawText;
+
+                        const parsed = rawText.match(/^(\d+)\s*\/\s*(\d+)(?:\s*\(([^)]+)\))?$/);
+                        const runsText = parsed?.[1] || String(rawRuns ?? rawScore ?? '').trim();
+                        const wicketsText = parsed?.[2] || String(wickets ?? '').trim();
+                        const oversText = parsed?.[3] || String(overs ?? '').trim();
+
+                        if (!runsText) return '';
+
+                        let formatted = runsText;
+                        if (wicketsText) {
+                            formatted += `/${wicketsText}`;
+                        }
+                        if (oversText) {
+                            formatted += ` (${formatCricketOvers(oversText)})`;
+                        }
+                        return formatted;
                     }
 
                     function tennisTournamentName() {
@@ -1461,11 +1499,9 @@
                         else if (isInProgress) scoreDisplay = `<span style="font-size:0.9rem;">Live</span>`;
                         else                scoreDisplay = `<span style="font-size:0.95rem; opacity:0.7;">vs</span>`;
                     } else if (hasScore) {
-                        // For cricket, use the formatted score strings (runs/wickets[overs])
-                        const vScore = isCricket ? (game.cricket_away_score || game.visitor_score || '') : game.visitor_score;
-                        const hScore = isCricket ? (game.cricket_home_score || game.home_score || '') : game.home_score;
-
                         if (isCricket) {
+                            const vScore = cricketAwayScore || String(game.visitor_score ?? '').trim();
+                            const hScore = cricketHomeScore || String(game.home_score ?? '').trim();
                             if (isFinal && (vScore || hScore)) {
                                 const vClass = visitorIsWinner ? 'winner-score' : '';
                                 const hClass = homeIsWinner ? 'winner-score' : '';
@@ -1601,6 +1637,18 @@
                             // Preserve cricket score fields from schedule or scores
                             cricket_home_score: scoreData?.cricket_home_score || game.cricket_home_score || '',
                             cricket_away_score: scoreData?.cricket_away_score || game.cricket_away_score || '',
+                            cricket_home_runs: scoreData?.cricket_home_runs ?? game.cricket_home_runs ?? scoreData?.home_runs ?? game.home_runs ?? '',
+                            cricket_away_runs: scoreData?.cricket_away_runs ?? game.cricket_away_runs ?? scoreData?.visitor_runs ?? game.visitor_runs ?? '',
+                            cricket_home_wickets: scoreData?.cricket_home_wickets ?? game.cricket_home_wickets ?? scoreData?.home_wickets ?? game.home_wickets ?? '',
+                            cricket_away_wickets: scoreData?.cricket_away_wickets ?? game.cricket_away_wickets ?? scoreData?.visitor_wickets ?? game.visitor_wickets ?? '',
+                            cricket_home_overs: scoreData?.cricket_home_overs ?? game.cricket_home_overs ?? scoreData?.home_overs ?? game.home_overs ?? '',
+                            cricket_away_overs: scoreData?.cricket_away_overs ?? game.cricket_away_overs ?? scoreData?.visitor_overs ?? game.visitor_overs ?? '',
+                            cricket_home_wkts: scoreData?.cricket_home_wkts ?? game.cricket_home_wkts ?? scoreData?.home_wkts ?? game.home_wkts ?? '',
+                            cricket_away_wkts: scoreData?.cricket_away_wkts ?? game.cricket_away_wkts ?? scoreData?.visitor_wkts ?? game.visitor_wkts ?? '',
+                            cricket_home_overs_bowled: scoreData?.cricket_home_overs_bowled ?? game.cricket_home_overs_bowled ?? scoreData?.home_overs_bowled ?? game.home_overs_bowled ?? '',
+                            cricket_away_overs_bowled: scoreData?.cricket_away_overs_bowled ?? game.cricket_away_overs_bowled ?? scoreData?.visitor_overs_bowled ?? game.visitor_overs_bowled ?? '',
+                            cricket_home_over: scoreData?.cricket_home_over ?? game.cricket_home_over ?? scoreData?.home_over ?? game.home_over ?? '',
+                            cricket_away_over: scoreData?.cricket_away_over ?? game.cricket_away_over ?? scoreData?.visitor_over ?? game.visitor_over ?? '',
                             cricket_winner: scoreData?.cricket_winner || game.cricket_winner || '',
                             cricket_result: scoreData?.cricket_result || game.cricket_result || '',
                             // Use OTL from scores if available, otherwise from schedule
@@ -1805,6 +1853,18 @@
                                 time_remaining: scoreGame.time_remaining,
                                 cricket_home_score: scoreGame.cricket_home_score || '',
                                 cricket_away_score: scoreGame.cricket_away_score || '',
+                                cricket_home_runs: scoreGame.cricket_home_runs ?? scoreGame.home_runs ?? '',
+                                cricket_away_runs: scoreGame.cricket_away_runs ?? scoreGame.visitor_runs ?? '',
+                                cricket_home_wickets: scoreGame.cricket_home_wickets ?? scoreGame.home_wickets ?? '',
+                                cricket_away_wickets: scoreGame.cricket_away_wickets ?? scoreGame.visitor_wickets ?? '',
+                                cricket_home_overs: scoreGame.cricket_home_overs ?? scoreGame.home_overs ?? '',
+                                cricket_away_overs: scoreGame.cricket_away_overs ?? scoreGame.visitor_overs ?? '',
+                                cricket_home_wkts: scoreGame.cricket_home_wkts ?? scoreGame.home_wkts ?? '',
+                                cricket_away_wkts: scoreGame.cricket_away_wkts ?? scoreGame.visitor_wkts ?? '',
+                                cricket_home_overs_bowled: scoreGame.cricket_home_overs_bowled ?? scoreGame.home_overs_bowled ?? '',
+                                cricket_away_overs_bowled: scoreGame.cricket_away_overs_bowled ?? scoreGame.visitor_overs_bowled ?? '',
+                                cricket_home_over: scoreGame.cricket_home_over ?? scoreGame.home_over ?? '',
+                                cricket_away_over: scoreGame.cricket_away_over ?? scoreGame.visitor_over ?? '',
                                 cricket_winner: scoreGame.cricket_winner || '',
                                 cricket_result: scoreGame.cricket_result || '',
                                 // For NFL, try to get records from Tank01 API if not in score data
@@ -1866,6 +1926,20 @@
                             existing.game_status = scoreGame.game_status;
                             existing.current_period = scoreGame.current_period;
                             existing.time_remaining = scoreGame.time_remaining;
+                            if (scoreGame.cricket_home_score !== undefined) existing.cricket_home_score = scoreGame.cricket_home_score;
+                            if (scoreGame.cricket_away_score !== undefined) existing.cricket_away_score = scoreGame.cricket_away_score;
+                            if (scoreGame.cricket_home_runs !== undefined) existing.cricket_home_runs = scoreGame.cricket_home_runs;
+                            if (scoreGame.cricket_away_runs !== undefined) existing.cricket_away_runs = scoreGame.cricket_away_runs;
+                            if (scoreGame.cricket_home_wickets !== undefined) existing.cricket_home_wickets = scoreGame.cricket_home_wickets;
+                            if (scoreGame.cricket_away_wickets !== undefined) existing.cricket_away_wickets = scoreGame.cricket_away_wickets;
+                            if (scoreGame.cricket_home_overs !== undefined) existing.cricket_home_overs = scoreGame.cricket_home_overs;
+                            if (scoreGame.cricket_away_overs !== undefined) existing.cricket_away_overs = scoreGame.cricket_away_overs;
+                            if (scoreGame.cricket_home_wkts !== undefined) existing.cricket_home_wkts = scoreGame.cricket_home_wkts;
+                            if (scoreGame.cricket_away_wkts !== undefined) existing.cricket_away_wkts = scoreGame.cricket_away_wkts;
+                            if (scoreGame.cricket_home_overs_bowled !== undefined) existing.cricket_home_overs_bowled = scoreGame.cricket_home_overs_bowled;
+                            if (scoreGame.cricket_away_overs_bowled !== undefined) existing.cricket_away_overs_bowled = scoreGame.cricket_away_overs_bowled;
+                            if (scoreGame.cricket_home_over !== undefined) existing.cricket_home_over = scoreGame.cricket_home_over;
+                            if (scoreGame.cricket_away_over !== undefined) existing.cricket_away_over = scoreGame.cricket_away_over;
                             // Playoff series fields (sportspuff-api 2026-06-04+) — score response is authoritative
                             if (scoreGame.is_playoff !== undefined) existing.is_playoff = scoreGame.is_playoff;
                             if (scoreGame.series_summary !== undefined) existing.series_summary = scoreGame.series_summary;

@@ -88,6 +88,22 @@
     state: started
     enabled: yes
 
+- name: Wait for postgresql socket to become available
+  wait_for:
+    path: /var/run/postgresql/.s.PGSQL.5432
+    state: present
+    timeout: 60
+
+- name: Wait for postgresql to accept local connections
+  become: yes
+  become_user: postgres
+  command: pg_isready -h /var/run/postgresql -d postgres
+  register: postgresql_ready
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: postgresql_ready.rc == 0
+
 - name: Set postgres user password (idempotent; (re)applies the configured value)
   become: yes
   become_user: postgres

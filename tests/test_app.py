@@ -136,6 +136,8 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"/api/proxy/schedule/", response.data)
         self.assertIn(b"/api/proxy/scores/", response.data)
         self.assertIn(b"/api/season-info/", response.data)
+        self.assertIn(b"function cricketInningsText", response.data)
+        self.assertIn(b"function formatCricketOvers", response.data)
 
     def test_static_logo_route_redirects_to_splitsp_lat(self):
         response = self.client.get("/static/logos/mlb/mlb_logo.png")
@@ -463,7 +465,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function resolvedOffseasonChampion", template)
         self.assertIn("league-empty-champion-row", template)
         self.assertIn("findLeagueTeamData(champion.abbreviation, leagueUpper)", template)
-        self.assertIn("game.home_score,", template)
+        self.assertIn("function cricketInningsText", template)
+        self.assertIn("cricket_home_runs", template)
         self.assertIn("game.result", template)
 
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
@@ -831,6 +834,14 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function resolvedOffseasonChampion", template)
         self.assertIn("const logo = eventContext?.asset || LEAGUE_LOGOS[upper] || ''", template)
         self.assertIn("league-empty-champion-logo", template)
+
+    def test_homepage_cricket_score_renderer_accepts_native_innings_fields(self):
+        template = (PROJECT_ROOT / "templates/index.html").read_text()
+
+        self.assertIn("function cricketInningsText", template)
+        self.assertIn("function formatCricketOvers", template)
+        self.assertIn("cricket_home_runs", template)
+        self.assertIn("cricket_away_overs", template)
 
     @patch("app._should_skip_live_api_fetch", return_value=False)
     @patch("app.requests.get")

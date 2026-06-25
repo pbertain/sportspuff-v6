@@ -737,9 +737,54 @@
                 return game.game_status || 'Scheduled';
             }
 
+            function firstValue(...values) {
+                return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+            }
+
+            function cricketSideValue(game, side, suffix) {
+                const prefixes = side === 'away'
+                    ? ['cricket_away', 'visitor', 'away']
+                    : ['cricket_home', 'home'];
+                return firstValue(...prefixes.map(prefix => game[`${prefix}_${suffix}`]));
+            }
+
+            function formatCricketOvers(value) {
+                const text = String(value ?? '').trim();
+                if (!text) return '';
+                if (/\bov\b/i.test(text) || /\bover(s)?\b/i.test(text)) return text;
+                return `${text} ov`;
+            }
+
+            function cricketInningsText(game, side) {
+                const rawScore = cricketSideValue(game, side, 'score');
+                const rawRuns = cricketSideValue(game, side, 'runs');
+                const wickets = cricketSideValue(game, side, 'wickets') || cricketSideValue(game, side, 'wkts') || cricketSideValue(game, side, 'wicket');
+                const overs = cricketSideValue(game, side, 'overs') || cricketSideValue(game, side, 'overs_bowled') || cricketSideValue(game, side, 'over');
+                const rawText = String(rawScore ?? rawRuns ?? '').trim();
+                if (!rawText) return '';
+
+                if (/\/\d+\s*\([^)]+\)/.test(rawText)) return rawText;
+
+                const parsed = rawText.match(/^(\d+)\s*\/\s*(\d+)(?:\s*\(([^)]+)\))?$/);
+                const runsText = parsed?.[1] || String(rawRuns ?? rawScore ?? '').trim();
+                const wicketsText = parsed?.[2] || String(wickets ?? '').trim();
+                const oversText = parsed?.[3] || String(overs ?? '').trim();
+
+                if (!runsText) return '';
+
+                let formatted = runsText;
+                if (wicketsText) {
+                    formatted += `/${wicketsText}`;
+                }
+                if (oversText) {
+                    formatted += ` (${formatCricketOvers(oversText)})`;
+                }
+                return formatted;
+            }
+
             function cricketScoreLines(game) {
-                const away = game.cricket_away_score || game.visitor_score || '';
-                const home = game.cricket_home_score || game.home_score || '';
+                const away = cricketInningsText(game, 'away');
+                const home = cricketInningsText(game, 'home');
                 if (!away && !home) return '';
                 return `<div class="league-cricket-score">
                     ${away ? `<span>${escapeHtml(away)}</span>` : ''}
@@ -749,7 +794,7 @@
 
             function scoreText(game) {
                 const isCricket = LEAGUE === 'IPL' || LEAGUE === 'MLC';
-                if (isCricket && (game.cricket_away_score || game.cricket_home_score || game.visitor_score || game.home_score)) {
+                if (isCricket && (cricketInningsText(game, 'away') || cricketInningsText(game, 'home'))) {
                     return cricketScoreLines(game);
                 }
                 const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
