@@ -92,7 +92,7 @@
   wait_for:
     path: /var/run/postgresql/.s.PGSQL.5432
     state: present
-    timeout: 60
+    timeout: 180
 
 - name: Wait for postgresql to accept local connections
   become: yes
@@ -100,8 +100,8 @@
   command: pg_isready -h /var/run/postgresql -d postgres
   register: postgresql_ready
   changed_when: false
-  retries: 12
-  delay: 5
+  retries: 30
+  delay: 10
   until: postgresql_ready.rc == 0
 
 - name: Set postgres user password (idempotent; (re)applies the configured value)
