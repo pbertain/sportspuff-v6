@@ -1141,6 +1141,8 @@
                     const isWorldCup = gameLeague === 'WC';
                     const cricketAwayScore = isCricket ? cricketInningsText(game, 'away') : '';
                     const cricketHomeScore = isCricket ? cricketInningsText(game, 'home') : '';
+                    const vScore = isCricket ? cricketAwayScore || String(game.visitor_score ?? '').trim() : String(game.visitor_score ?? '').trim();
+                    const hScore = isCricket ? cricketHomeScore || String(game.home_score ?? '').trim() : String(game.home_score ?? '').trim();
                     const hasCricketScore = isCricket && (cricketAwayScore || cricketHomeScore);
                     const hasCricketLive = isCricket && isInProgress && (game.cricket_result || game.result);
                     const hasScore = !isTennis && !isCyclingEvent && (
@@ -1500,8 +1502,6 @@
                         else                scoreDisplay = `<span style="font-size:0.95rem; opacity:0.7;">vs</span>`;
                     } else if (hasScore) {
                         if (isCricket) {
-                            const vScore = cricketAwayScore || String(game.visitor_score ?? '').trim();
-                            const hScore = cricketHomeScore || String(game.home_score ?? '').trim();
                             if (isFinal && (vScore || hScore)) {
                                 const vClass = visitorIsWinner ? 'winner-score' : '';
                                 const hClass = homeIsWinner ? 'winner-score' : '';
