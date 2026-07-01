@@ -1143,6 +1143,7 @@
                     const cricketHomeScore = isCricket ? cricketInningsText(game, 'home') : '';
                     const vScore = isCricket ? cricketAwayScore || String(game.visitor_score ?? '').trim() : String(game.visitor_score ?? '').trim();
                     const hScore = isCricket ? cricketHomeScore || String(game.home_score ?? '').trim() : String(game.home_score ?? '').trim();
+                    const wcPenaltyText = isWorldCup ? worldCupPenaltyText(game) : '';
                     const hasCricketScore = isCricket && (cricketAwayScore || cricketHomeScore);
                     const hasCricketLive = isCricket && isInProgress && (game.cricket_result || game.result);
                     const hasScore = !isTennis && !isCyclingEvent && (
@@ -1192,6 +1193,30 @@
                             formatted += ` (${formatCricketOvers(oversText)})`;
                         }
                         return formatted;
+                    }
+
+                    function worldCupPenaltyValue(game, side) {
+                        const direct = game[`${side}_shootout_score`];
+                        if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+                            return String(direct).trim();
+                        }
+
+                        const boxScore = game.box_score;
+                        const columns = Array.isArray(boxScore?.columns) ? boxScore.columns : [];
+                        const pkIndex = columns.findIndex(column => String(column).toUpperCase() === 'PK');
+                        const values = Array.isArray(boxScore?.[side]) ? boxScore[side] : [];
+                        if (pkIndex >= 0 && values[pkIndex] !== undefined && values[pkIndex] !== null && String(values[pkIndex]).trim() !== '') {
+                            return String(values[pkIndex]).trim();
+                        }
+
+                        return '';
+                    }
+
+                    function worldCupPenaltyText(game) {
+                        const away = worldCupPenaltyValue(game, 'visitor');
+                        const home = worldCupPenaltyValue(game, 'home');
+                        if (!away && !home) return '';
+                        return `PK ${away || '0'}-${home || '0'}`;
                     }
 
                     function tennisTournamentName() {
@@ -1272,6 +1297,13 @@
                                 const parseRuns = (s) => parseInt(String(s).split('/')[0]) || 0;
                                 visitorIsWinner = parseRuns(game.visitor_score) > parseRuns(game.home_score);
                                 homeIsWinner = parseRuns(game.home_score) > parseRuns(game.visitor_score);
+                            }
+                        } else if (isWorldCup && wcPenaltyText) {
+                            const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
+                            const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
+                            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout)) {
+                                visitorIsWinner = visitorShootout > homeShootout;
+                                homeIsWinner = homeShootout > visitorShootout;
                             }
                         } else {
                             visitorIsWinner = game.visitor_score > game.home_score;
@@ -1517,6 +1549,15 @@
                             } else {
                                 scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }
+                        } else if (isWorldCup && isFinal && wcPenaltyText) {
+                            const pkLine = `<br><span style="font-size:0.78rem; opacity:0.85;">${wcPenaltyText}</span>`;
+                            if (visitorIsWinner) {
+                                scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>${pkLine}`;
+                            } else if (homeIsWinner) {
+                                scoreDisplay = `<span>${vScore}</span> - <span class="winner-score">${hScore}</span>${pkLine}`;
+                            } else {
+                                scoreDisplay = `${vScore} - ${hScore}${pkLine}`;
+                            }
                         } else if (isFinal) {
                             if (visitorIsWinner) {
                                 scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>`;
@@ -1651,6 +1692,9 @@
                             cricket_away_over: scoreData?.cricket_away_over ?? game.cricket_away_over ?? scoreData?.visitor_over ?? game.visitor_over ?? '',
                             cricket_winner: scoreData?.cricket_winner || game.cricket_winner || '',
                             cricket_result: scoreData?.cricket_result || game.cricket_result || '',
+                            home_shootout_score: scoreData?.home_shootout_score ?? game.home_shootout_score ?? '',
+                            visitor_shootout_score: scoreData?.visitor_shootout_score ?? game.visitor_shootout_score ?? '',
+                            box_score: scoreData?.box_score ?? game.box_score ?? null,
                             // Use OTL from scores if available, otherwise from schedule
                             // API uses home_otl/visitor_otl (not home_overtime_losses)
                             // For NFL, try to get records from Tank01 API if not in game data
@@ -1867,6 +1911,9 @@
                                 cricket_away_over: scoreGame.cricket_away_over ?? scoreGame.visitor_over ?? '',
                                 cricket_winner: scoreGame.cricket_winner || '',
                                 cricket_result: scoreGame.cricket_result || '',
+                                home_shootout_score: scoreGame.home_shootout_score ?? '',
+                                visitor_shootout_score: scoreGame.visitor_shootout_score ?? '',
+                                box_score: scoreGame.box_score ?? null,
                                 // For NFL, try to get records from Tank01 API if not in score data
                                 home_wins: scoreGame.home_wins !== undefined && scoreGame.home_wins !== null ? scoreGame.home_wins :
                                     (scoreLeague === 'nfl' && nflTeamRecords[scoreGame.home_team] ? nflTeamRecords[scoreGame.home_team].wins :
@@ -1940,6 +1987,9 @@
                             if (scoreGame.cricket_away_overs_bowled !== undefined) existing.cricket_away_overs_bowled = scoreGame.cricket_away_overs_bowled;
                             if (scoreGame.cricket_home_over !== undefined) existing.cricket_home_over = scoreGame.cricket_home_over;
                             if (scoreGame.cricket_away_over !== undefined) existing.cricket_away_over = scoreGame.cricket_away_over;
+                            if (scoreGame.home_shootout_score !== undefined) existing.home_shootout_score = scoreGame.home_shootout_score;
+                            if (scoreGame.visitor_shootout_score !== undefined) existing.visitor_shootout_score = scoreGame.visitor_shootout_score;
+                            if (scoreGame.box_score !== undefined) existing.box_score = scoreGame.box_score;
                             // Playoff series fields (sportspuff-api 2026-06-04+) — score response is authoritative
                             if (scoreGame.is_playoff !== undefined) existing.is_playoff = scoreGame.is_playoff;
                             if (scoreGame.series_summary !== undefined) existing.series_summary = scoreGame.series_summary;

@@ -138,6 +138,7 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"/api/season-info/", response.data)
         self.assertIn(b"function cricketInningsText", response.data)
         self.assertIn(b"function formatCricketOvers", response.data)
+        self.assertIn(b"function worldCupPenaltyText", response.data)
 
     def test_static_logo_route_redirects_to_splitsp_lat(self):
         response = self.client.get("/static/logos/mlb/mlb_logo.png")
@@ -467,6 +468,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("findLeagueTeamData(champion.abbreviation, leagueUpper)", template)
         self.assertIn("function cricketInningsText", template)
         self.assertIn("cricket_home_runs", template)
+        self.assertIn("home_shootout_score", template)
+        self.assertIn("visitor_shootout_score", template)
+        self.assertIn("box_score", template)
         self.assertIn("game.result", template)
 
     def test_league_page_has_nfl_grid_and_mls_record_fallback(self):
@@ -840,8 +844,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         self.assertIn("function cricketInningsText", template)
         self.assertIn("function formatCricketOvers", template)
+        self.assertIn("function worldCupPenaltyText", template)
         self.assertIn("cricket_home_runs", template)
         self.assertIn("cricket_away_overs", template)
+        self.assertIn("home_shootout_score", template)
+        self.assertIn("visitor_shootout_score", template)
 
     @patch("app._should_skip_live_api_fetch", return_value=False)
     @patch("app.requests.get")

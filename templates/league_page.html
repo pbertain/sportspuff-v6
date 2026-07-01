@@ -782,6 +782,30 @@
                 return formatted;
             }
 
+            function worldCupPenaltyValue(game, side) {
+                const direct = game[`${side}_shootout_score`];
+                if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+                    return String(direct).trim();
+                }
+
+                const boxScore = game.box_score;
+                const columns = Array.isArray(boxScore?.columns) ? boxScore.columns : [];
+                const pkIndex = columns.findIndex(column => String(column).toUpperCase() === 'PK');
+                const values = Array.isArray(boxScore?.[side]) ? boxScore[side] : [];
+                if (pkIndex >= 0 && values[pkIndex] !== undefined && values[pkIndex] !== null && String(values[pkIndex]).trim() !== '') {
+                    return String(values[pkIndex]).trim();
+                }
+
+                return '';
+            }
+
+            function worldCupPenaltyText(game) {
+                const away = worldCupPenaltyValue(game, 'visitor');
+                const home = worldCupPenaltyValue(game, 'home');
+                if (!away && !home) return '';
+                return `PK ${away || '0'}-${home || '0'}`;
+            }
+
             function cricketScoreLines(game) {
                 const away = cricketInningsText(game, 'away');
                 const home = cricketInningsText(game, 'home');
@@ -796,6 +820,17 @@
                 const isCricket = LEAGUE === 'IPL' || LEAGUE === 'MLC';
                 if (isCricket && (cricketInningsText(game, 'away') || cricketInningsText(game, 'home'))) {
                     return cricketScoreLines(game);
+                }
+                if (LEAGUE === 'WC') {
+                    const away = String(game.visitor_score ?? '').trim();
+                    const home = String(game.home_score ?? '').trim();
+                    const penalty = worldCupPenaltyText(game);
+                    if (penalty && (away || home) && game.is_final) {
+                        return `<div class="league-cricket-score">
+                            ${away || home ? `<span>${escapeHtml(`${away || '0'} - ${home || '0'}`)}</span>` : ''}
+                            <span>${escapeHtml(penalty)}</span>
+                        </div>`;
+                    }
                 }
                 const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
                     && (game.is_final || Number(game.home_score) > 0 || Number(game.visitor_score) > 0);
