@@ -279,6 +279,140 @@
                 || (teamAbbrev ? recordMap[teamAbbrev] : null)
                 || null;
         }
+        function worldCupTeamKey(teamName, teamAbbrev) {
+            const abbrev = String(teamAbbrev || '').trim().toLowerCase();
+            if (abbrev) return abbrev;
+            return String(getWorldCupTeamAbbrev(teamName) || teamName || '').trim().toLowerCase();
+        }
+        function worldCupCloneTeamRecords(recordMap) {
+            const records = {};
+            Object.values(recordMap || {}).forEach(record => {
+                const key = worldCupTeamKey(record?.team_name, record?.abbreviation);
+                if (!key || records[key]) return;
+                const wins = Number(record?.wins ?? 0);
+                const draws = Number(record?.draws ?? record?.ties ?? 0);
+                const losses = Number(record?.losses ?? 0);
+                records[key] = {
+                    team_name: record?.team_name || '',
+                    abbreviation: String(record?.abbreviation || '').toLowerCase(),
+                    wins,
+                    draws,
+                    losses,
+                    record: record?.record || `${wins}-${draws}-${losses}`
+                };
+            });
+            return records;
+        }
+        function worldCupRecordText(record) {
+            if (!record) return '';
+            return record.record || `${Number(record.wins ?? 0)}-${Number(record.draws ?? 0)}-${Number(record.losses ?? 0)}`;
+        }
+        function worldCupLookupTeamRecord(recordMap, teamName, teamAbbrev) {
+            if (!recordMap || typeof recordMap !== 'object') return null;
+            return recordMap[worldCupTeamKey(teamName, teamAbbrev)] || null;
+        }
+        function worldCupPenaltyValue(game, side) {
+            const direct = game[`${side}_shootout_score`];
+            if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+                return String(direct).trim();
+            }
+
+            const boxScore = game.box_score;
+            const columns = Array.isArray(boxScore?.columns) ? boxScore.columns : [];
+            const pkIndex = columns.findIndex(column => String(column).toUpperCase() === 'PK');
+            const values = Array.isArray(boxScore?.[side]) ? boxScore[side] : [];
+            if (pkIndex >= 0 && values[pkIndex] !== undefined && values[pkIndex] !== null && String(values[pkIndex]).trim() !== '') {
+                return String(values[pkIndex]).trim();
+            }
+
+            return '';
+        }
+        function worldCupPenaltyText(game) {
+            const away = worldCupPenaltyValue(game, 'visitor');
+            const home = worldCupPenaltyValue(game, 'home');
+            if (!away && !home) return '';
+            return `PK ${away || '0'}-${home || '0'}`;
+        }
+        function worldCupRoundLabel(game) {
+            const raw = String(game?.wc_round_label || game?.game_type || game?.stage || game?.round || '').trim();
+            return raw ? raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+        }
+        function worldCupRoundOrder(game) {
+            const raw = String(game?.wc_round_label || game?.game_type || game?.stage || game?.round || '').toLowerCase();
+            if (!raw) return 999;
+            if (raw.includes('round of 32')) return 10;
+            if (raw.includes('round of 16')) return 20;
+            if (raw.includes('round of 8') || raw.includes('quarter')) return 30;
+            if (raw.includes('round of 4') || raw.includes('semi')) return 40;
+            if (raw.includes('third') || raw.includes('bronze')) return 50;
+            if (raw.includes('final')) return 60;
+            return 70;
+        }
+        function isWorldCupKnockoutGame(game) {
+            const raw = String(game?.wc_round_label || game?.game_type || game?.stage || game?.round || '').toLowerCase();
+            if (!raw || raw.startsWith('group')) return false;
+            return raw.includes('round') || raw.includes('quarter') || raw.includes('semi') || raw.includes('final') || raw.includes('third') || raw.includes('bronze') || raw.includes('knockout');
+        }
+        function worldCupGameIsFinal(game) {
+            const statusLower = String(game?.game_status || '').toLowerCase();
+            return game?.is_final === true
+                || statusLower === 'final'
+                || statusLower === 'completed'
+                || statusLower === 'finished'
+                || statusLower === 'off';
+        }
+        function worldCupWinnerSide(game) {
+            const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
+            const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
+            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
+                return visitorShootout > homeShootout ? 'visitor' : 'home';
+            }
+
+            const visitorScore = Number(game?.visitor_score);
+            const homeScore = Number(game?.home_score);
+            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
+                return visitorScore > homeScore ? 'visitor' : 'home';
+            }
+            return '';
+        }
+        function worldCupApplyRecordResult(records, teamName, teamAbbrev, outcome) {
+            const key = worldCupTeamKey(teamName, teamAbbrev);
+            if (!key) return;
+            if (!records[key]) {
+                records[key] = {
+                    team_name: teamName || '',
+                    abbreviation: String(teamAbbrev || '').toLowerCase(),
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    record: '0-0-0'
+                };
+            }
+            const record = records[key];
+            if (outcome === 'win') record.wins += 1;
+            if (outcome === 'loss') record.losses += 1;
+            record.record = `${record.wins}-${record.draws}-${record.losses}`;
+        }
+        function normalizeWorldCupBracket(source) {
+            return source?.knockout_bracket || source || null;
+        }
+        function worldCupBracketGameIds(bracket) {
+            const ids = new Set();
+            const collect = match => {
+                const id = match?.game_id;
+                if (id !== undefined && id !== null && String(id).trim() !== '') {
+                    ids.add(String(id));
+                }
+            };
+            (Array.isArray(bracket?.rounds) ? bracket.rounds : []).forEach(round => {
+                (Array.isArray(round?.matches) ? round.matches : []).forEach(collect);
+            });
+            const sides = bracket?.sides || {};
+            ['left', 'right'].forEach(side => {
+                (Array.isArray(sides[side]) ? sides[side] : []).forEach(collect);
+            });
+            return ids;
+        }
         function findLeagueTeamData(teamName, leagueUpper) {
             const teams = allTeamColors && allTeamColors[leagueUpper];
             if (!teams || teamName === undefined || teamName === null) return null;
@@ -1195,30 +1329,6 @@
                         return formatted;
                     }
 
-                    function worldCupPenaltyValue(game, side) {
-                        const direct = game[`${side}_shootout_score`];
-                        if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
-                            return String(direct).trim();
-                        }
-
-                        const boxScore = game.box_score;
-                        const columns = Array.isArray(boxScore?.columns) ? boxScore.columns : [];
-                        const pkIndex = columns.findIndex(column => String(column).toUpperCase() === 'PK');
-                        const values = Array.isArray(boxScore?.[side]) ? boxScore[side] : [];
-                        if (pkIndex >= 0 && values[pkIndex] !== undefined && values[pkIndex] !== null && String(values[pkIndex]).trim() !== '') {
-                            return String(values[pkIndex]).trim();
-                        }
-
-                        return '';
-                    }
-
-                    function worldCupPenaltyText(game) {
-                        const away = worldCupPenaltyValue(game, 'visitor');
-                        const home = worldCupPenaltyValue(game, 'home');
-                        if (!away && !home) return '';
-                        return `PK ${away || '0'}-${home || '0'}`;
-                    }
-
                     function tennisTournamentName() {
                         return firstValue(
                             game.tennis_tournament,
@@ -1282,6 +1392,7 @@
                     const homeLogo = isTennis ? '' : (isWorldCup ? getWorldCupTeamBallLogo(game.home_team) : (homeTeamData?.logo_url || '/static/images/no-logo.png'));
                     const visitorLogoBg = visitorTeamData?.color_3 || '#FFFFFF';
                     const homeLogoBg = homeTeamData?.color_3 || '#FFFFFF';
+                    const wcRecordSnapshot = game._wcTournamentRecord || null;
                     
                     // Determine winner
                     let visitorIsWinner = false;
@@ -1500,12 +1611,8 @@
                             homeRecord = `${game.home_wins}-${game.home_losses}`;
                         }
                     } else if (gameLeague === 'WC') {
-                        const visitorAbbrev = getWorldCupTeamAbbrev(game.visitor_team);
-                        const homeAbbrev = getWorldCupTeamAbbrev(game.home_team);
-                        const vRec = lookupTeamRecord(wcTeamRecords, game.visitor_team, visitorAbbrev);
-                        const hRec = lookupTeamRecord(wcTeamRecords, game.home_team, homeAbbrev);
-                        visitorRecord = vRec?.record || (vRec ? `${vRec.wins}-${vRec.draws}-${vRec.losses}` : '');
-                        homeRecord = hRec?.record || (hRec ? `${hRec.wins}-${hRec.draws}-${hRec.losses}` : '');
+                        visitorRecord = wcRecordSnapshot?.visitor || '';
+                        homeRecord = wcRecordSnapshot?.home || '';
                     } else if (gameLeague === 'MLC' || gameLeague === 'IPL') {
                         const visitorAbbrev = game.visitor_team_abbrev || '';
                         const homeAbbrev = game.home_team_abbrev || '';
@@ -2081,6 +2188,34 @@
                     if (a.game_time) return -1;
                     if (b.game_time) return 1;
                     return 0;
+                });
+
+                const wcTournamentRecords = worldCupCloneTeamRecords(wcTeamRecords);
+                const wcBracket = normalizeWorldCupBracket(seasonInfoCache.wc?.knockout_bracket);
+                const wcBracketGameIds = worldCupBracketGameIds(wcBracket);
+                games.forEach(game => {
+                    const gameLeague = String(game.league || game.sport || '').toLowerCase();
+                    if (gameLeague !== 'wc') return;
+
+                    const visitorAbbrev = getWorldCupTeamAbbrev(game.visitor_team);
+                    const homeAbbrev = getWorldCupTeamAbbrev(game.home_team);
+                    game._wcTournamentRecord = {
+                        visitor: worldCupRecordText(worldCupLookupTeamRecord(wcTournamentRecords, game.visitor_team, visitorAbbrev)),
+                        home: worldCupRecordText(worldCupLookupTeamRecord(wcTournamentRecords, game.home_team, homeAbbrev))
+                    };
+
+                    const isBracketKnockout = wcBracketGameIds.size > 0
+                        ? wcBracketGameIds.has(String(game.game_id || ''))
+                        : isWorldCupKnockoutGame(game);
+                    if (!isBracketKnockout || !worldCupGameIsFinal(game)) return;
+                    const winner = worldCupWinnerSide(game);
+                    if (winner === 'visitor') {
+                        worldCupApplyRecordResult(wcTournamentRecords, game.visitor_team, visitorAbbrev, 'win');
+                        worldCupApplyRecordResult(wcTournamentRecords, game.home_team, homeAbbrev, 'loss');
+                    } else if (winner === 'home') {
+                        worldCupApplyRecordResult(wcTournamentRecords, game.visitor_team, visitorAbbrev, 'loss');
+                        worldCupApplyRecordResult(wcTournamentRecords, game.home_team, homeAbbrev, 'win');
+                    }
                 });
                 
                 if (games.length === 0) {

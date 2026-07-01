@@ -520,8 +520,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()
 
         self.assertIn('id="wc-standings-panel"', template)
+        self.assertIn('id="wc-marquee"', template)
         self.assertIn("function worldCupGroupsFromStandings", template)
         self.assertIn("function renderWorldCupStandings", template)
+        self.assertIn("function renderWorldCupKnockout", template)
+        self.assertIn("function normalizeWorldCupBracket", template)
         self.assertIn("function mergeWorldCupTeams", template)
         self.assertIn("data?.groups", template)
         self.assertIn("data?.teams", template)
@@ -541,9 +544,14 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("const teamUrl = teamCode ? `/team/wc/${encodeURIComponent(teamCode)}` : ''", template)
         self.assertIn("wc-team-code-link", template)
         self.assertIn("wc-advancing-team", template)
+        self.assertIn("wc-knockout-panel", template)
+        self.assertIn("wc-knockout-round", template)
+        self.assertIn("fetch('/api/proxy/world-cup/bracket')", template)
         self.assertIn(".wc-team-link", css)
         self.assertIn(".wc-team-code-link", css)
         self.assertIn(".wc-advancing-team", css)
+        self.assertIn(".wc-knockout-panel", css)
+        self.assertIn(".wc-knockout-round-title", css)
 
     @patch("app.set_cached_response")
     @patch("app.get_cached_response", return_value=None)
@@ -772,6 +780,41 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(groups["K"], ["POR", "COL", "COD", "UZB"])
         self.assertEqual(groups["L"], ["ENG", "CRO", "GHA", "PAN"])
 
+    @patch("app._fetch_api_json")
+    def test_proxy_world_cup_bracket_exposes_knockout_bracket(self, mock_fetch):
+        mock_fetch.return_value = {
+            "sport": "wc",
+            "knockout_bracket": {
+                "format": "round_of_32",
+                "rounds": [
+                    {
+                        "name": "Round of 32",
+                        "matches": [
+                            {
+                                "match_number": 1,
+                                "home_team": "Mexico",
+                                "away_team": "Argentina",
+                                "game_id": "wc-k1",
+                                "game_status": "scheduled",
+                            }
+                        ],
+                    }
+                ],
+            },
+            "available": True,
+        }
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/world-cup/bracket")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["knockout_bracket"]["format"], "round_of_32")
+        self.assertEqual(data["knockout_bracket"]["rounds"][0]["name"], "Round of 32")
+        mock_fetch.assert_called_once_with("/api/v1/world-cup/bracket", timeout=15)
+        mock_cache.assert_called_once_with("world_cup_bracket", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "world_cup_bracket")
+
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()
 
@@ -845,6 +888,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function cricketInningsText", template)
         self.assertIn("function formatCricketOvers", template)
         self.assertIn("function worldCupPenaltyText", template)
+        self.assertIn("function worldCupCloneTeamRecords", template)
+        self.assertIn("function worldCupWinnerSide", template)
+        self.assertIn("game._wcTournamentRecord", template)
         self.assertIn("cricket_home_runs", template)
         self.assertIn("cricket_away_overs", template)
         self.assertIn("home_shootout_score", template)

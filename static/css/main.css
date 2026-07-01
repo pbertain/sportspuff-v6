@@ -870,6 +870,60 @@ main, .main-content {
   padding: 14px 16px;
 }
 
+.wc-knockout-panel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 6px solid #b22222;
+  border-radius: 8px;
+  background: rgba(40, 8, 12, 0.56);
+  color: var(--warm-white);
+  padding: 14px 16px;
+}
+
+.wc-knockout-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.wc-knockout-title {
+  color: var(--warm-white);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.wc-knockout-rounds {
+  display: grid;
+  gap: 12px;
+}
+
+.wc-knockout-round {
+  background: rgba(20, 10, 40, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wc-knockout-round-title {
+  background: linear-gradient(135deg, rgba(178, 34, 34, 0.82), rgba(92, 17, 31, 0.92));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--warm-white);
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 7px 9px;
+  text-transform: uppercase;
+}
+
+.wc-knockout-round-matches {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
 .wc-standings-header {
   align-items: center;
   display: flex;

@@ -2607,6 +2607,37 @@ def proxy_standings(league):
             return jsonify(expired_cache)
         return jsonify({'teams': [], 'standings': [], 'groups': [], 'available': False}), 200
 
+
+@app.route('/api/proxy/world-cup/bracket')
+def proxy_world_cup_bracket():
+    """Proxy the World Cup knockout bracket."""
+    cache_key = 'world_cup_bracket'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    try:
+        data = _fetch_api_json('/api/v1/world-cup/bracket', timeout=15)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"World Cup bracket API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying World Cup bracket: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached World Cup bracket due to request exception")
+            return jsonify(expired_cache)
+        return jsonify({'sport': 'wc', 'knockout_bracket': {}, 'available': False}), 200
+    except Exception as e:
+        logger.error(f"Unexpected error proxying World Cup bracket: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached World Cup bracket due to unexpected error")
+            return jsonify(expired_cache)
+        return jsonify({'sport': 'wc', 'knockout_bracket': {}, 'available': False}), 200
+
 @app.route('/api/nfl/team-records')
 def nfl_team_records():
     """Fetch NFL team records from sportspuff-api standings, keyed by full name and abbreviation."""
