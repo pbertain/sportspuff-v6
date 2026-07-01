@@ -21,6 +21,24 @@
       - acl
     state: present
 
+## If the app directory exists but is not a git checkout, a plain git module
+## update can fail trying to retarget origin. Clear that stale state first.
+- name: Check whether application directory exists
+  stat:
+    path: "{{ app_dir }}"
+  register: app_dir_stat
+
+- name: Check whether application directory is a git checkout
+  stat:
+    path: "{{ app_dir }}/.git"
+  register: app_dir_git_stat
+
+- name: Remove stale application directory without git metadata
+  file:
+    path: "{{ app_dir }}"
+    state: absent
+  when: app_dir_stat.stat.exists and not app_dir_git_stat.stat.exists
+
 # Create application directory
 - name: Create application directory
   file:
