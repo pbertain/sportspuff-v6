@@ -362,6 +362,15 @@
                 || statusLower === 'off';
         }
         function worldCupWinnerSide(game) {
+            const explicitWinner = String(game?.wc_winner || game?.winner || '').trim();
+            if (explicitWinner) {
+                if (worldCupTeamMatchesLabel(game?.visitor_team, game?.visitor_team_abbrev || '', explicitWinner)) {
+                    return 'visitor';
+                }
+                if (worldCupTeamMatchesLabel(game?.home_team, game?.home_team_abbrev || '', explicitWinner)) {
+                    return 'home';
+                }
+            }
             const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
             const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
             if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
@@ -412,6 +421,62 @@
                 (Array.isArray(sides[side]) ? sides[side] : []).forEach(collect);
             });
             return ids;
+        }
+        function worldCupWinnerLabel(game) {
+            const explicit = String(game?.wc_winner || game?.winner || '').trim();
+            if (explicit) return explicit;
+            const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
+            const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
+            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
+                return visitorShootout > homeShootout ? (game?.visitor_team || '') : (game?.home_team || '');
+            }
+            const visitorScore = Number(game?.visitor_score);
+            const homeScore = Number(game?.home_score);
+            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
+                return visitorScore > homeScore ? (game?.visitor_team || '') : (game?.home_team || '');
+            }
+            return '';
+        }
+        function worldCupTeamMatchesLabel(teamName, teamAbbrev, label) {
+            const needle = String(label || '').trim().toLowerCase();
+            if (!needle) return false;
+            const name = String(teamName || '').trim().toLowerCase();
+            const abbrev = String(teamAbbrev || '').trim().toLowerCase();
+            return needle === name || needle === abbrev || needle.includes(name) || needle.includes(abbrev);
+        }
+        function cyclingGameKey(game) {
+            const race = String(game?.cycling_race || game?.home_team || '').trim().toLowerCase();
+            const stage = String(game?.cycling_stage_label || game?.visitor_team || '').trim().toLowerCase();
+            const number = String(game?.cycling_stage_number || '').trim().toLowerCase();
+            const date = String(game?.game_date || '').trim().toLowerCase();
+            return [date, race, stage, number].filter(Boolean).join('|') || String(game?.game_id || '').trim().toLowerCase();
+        }
+        function cyclingFieldCount(game) {
+            return [
+                game?.cycling_winner,
+                game?.cycling_rank,
+                game?.cycling_race,
+                game?.cycling_stage_label,
+                game?.cycling_stage_number,
+                game?.game_status,
+                game?.home_score,
+                game?.visitor_score
+            ].filter(value => value !== undefined && value !== null && String(value).trim() !== '').length;
+        }
+        function cyclingStatusRank(game) {
+            const status = String(game?.game_status || '').toLowerCase();
+            if (['final', 'completed', 'finished', 'off'].includes(status)) return 3;
+            if (['in_progress', 'live', 'active'].includes(status)) return 2;
+            return 1;
+        }
+        function chooseBetterCyclingGame(current, incoming) {
+            if (!current) return incoming;
+            if (!incoming) return current;
+            const currentScore = cyclingFieldCount(current) * 10 + cyclingStatusRank(current);
+            const incomingScore = cyclingFieldCount(incoming) * 10 + cyclingStatusRank(incoming);
+            if (incomingScore > currentScore) return incoming;
+            if (incomingScore < currentScore) return current;
+            return (String(incoming?.game_status || '').length >= String(current?.game_status || '').length) ? incoming : current;
         }
         function findLeagueTeamData(teamName, leagueUpper) {
             const teams = allTeamColors && allTeamColors[leagueUpper];
@@ -1273,11 +1338,13 @@
                     const isTennis = gameLeague === 'ATP' || gameLeague === 'WTA';
                     const isCyclingEvent = gameLeague === 'CYCLING';
                     const isWorldCup = gameLeague === 'WC';
+                    const isWorldCupKnockout = isWorldCup && Boolean(game.__wcKnockout);
                     const cricketAwayScore = isCricket ? cricketInningsText(game, 'away') : '';
                     const cricketHomeScore = isCricket ? cricketInningsText(game, 'home') : '';
                     const vScore = isCricket ? cricketAwayScore || String(game.visitor_score ?? '').trim() : String(game.visitor_score ?? '').trim();
                     const hScore = isCricket ? cricketHomeScore || String(game.home_score ?? '').trim() : String(game.home_score ?? '').trim();
                     const wcPenaltyText = isWorldCup ? worldCupPenaltyText(game) : '';
+                    const wcWinnerLabel = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';
                     const hasCricketScore = isCricket && (cricketAwayScore || cricketHomeScore);
                     const hasCricketLive = isCricket && isInProgress && (game.cricket_result || game.result);
                     const hasScore = !isTennis && !isCyclingEvent && (
@@ -1356,9 +1423,17 @@
                         const race = game.cycling_race || game.home_team || '';
                         const stage = game.cycling_stage_label || game.visitor_team || '';
                         const country = game.cycling_country || '';
+                        const winner = game.cycling_winner || '';
+                        const rank = game.cycling_rank !== undefined && game.cycling_rank !== null && String(game.cycling_rank).trim() !== ''
+                            ? game.cycling_rank
+                            : '';
+                        const stageNumber = game.cycling_stage_number !== undefined && game.cycling_stage_number !== null && String(game.cycling_stage_number).trim() !== ''
+                            ? `Stage ${game.cycling_stage_number}`
+                            : '';
                         const eventLabel = game.cycling_event_label || (stage ? `${race} · ${stage}` : race);
                         const statusText = isFinal ? 'Final' : (isInProgress ? 'Live' : (isScheduled ? 'Scheduled' : ''));
                         const logo = game.league_badge || LEAGUE_LOGOS.CYCLING;
+                        const metaParts = [stage, winner ? `Winner: ${winner}` : '', rank ? `GC ${rank}` : '', stageNumber].filter(Boolean);
                         return `
                             <tr>
                                 <td colspan="4" style="padding: 10px 14px; background-color: rgba(255, 107, 53, 0.18); border-radius: 4px;">
@@ -1367,6 +1442,7 @@
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${eventLabel}</div>
                                             ${country ? `<div style="font-size: 0.8rem; opacity: 0.75;">${country}</div>` : ''}
+                                            ${metaParts.length ? `<div style="font-size: 0.78rem; opacity: 0.85; margin-top: 2px;">${metaParts.map(escapeHtml).join(' · ')}</div>` : ''}
                                         </div>
                                         ${statusText ? `<div style="font-size: 0.85rem; opacity: 0.85; white-space: nowrap;">${statusText}</div>` : ''}
                                     </div>
@@ -1409,7 +1485,7 @@
                                 visitorIsWinner = parseRuns(game.visitor_score) > parseRuns(game.home_score);
                                 homeIsWinner = parseRuns(game.home_score) > parseRuns(game.visitor_score);
                             }
-                        } else if (isWorldCup && wcPenaltyText) {
+                        } else if (isWorldCupKnockout && wcPenaltyText) {
                             const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
                             const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
                             if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout)) {
@@ -1656,14 +1732,15 @@
                             } else {
                                 scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }
-                        } else if (isWorldCup && isFinal && wcPenaltyText) {
+                        } else if (isWorldCupKnockout && isFinal && wcPenaltyText) {
                             const pkLine = `<br><span style="font-size:0.78rem; opacity:0.85;">${wcPenaltyText}</span>`;
+                            const winnerLine = wcWinnerLabel ? `<br><span style="font-size:0.78rem; opacity:0.85;">Winner: ${escapeHtml(wcWinnerLabel)}</span>` : '';
                             if (visitorIsWinner) {
-                                scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>${pkLine}`;
+                                scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>${pkLine}${winnerLine}`;
                             } else if (homeIsWinner) {
-                                scoreDisplay = `<span>${vScore}</span> - <span class="winner-score">${hScore}</span>${pkLine}`;
+                                scoreDisplay = `<span>${vScore}</span> - <span class="winner-score">${hScore}</span>${pkLine}${winnerLine}`;
                             } else {
-                                scoreDisplay = `${vScore} - ${hScore}${pkLine}`;
+                                scoreDisplay = `${vScore} - ${hScore}${pkLine}${winnerLine}`;
                             }
                         } else if (isFinal) {
                             if (visitorIsWinner) {
@@ -1724,6 +1801,9 @@
                                         line = tennisTournamentName() + ((game.tennis_round || game.round) ? ` &middot; R${game.tennis_round || game.round}` : '');
                                     } else if (gameLeague === 'WC' && game.wc_round_label) {
                                         line = game.wc_round_label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                    }
+                                    if (isWorldCupKnockout && wcWinnerLabel) {
+                                        line = line ? `${line} · Winner: ${wcWinnerLabel}` : `Winner: ${wcWinnerLabel}`;
                                     }
                                     return line ? `<div style="font-size: 0.72rem; font-weight: 500; color: rgba(255,255,255,0.75); margin-top: 3px; white-space: normal; line-height: 1.2;">${line}</div>` : '';
                                 })()}
@@ -2181,7 +2261,7 @@
                 }
                 
                 // Convert map to array and sort by game_time (scheduled games first, then TBD)
-                const games = Object.values(allGamesMap).sort((a, b) => {
+                let games = Object.values(allGamesMap).sort((a, b) => {
                     if (a.game_time && b.game_time) {
                         return new Date(a.game_time) - new Date(b.game_time);
                     }
@@ -2189,6 +2269,24 @@
                     if (b.game_time) return 1;
                     return 0;
                 });
+
+                const cyclingGamesByKey = new Map();
+                games.forEach(game => {
+                    if (String(game.league || game.sport || '').toLowerCase() !== 'cycling') return;
+                    const key = cyclingGameKey(game);
+                    const current = cyclingGamesByKey.get(key);
+                    cyclingGamesByKey.set(key, chooseBetterCyclingGame(current, game));
+                });
+                if (cyclingGamesByKey.size > 0) {
+                    const seenKeys = new Set();
+                    games = games.filter(game => {
+                        if (String(game.league || game.sport || '').toLowerCase() !== 'cycling') return true;
+                        const key = cyclingGameKey(game);
+                        if (seenKeys.has(key)) return false;
+                        seenKeys.add(key);
+                        return cyclingGamesByKey.get(key) === game;
+                    });
+                }
 
                 const wcTournamentRecords = worldCupCloneTeamRecords(wcTeamRecords);
                 const wcBracket = normalizeWorldCupBracket(seasonInfoCache.wc?.knockout_bracket);

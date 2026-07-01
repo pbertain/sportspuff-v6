@@ -113,6 +113,46 @@
             return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
         }
 
+        function worldCupPenaltyValue(game, side) {
+            const direct = game[`${side}_shootout_score`];
+            if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+                return String(direct).trim();
+            }
+
+            const boxScore = game.box_score;
+            const columns = Array.isArray(boxScore?.columns) ? boxScore.columns : [];
+            const pkIndex = columns.findIndex(column => String(column).toUpperCase() === 'PK');
+            const values = Array.isArray(boxScore?.[side]) ? boxScore[side] : [];
+            if (pkIndex >= 0 && values[pkIndex] !== undefined && values[pkIndex] !== null && String(values[pkIndex]).trim() !== '') {
+                return String(values[pkIndex]).trim();
+            }
+
+            return '';
+        }
+
+        function worldCupPenaltyText(game) {
+            const away = worldCupPenaltyValue(game, 'visitor');
+            const home = worldCupPenaltyValue(game, 'home');
+            if (!away && !home) return '';
+            return `PK ${away || '0'}-${home || '0'}`;
+        }
+
+        function worldCupWinnerLabel(game) {
+            const explicit = firstValue(game.wc_winner, game.winner);
+            if (explicit) return String(explicit);
+            const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
+            const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
+            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
+                return visitorShootout > homeShootout ? (game.visitor_team || '') : (game.home_team || '');
+            }
+            const visitorScore = Number(game.visitor_score);
+            const homeScore = Number(game.home_score);
+            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
+                return visitorScore > homeScore ? (game.visitor_team || '') : (game.home_team || '');
+            }
+            return '';
+        }
+
         function tournamentName(game) {
             return firstValue(
                 game.tennis_tournament,
@@ -202,8 +242,13 @@
 
         function renderGame(game) {
             if (EVENT_MODE === 'cycling') {
-                const title = game.cycling_event_label || detailLine(game) || game.home_team || 'Cycling event';
-                const details = detailLine(game);
+                const race = game.cycling_race || game.home_team || 'Cycling event';
+                const stage = game.cycling_stage_label || game.visitor_team || '';
+                const winner = game.cycling_winner || '';
+                const rank = game.cycling_rank;
+                const title = game.cycling_event_label || race;
+                const detailParts = [stage, winner ? `Winner: ${winner}` : '', rank !== undefined && rank !== null && String(rank).trim() !== '' ? `GC ${rank}` : '', game.cycling_stage_number ? `Stage ${game.cycling_stage_number}` : ''].filter(Boolean);
+                const details = detailParts.length ? detailParts.join(' · ') : detailLine(game);
                 return `<div class="event-league-card">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
@@ -219,6 +264,11 @@
             const visitorName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'visitor') : (game.visitor_team || 'TBD');
             const homeName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'home') : (game.home_team || 'TBD');
             const sideLabel = EVENT_MODE === 'tennis' ? 'Player' : 'Team';
+            const isWorldCupKnockout = EVENT_MODE === 'world-cup' && Boolean(game.__wcKnockout);
+            const worldCupWinner = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';
+            const worldCupPK = isWorldCupKnockout ? worldCupPenaltyText(game) : '';
+            const worldCupRound = isWorldCupKnockout ? (game.__wcBracketRound || game.wc_round_label || game.game_type || '') : '';
+            const worldCupMeta = [worldCupRound, worldCupPK ? `PK ${worldCupPK.replace(/^PK\s+/, '')}` : '', worldCupWinner ? `Winner: ${worldCupWinner}` : ''].filter(Boolean).join(' · ');
             return `<div class="event-league-card">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div style="min-width: 180px;">
@@ -228,6 +278,7 @@
                     <div class="text-center">
                         <div class="event-league-score fs-4">${escapeHtml(scoreText(game))}</div>
                         <div class="event-league-meta">${escapeHtml(statusText(game))}</div>
+                        ${worldCupMeta ? `<div class="event-league-meta mt-1">${escapeHtml(worldCupMeta)}</div>` : ''}
                     </div>
                     <div class="text-end" style="min-width: 180px;">
                         <h3 class="event-league-title fs-5">${escapeHtml(homeName)}</h3>
@@ -327,6 +378,24 @@
             return source?.knockout_bracket || source || null;
         }
 
+        function worldCupBracketGameIds(bracket) {
+            const ids = new Set();
+            const addMatch = match => {
+                const id = match?.game_id;
+                if (id !== undefined && id !== null && String(id).trim() !== '') {
+                    ids.add(String(id));
+                }
+            };
+            (Array.isArray(bracket?.rounds) ? bracket.rounds : []).forEach(round => {
+                (Array.isArray(round?.matches) ? round.matches : []).forEach(addMatch);
+            });
+            const sides = bracket?.sides || {};
+            ['left', 'right'].forEach(side => {
+                (Array.isArray(sides[side]) ? sides[side] : []).forEach(addMatch);
+            });
+            return ids;
+        }
+
         function worldCupBracketMatchCount(bracket) {
             const rounds = Array.isArray(bracket?.rounds) ? bracket.rounds : [];
             const roundCount = rounds.reduce((total, round) => total + (Array.isArray(round?.matches) ? round.matches.length : 0), 0);
@@ -370,6 +439,7 @@
         function renderWorldCupKnockout(bracket, legacyGames) {
             if (EVENT_MODE !== 'world-cup') return '';
             const normalized = normalizeWorldCupBracket(bracket);
+            const ids = worldCupBracketGameIds(normalized);
             const rounds = worldCupBracketMatchesFromRounds(normalized?.rounds || []);
             const hasRounds = rounds.some(round => round.matches.length > 0);
             const sides = normalized?.sides || {};
@@ -402,10 +472,11 @@
             }
 
             const renderedRounds = rounds
-                .map(round => renderWorldCupBracketRound(round.name, round.matches))
+                .map(round => renderWorldCupBracketRound(round.name, round.matches.map(match => ({ ...match, __wcKnockout: true, __wcBracketRound: round.name }))))
                 .join('');
             const renderedSides = sideMatches.map(side => renderWorldCupBracketRound(side === 'left' ? 'Left Side' : 'Right Side', (sides[side] || []).map(match => ({
                 ...match,
+                __wcKnockout: true,
                 home_team: match.home_team || match.homeTeam || '',
                 visitor_team: match.away_team || match.visitor_team || match.awayTeam || '',
                 home_score: match.home_score ?? match.homeScore ?? null,
@@ -617,7 +688,7 @@
             results.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
             try {
-            const [seasonRes, scheduleRes, scoresRes, standingsRes, bracketRes] = await Promise.all([
+                const [seasonRes, scheduleRes, scoresRes, standingsRes, bracketRes] = await Promise.all([
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
                     fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
@@ -669,8 +740,11 @@
                 const knockoutSource = EVENT_MODE === 'world-cup'
                     ? normalizeWorldCupBracket(seasonRes?.knockout_bracket) || normalizeWorldCupBracket(bracketRes)
                     : null;
+                const knockoutIds = EVENT_MODE === 'world-cup' ? worldCupBracketGameIds(knockoutSource) : new Set();
                 const knockoutBlock = EVENT_MODE === 'world-cup' ? renderWorldCupKnockout(knockoutSource, games) : '';
-                const groupGames = EVENT_MODE === 'world-cup' ? games.filter(game => !isWorldCupKnockout(game)) : games;
+                const groupGames = EVENT_MODE === 'world-cup'
+                    ? games.filter(game => !knockoutIds.has(String(game.game_id || '')) && !isWorldCupKnockout(game))
+                    : games;
                 const renderedEvents = EVENT_MODE === 'tennis'
                     ? renderTennisGroups(games)
                     : `${knockoutBlock}${groupGames.map(renderGame).join('')}`;
