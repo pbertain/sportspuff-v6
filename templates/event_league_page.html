@@ -70,6 +70,9 @@
         {% if league_config.mode == 'world-cup' %}
         <div id="wc-standings-panel" class="wc-standings-panel mt-3" style="display: none;"></div>
         {% endif %}
+        {% if league_config.mode == 'cycling' %}
+        <div id="cycling-standings-panel" class="event-league-card mt-3" style="display: none;"></div>
+        {% endif %}
     </div>
 
     {% include 'shared_footer.html' %}
@@ -139,18 +142,7 @@
 
         function worldCupWinnerLabel(game) {
             const explicit = firstValue(game.wc_winner, game.winner);
-            if (explicit) return String(explicit);
-            const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
-            const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
-            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
-                return visitorShootout > homeShootout ? (game.visitor_team || '') : (game.home_team || '');
-            }
-            const visitorScore = Number(game.visitor_score);
-            const homeScore = Number(game.home_score);
-            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
-                return visitorScore > homeScore ? (game.visitor_team || '') : (game.home_team || '');
-            }
-            return '';
+            return explicit ? String(explicit) : '';
         }
 
         function tournamentName(game) {
@@ -224,6 +216,56 @@
             }
             target.textContent = `Updated: ${labels.join(' • ')}`;
             target.style.display = '';
+        }
+
+        function renderCyclingStandings(data) {
+            if (EVENT_MODE !== 'cycling') return;
+            const panel = document.getElementById('cycling-standings-panel');
+            if (!panel) return;
+            const teams = Array.isArray(data?.teams) ? data.teams : [];
+            if (teams.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            const rows = teams.map(team => {
+                const teamName = escapeHtml(team.team_name || 'TBD');
+                const rank = escapeHtml(team.rank ?? team.group_rank ?? team.cycling_rank ?? '');
+                const points = escapeHtml(team.points ?? '');
+                const gamesBack = escapeHtml(team.games_back ?? '');
+                const cyclingRank = escapeHtml(team.cycling_rank ?? '');
+                return `
+                    <tr>
+                        <td>${rank}</td>
+                        <td>${teamName}</td>
+                        <td>${points}</td>
+                        <td>${gamesBack}</td>
+                        <td>${cyclingRank}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="event-league-title fs-5 mb-0">Cycling GC</h2>
+                    <span class="event-league-pill">${teams.length} ${teams.length === 1 ? 'team' : 'teams'}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Team</th>
+                                <th>Pts</th>
+                                <th>GB</th>
+                                <th>GC Rank</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+            panel.style.display = '';
         }
 
         function detailLine(game) {
@@ -311,9 +353,11 @@
 
         function renderSeasonInfo(info) {
             const panel = document.getElementById('event-season-panel');
-            if (!info || !Array.isArray(info.season_types) || info.season_types.length === 0) return;
-            const phase = info.current_phase || info.season_types[0].name || '';
-            const dates = info.season_types
+            if (!info) return;
+            const seasonTypes = Array.isArray(info.season_types) ? info.season_types : [];
+            const phase = info.current_phase || (seasonTypes[0] && seasonTypes[0].name) || '';
+            if (!phase && seasonTypes.length === 0 && !info.year) return;
+            const dates = seasonTypes
                 .filter(st => st.display || st.start_date)
                 .map(st => `<span class="event-league-pill">${escapeHtml(st.display || `${st.name}: ${prettyDate(st.start_date)} - ${prettyDate(st.end_date)}`)}</span>`)
                 .join(' ');
@@ -692,7 +736,7 @@
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
                     fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
-                    EVENT_MODE === 'world-cup'
+                    EVENT_MODE === 'world-cup' || EVENT_MODE === 'cycling'
                         ? fetch(`/api/proxy/standings/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                         : Promise.resolve({}),
                     EVENT_MODE === 'world-cup'
@@ -702,6 +746,7 @@
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
                 renderWorldCupStandings(standingsRes);
+                renderCyclingStandings(standingsRes);
                 renderFreshnessLine([
                     freshnessLabel('scores', scoresRes),
                     freshnessLabel('schedule', scheduleRes),

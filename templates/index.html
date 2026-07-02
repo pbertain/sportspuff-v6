@@ -376,12 +376,6 @@
             if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
                 return visitorShootout > homeShootout ? 'visitor' : 'home';
             }
-
-            const visitorScore = Number(game?.visitor_score);
-            const homeScore = Number(game?.home_score);
-            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
-                return visitorScore > homeScore ? 'visitor' : 'home';
-            }
             return '';
         }
         function worldCupApplyRecordResult(records, teamName, teamAbbrev, outcome) {
@@ -429,11 +423,6 @@
             const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
             if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
                 return visitorShootout > homeShootout ? (game?.visitor_team || '') : (game?.home_team || '');
-            }
-            const visitorScore = Number(game?.visitor_score);
-            const homeScore = Number(game?.home_score);
-            if (Number.isFinite(visitorScore) && Number.isFinite(homeScore) && visitorScore !== homeScore) {
-                return visitorScore > homeScore ? (game?.visitor_team || '') : (game?.home_team || '');
             }
             return '';
         }
@@ -1485,10 +1474,14 @@
                                 visitorIsWinner = parseRuns(game.visitor_score) > parseRuns(game.home_score);
                                 homeIsWinner = parseRuns(game.home_score) > parseRuns(game.visitor_score);
                             }
-                        } else if (isWorldCupKnockout && wcPenaltyText) {
+                        } else if (isWorldCupKnockout) {
                             const visitorShootout = Number(worldCupPenaltyValue(game, 'visitor'));
                             const homeShootout = Number(worldCupPenaltyValue(game, 'home'));
-                            if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout)) {
+                            const explicitWinner = worldCupWinnerLabel(game);
+                            if (explicitWinner) {
+                                visitorIsWinner = worldCupTeamMatchesLabel(game.visitor_team, game.visitor_team_abbrev || '', explicitWinner);
+                                homeIsWinner = worldCupTeamMatchesLabel(game.home_team, game.home_team_abbrev || '', explicitWinner);
+                            } else if (Number.isFinite(visitorShootout) && Number.isFinite(homeShootout) && visitorShootout !== homeShootout) {
                                 visitorIsWinner = visitorShootout > homeShootout;
                                 homeIsWinner = homeShootout > visitorShootout;
                             }
@@ -1732,8 +1725,8 @@
                             } else {
                                 scoreDisplay = `<span style="font-size:0.8rem; opacity:0.8;">Live</span>`;
                             }
-                        } else if (isWorldCupKnockout && isFinal && wcPenaltyText) {
-                            const pkLine = `<br><span style="font-size:0.78rem; opacity:0.85;">${wcPenaltyText}</span>`;
+                        } else if (isWorldCupKnockout && isFinal && (wcPenaltyText || wcWinnerLabel)) {
+                            const pkLine = wcPenaltyText ? `<br><span style="font-size:0.78rem; opacity:0.85;">${wcPenaltyText}</span>` : '';
                             const winnerLine = wcWinnerLabel ? `<br><span style="font-size:0.78rem; opacity:0.85;">Winner: ${escapeHtml(wcWinnerLabel)}</span>` : '';
                             if (visitorIsWinner) {
                                 scoreDisplay = `<span class="winner-score">${vScore}</span> - <span>${hScore}</span>${pkLine}${winnerLine}`;

@@ -89,11 +89,12 @@ class TestPageSmoke(unittest.TestCase):
             with self.subTest(league=league), patch("app.get_db_connection") as db:
                 response = self.client.get(f"/league/{league}")
 
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(title.encode(), response.data)
-            self.assertIn(b"id=\"event-date-picker\"", response.data)
-            self.assertIn(b"id=\"event-data-freshness\"", response.data)
-            db.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(title.encode(), response.data)
+        self.assertIn(b"id=\"event-date-picker\"", response.data)
+        self.assertIn(b"id=\"event-data-freshness\"", response.data)
+        self.assertIn(b"id=\"cycling-standings-panel\"", response.data)
+        db.assert_not_called()
 
     def test_regular_league_page_exposes_schedule_module(self):
         cursor = FakeCursor(
@@ -835,6 +836,25 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         self.assertIn("if (league === 'WC')", template)
         self.assertIn("return code ? `/team/wc/${code}`", template)
+
+    def test_world_cup_and_cycling_rendering_uses_api_contract_fields(self):
+        index_template = (PROJECT_ROOT / "templates/index.html").read_text()
+        event_template = (PROJECT_ROOT / "templates/event_league_page.html").read_text()
+
+        for snippet in [
+            "function renderCyclingStandings(data)",
+            "EVENT_MODE === 'world-cup' || EVENT_MODE === 'cycling'",
+            "const rank = game.cycling_rank;",
+            "Winner: ${winner}",
+            "GC ${rank}",
+            "const worldCupWinner = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';",
+        ]:
+            self.assertIn(snippet, event_template)
+
+        for snippet in [
+            "const explicitWinner = String(game?.wc_winner || game?.winner || '').trim();",
+        ]:
+            self.assertIn(snippet, index_template)
 
     def test_cycling_uses_uci_branding(self):
         index_template = (PROJECT_ROOT / "templates/index.html").read_text()
