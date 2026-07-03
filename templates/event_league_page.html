@@ -754,7 +754,7 @@
             const roundGroups = worldCupBracketRoundGroups(allRounds.flatMap(round => round.matches || []));
             const hasSides = Boolean((Array.isArray(normalized?.sides?.left) && normalized.sides.left.length) || (Array.isArray(normalized?.sides?.right) && normalized.sides.right.length));
             const count = allRounds.reduce((total, round) => total + (Array.isArray(round?.matches) ? round.matches.length : 0), 0) || worldCupBracketMatchCount(normalized);
-            const champion = worldCupBracketWinnerLabel(worldCupBracketFinalMatch(normalized, gameMap) || {});
+            const champion = worldCupWinnerLabel(worldCupBracketFinalMatch(normalized, gameMap) || {});
             const round32Label = String(normalized?.rounds?.[0]?.name || 'Round of 32').trim();
             const centerRounds = roundGroups.filter(group => group.order >= 50);
             const outerRounds = roundGroups.filter(group => group.order < 50);
