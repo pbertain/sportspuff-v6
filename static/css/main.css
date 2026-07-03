@@ -925,8 +925,77 @@ main, .main-content {
 }
 
 .wc-bracket {
+  display: grid;
+  gap: 14px;
   overflow-x: auto;
   position: relative;
+}
+
+.wc-bracket-winner-banner {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(178, 34, 34, 0.22), rgba(20, 10, 40, 0.88));
+  border: 1px solid rgba(255, 215, 0, 0.22);
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  padding: 12px 16px;
+}
+
+.wc-bracket-winner-trophy {
+  display: block;
+  flex: 0 0 auto;
+  height: 54px;
+  object-fit: contain;
+  width: 54px;
+}
+
+.wc-bracket-winner-copy {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.wc-bracket-winner-kicker {
+  color: rgba(255, 230, 160, 0.86);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wc-bracket-winner-name {
+  color: var(--warm-white);
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.wc-bracket-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.wc-bracket-side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wc-bracket-side--left {
+  align-content: start;
+}
+
+.wc-bracket-side--right {
+  align-content: start;
+}
+
+.wc-bracket-center {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
 }
 
 .wc-bracket-columns {
@@ -947,6 +1016,16 @@ main, .main-content {
   position: relative;
 }
 
+.wc-bracket-column--final {
+  border-color: rgba(255, 215, 0, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.08) inset;
+}
+
+.wc-bracket-column--placeholder {
+  border-style: dashed;
+  opacity: 0.95;
+}
+
 .wc-bracket-column-title {
   background: color-mix(in srgb, var(--event-accent, #00824a) 26%, rgba(20, 10, 40, 0.92));
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -965,6 +1044,20 @@ main, .main-content {
   padding: 12px;
 }
 
+.wc-bracket-empty-slot {
+  align-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.64);
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 92px;
+  padding: 12px;
+  text-transform: uppercase;
+}
+
 .wc-bracket-match {
   background: rgba(9, 14, 27, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -974,6 +1067,11 @@ main, .main-content {
   gap: 8px;
   padding: 10px 10px 12px;
   position: relative;
+}
+
+.wc-bracket-match--final {
+  background: rgba(33, 19, 8, 0.94);
+  border-color: rgba(255, 215, 0, 0.28);
 }
 
 .wc-bracket-match-head,
@@ -1005,6 +1103,10 @@ main, .main-content {
   justify-content: space-between;
   min-height: 34px;
   padding: 6px 8px;
+}
+
+.wc-bracket-team .wc-bracket-team-name {
+  flex: 1 1 auto;
 }
 
 .wc-bracket-team-name {
@@ -1107,6 +1209,25 @@ main, .main-content {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.wc-groups-split {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.wc-groups-column {
+  display: grid;
+  gap: 12px;
+}
+
+.wc-groups-column-title {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .wc-group-card {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1163,6 +1284,14 @@ main, .main-content {
   width: 100%;
 }
 
+.wc-team-badge {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .wc-rank {
   color: rgba(255, 255, 255, 0.7);
   font-weight: 700;
@@ -1170,6 +1299,10 @@ main, .main-content {
 
 .wc-team {
   min-width: 9rem;
+}
+
+.wc-team-name {
+  min-width: 0;
 }
 
 .wc-team-code {
@@ -1182,6 +1315,22 @@ main, .main-content {
   min-width: 2rem;
   padding: 2px 4px;
   text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .wc-bracket-layout,
+  .wc-groups-split {
+    grid-template-columns: 1fr;
+  }
+
+  .wc-bracket-center {
+    order: -1;
+  }
+
+  .wc-bracket-side--left,
+  .wc-bracket-side--right {
+    grid-template-columns: 1fr;
+  }
 }
 
 .wc-team-code-link {

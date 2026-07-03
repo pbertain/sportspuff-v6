@@ -535,7 +535,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("worldCupGroupName(team.group)", template)
         self.assertIn("worldCupGroupName(group.group)", template)
         self.assertIn("/api/proxy/standings/${league}", template)
-        for column in ["#</th>", "Team</th>", "GP</th>", "W</th>", "D</th>", "L</th>", "F</th>", "A</th>", "GD</th>", "P</th>"]:
+        for column in ["#</th>", "Team</th>", "W-D-L</th>", "Pts</th>", "Groups A-F", "Groups G-L", "wc-team-badge", "wc-bracket-winner-banner", "wc-bracket-layout"]:
             self.assertIn(column, template)
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", css)
@@ -855,6 +855,12 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function wireWorldCupBracketConnectors(root)",
             "wc-bracket-column",
             "wc-bracket-connectors",
+            "wc-bracket-winner-banner",
+            "wc-bracket-layout",
+            "wc-groups-split",
+            "wc-team-badge",
+            "World Cup Champion",
+            "https://splitsp.lat/logos/wc/wc-trophy.png",
             "winner-star.png",
         ]:
             self.assertIn(snippet, event_template)
@@ -878,6 +884,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("cycling-anniversary-banner", css)
         self.assertIn("wc-bracket-column", css)
         self.assertIn("wc-bracket-connectors", css)
+        self.assertIn("wc-bracket-layout", css)
+        self.assertIn("wc-bracket-winner-banner", css)
+        self.assertIn("wc-groups-split", css)
         self.assertIn("https://www.uci.org/the-uci-celebrates-its-125th-anniversary/7cSGKuFPEiLx1fVHx7YCDe", app_source)
 
     def test_shared_header_dropdown_stays_above_page_content(self):
