@@ -546,13 +546,17 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("wc-team-code-link", template)
         self.assertIn("wc-advancing-team", template)
         self.assertIn("wc-knockout-panel", template)
-        self.assertIn("wc-knockout-round", template)
+        self.assertIn("wc-bracket", template)
+        self.assertIn("wc-bracket-column", template)
+        self.assertIn("wc-bracket-match", template)
+        self.assertIn("wc-bracket-connectors", template)
         self.assertIn("fetch('/api/proxy/world-cup/bracket')", template)
         self.assertIn(".wc-team-link", css)
         self.assertIn(".wc-team-code-link", css)
         self.assertIn(".wc-advancing-team", css)
         self.assertIn(".wc-knockout-panel", css)
-        self.assertIn(".wc-knockout-round-title", css)
+        self.assertIn(".wc-bracket-column-title", css)
+        self.assertIn(".wc-bracket-match", css)
 
     @patch("app.set_cached_response")
     @patch("app.get_cached_response", return_value=None)
@@ -848,6 +852,10 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "Winner: ${winner}",
             "GC ${rank}",
             "const worldCupWinner = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';",
+            "function wireWorldCupBracketConnectors(root)",
+            "wc-bracket-column",
+            "wc-bracket-connectors",
+            "winner-star.png",
         ]:
             self.assertIn(snippet, event_template)
 
@@ -868,6 +876,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("banner_logo_url", event_template)
         self.assertIn("cycling-anniversary-banner", event_template)
         self.assertIn("cycling-anniversary-banner", css)
+        self.assertIn("wc-bracket-column", css)
+        self.assertIn("wc-bracket-connectors", css)
         self.assertIn("https://www.uci.org/the-uci-celebrates-its-125th-anniversary/7cSGKuFPEiLx1fVHx7YCDe", app_source)
 
     def test_shared_header_dropdown_stays_above_page_content(self):
