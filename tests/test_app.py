@@ -859,6 +859,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "wc-bracket-layout",
             "wc-groups-split",
             "wc-team-badge",
+            "function worldCupBracketScoreValue",
+            "const visitorScore = Number(worldCupBracketScoreValue(game, 'visitor'));",
             "World Cup Champion",
             "https://splitsp.lat/logos/wc/wc-trophy.png",
             "winner-star.png",
