@@ -279,7 +279,7 @@
             const homeStar = winnerSide === 'home' ? '<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large wc-bracket-star" />' : '';
             const awayStar = winnerSide === 'away' ? '<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large wc-bracket-star" />' : '';
             const winnerPill = showWinner ? `<div class="wc-bracket-winner-pill">Winner: ${escapeHtml(winnerLabel)}</div>` : '';
-            const finalClass = worldCupRoundOrderFromLabel(roundLabel) >= 60 ? ' wc-bracket-match--final' : '';
+            const finalClass = worldCupBracketRoundOrderFromLabel(roundLabel) >= 60 ? ' wc-bracket-match--final' : '';
 
             return `
                 <article class="wc-bracket-match${finalClass}${matchClass ? ` ${matchClass}` : ''}" data-match-index="${matchIndex}">
