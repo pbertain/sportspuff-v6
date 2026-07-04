@@ -859,6 +859,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "wc-bracket-layout",
             "wc-groups-split",
             "wc-team-badge",
+            "function worldCupBracketContentScore",
+            "function chooseWorldCupBracketSource",
             "function worldCupBracketScoreValue",
             "function worldCupBracketTeamLabel",
             "match?.visitor_team",

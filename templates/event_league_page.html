@@ -760,6 +760,31 @@
             return source?.knockout_bracket || source || null;
         }
 
+        function worldCupBracketContentScore(bracket) {
+            const normalized = normalizeWorldCupBracket(bracket);
+            const rounds = Array.isArray(normalized?.rounds) ? normalized.rounds : [];
+            const sides = normalized?.sides || {};
+            const matches = [
+                ...rounds.flatMap(round => Array.isArray(round?.matches) ? round.matches : []),
+                ...(Array.isArray(sides.left) ? sides.left : []),
+                ...(Array.isArray(sides.right) ? sides.right : [])
+            ];
+            return matches.reduce((total, match) => {
+                return total +
+                    (worldCupBracketTeamLabel(match, 'home') !== 'TBD' ? 2 : 0) +
+                    (worldCupBracketTeamLabel(match, 'away') !== 'TBD' ? 2 : 0) +
+                    (worldCupBracketScoreText(match) ? 2 : 0) +
+                    (firstValue(match?.winner, match?.wc_winner) ? 1 : 0) +
+                    (firstValue(match?.game_id, match?.match_number) ? 1 : 0);
+            }, 0);
+        }
+
+        function chooseWorldCupBracketSource(primary, fallback) {
+            const primaryScore = worldCupBracketContentScore(primary);
+            const fallbackScore = worldCupBracketContentScore(fallback);
+            return primaryScore >= fallbackScore ? primary : fallback;
+        }
+
         function worldCupBracketGameIds(bracket) {
             const ids = new Set();
             const addMatch = match => {
@@ -1064,7 +1089,7 @@
             results.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
             try {
-                const [seasonRes, scheduleRes, scoresRes, standingsRes, bracketRes] = await Promise.all([
+            const [seasonRes, scheduleRes, scoresRes, standingsRes, bracketRes] = await Promise.all([
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
                     fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
@@ -1075,6 +1100,9 @@
                         ? fetch('/api/proxy/world-cup/bracket').then(r => r.ok ? r.json() : {}).catch(() => ({}))
                         : Promise.resolve({})
                 ]);
+                const knockoutSource = EVENT_MODE === 'world-cup'
+                    ? chooseWorldCupBracketSource(seasonRes?.knockout_bracket, bracketRes)
+                    : null;
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
                 renderWorldCupStandings(standingsRes);
@@ -1114,9 +1142,6 @@
                     return;
                 }
 
-                const knockoutSource = EVENT_MODE === 'world-cup'
-                    ? normalizeWorldCupBracket(seasonRes?.knockout_bracket) || normalizeWorldCupBracket(bracketRes)
-                    : null;
                 const knockoutIds = EVENT_MODE === 'world-cup' ? worldCupBracketGameIds(knockoutSource) : new Set();
                 const knockoutBlock = EVENT_MODE === 'world-cup' ? renderWorldCupKnockout(knockoutSource, games) : '';
                 const groupGames = EVENT_MODE === 'world-cup'
