@@ -974,7 +974,7 @@ main, .main-content {
 .wc-bracket-layout {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -1002,7 +1002,7 @@ main, .main-content {
   display: grid;
   gap: 0;
   grid-auto-flow: column;
-  grid-auto-columns: 160px;
+  grid-auto-columns: 172px;
   min-width: max-content;
   position: relative;
 }
@@ -1011,8 +1011,8 @@ main, .main-content {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  min-width: 160px;
-  width: 160px;
+  min-width: 172px;
+  width: 172px;
   padding-bottom: 8px;
   position: relative;
 }
@@ -1130,7 +1130,7 @@ main, .main-content {
 
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
