@@ -1011,8 +1011,8 @@ main, .main-content {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  min-width: 220px;
-  padding-bottom: 10px;
+  min-width: 190px;
+  padding-bottom: 8px;
   position: relative;
 }
 
@@ -1031,17 +1031,17 @@ main, .main-content {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px 8px 0 0;
   color: var(--warm-white);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.04em;
-  padding: 8px 10px;
+  padding: 7px 9px;
   text-transform: uppercase;
 }
 
 .wc-bracket-column-matches {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .wc-bracket-empty-slot {
@@ -1050,11 +1050,11 @@ main, .main-content {
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.64);
   display: flex;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 700;
   justify-content: center;
-  min-height: 92px;
-  padding: 12px;
+  min-height: 72px;
+  padding: 10px;
   text-transform: uppercase;
 }
 
@@ -1064,8 +1064,8 @@ main, .main-content {
   border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset;
   display: grid;
-  gap: 8px;
-  padding: 10px 10px 12px;
+  gap: 6px;
+  padding: 8px;
   position: relative;
 }
 
@@ -1084,7 +1084,7 @@ main, .main-content {
 
 .wc-bracket-match-label {
   color: var(--warm-white);
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -1092,32 +1092,53 @@ main, .main-content {
 
 .wc-bracket-match-status {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
 }
 
 .wc-bracket-team {
   align-items: center;
   border-radius: 6px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: space-between;
-  min-height: 34px;
-  padding: 6px 8px;
+  min-height: 28px;
+  padding: 4px 6px;
 }
 
 .wc-bracket-team .wc-bracket-team-name {
   flex: 1 1 auto;
 }
 
+.wc-bracket-team-main {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wc-bracket-team-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wc-bracket-team-record {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .wc-bracket-team--winner {
@@ -1136,10 +1157,21 @@ main, .main-content {
 
 .wc-bracket-star {
   position: static;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+}
+
+.wc-bracket-team-score {
+  align-items: center;
+  color: #FFF1A8;
+  display: inline-flex;
+  font-size: 0.92rem;
+  font-weight: 800;
+  gap: 4px;
+  margin-left: 8px;
+  white-space: nowrap;
 }
 
 .wc-bracket-score {
@@ -1154,8 +1186,12 @@ main, .main-content {
 
 .wc-bracket-details {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   line-height: 1.25;
+}
+
+.wc-bracket-details--pk {
+  color: #ffd86a;
 }
 
 .wc-bracket-winner-pill {
@@ -1185,6 +1221,14 @@ main, .main-content {
 .wc-bracket-column,
 .wc-bracket-match {
   z-index: 2;
+}
+
+.wc-bracket-team-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: 16px;
+  object-fit: contain;
+  width: 16px;
 }
 
 .wc-standings-header {

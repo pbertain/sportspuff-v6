@@ -174,13 +174,23 @@
             return needle === name || needle === abbrev || needle.includes(name) || needle.includes(abbrev);
         }
 
+        function worldCupBracketIdentifierText(match, side) {
+            const names = side === 'home'
+                ? [match?.home_team, match?.home_name, match?.homeTeam]
+                : [match?.away_team, match?.visitor_team, match?.away_name, match?.visitor_name, match?.awayTeam, match?.visitorTeam];
+            const cleaned = names.map(value => String(value || '').trim()).filter(Boolean);
+            return cleaned[0] || '';
+        }
+
         function worldCupBracketWinnerSide(match) {
-            const explicit = String(firstValue(match?.winner, match?.wc_winner) || '').trim();
+            const explicit = String(worldCupWinnerLabel(match) || firstValue(match?.winner, match?.wc_winner) || '').trim();
             if (!explicit) return '';
-            if (worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'home'), match?.home_team_abbrev || match?.home_team_code || '', explicit)) {
+            const homeName = worldCupBracketIdentifierText(match, 'home');
+            const awayName = worldCupBracketIdentifierText(match, 'away');
+            if (worldCupTeamMatchesLabel(homeName, worldCupBracketTeamCode(match, 'home'), explicit) || worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'home'), worldCupBracketTeamCode(match, 'home'), explicit)) {
                 return 'home';
             }
-            if (worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'away'), match?.away_team_abbrev || match?.visitor_team_abbrev || match?.away_team_code || '', explicit)) {
+            if (worldCupTeamMatchesLabel(awayName, worldCupBracketTeamCode(match, 'away'), explicit) || worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'away'), worldCupBracketTeamCode(match, 'away'), explicit)) {
                 return 'away';
             }
             return '';
@@ -204,9 +214,9 @@
         function worldCupBracketTeamLabel(match, side) {
             if (side === 'home') {
                 return firstValue(
+                    match?.home_slot,
                     match?.home_team,
                     match?.homeTeam,
-                    match?.home_slot,
                     match?.homeSlot,
                     match?.home_name,
                     match?.homeName,
@@ -233,6 +243,65 @@
         function worldCupBracketSlotLabel(match, side) {
             const team = worldCupBracketTeamLabel(match, side);
             return String(team || 'TBD').trim();
+        }
+
+        function worldCupBracketTeamCode(match, side) {
+            const name = side === 'home'
+                ? firstValue(match?.home_team, match?.home_name, '')
+                : firstValue(match?.away_team, match?.visitor_team, match?.away_name, match?.visitor_name, '');
+            const abbrev = side === 'home'
+                ? firstValue(match?.home_team_abbrev, match?.home_team_code, '')
+                : firstValue(match?.away_team_abbrev, match?.visitor_team_abbrev, match?.away_team_code, match?.visitor_team_code, '');
+            const slot = side === 'home' ? firstValue(match?.home_slot, match?.homeSlot, '') : firstValue(match?.away_slot, match?.visitor_slot, match?.awaySlot, match?.visitorSlot, '');
+            const code = String(abbrev || '').trim().toUpperCase();
+            if (code) return code;
+            if (name && /^w\d+|^l\d+|^tbd$/i.test(String(slot || ''))) {
+                return String(slot || '').trim().toUpperCase();
+            }
+            return String(slot || '').trim();
+        }
+
+        function worldCupBracketTeamRecordText(match, side) {
+            const record = side === 'home'
+                ? firstValue(match?.home_record, match?.homeRecord, '')
+                : firstValue(match?.away_record, match?.awayRecord, match?.visitor_record, match?.visitorRecord, '');
+            if (record) return String(record).trim();
+
+            const wins = side === 'home'
+                ? firstValue(match?.home_wins, match?.homeWins, '')
+                : firstValue(match?.away_wins, match?.awayWins, match?.visitor_wins, match?.visitorWins, '');
+            const draws = side === 'home'
+                ? firstValue(match?.home_draws, match?.homeDraws, '')
+                : firstValue(match?.away_draws, match?.awayDraws, match?.visitor_draws, match?.visitorDraws, '');
+            const losses = side === 'home'
+                ? firstValue(match?.home_losses, match?.homeLosses, '')
+                : firstValue(match?.away_losses, match?.awayLosses, match?.visitor_losses, match?.visitorLosses, '');
+            const pieces = [wins, draws, losses].filter(value => value !== undefined && value !== null && String(value).trim() !== '');
+            return pieces.length ? `[${pieces.map(value => String(value).trim()).join('-')}]` : '';
+        }
+
+        function worldCupBracketTeamLogo(match, side) {
+            const code = worldCupBracketTeamCode(match, side);
+            if (!code) return '';
+            const lower = code.toLowerCase();
+            return `<img class="wc-bracket-team-logo" src="https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(lower)}_ball_logo.png" alt="" loading="lazy" onerror="this.style.display='none';">`;
+        }
+
+        function worldCupBracketTeamDisplay(match, side) {
+            const isHome = side === 'home';
+            const label = worldCupBracketTeamLabel(match, side);
+            const code = worldCupBracketTeamCode(match, side);
+            const record = worldCupBracketTeamRecordText(match, side);
+            const isPlaceholder = !firstValue(isHome ? match?.home_team : (match?.away_team || match?.visitor_team), isHome ? match?.homeTeam : match?.awayTeam, isHome ? match?.home_name : match?.away_name, '');
+            const displayName = code || label;
+            const slot = String(label || '').trim();
+            const nameText = slot && /^w\d+|^l\d+|^tbd$/i.test(slot) ? slot.toUpperCase() : displayName;
+            return {
+                nameText: nameText || 'TBD',
+                logo: isPlaceholder ? '' : worldCupBracketTeamLogo(match, side),
+                record,
+                placeholder: isPlaceholder && !/^w\d+|^l\d+/i.test(slot)
+            };
         }
 
         function worldCupBracketStatusLine(match) {
@@ -336,37 +405,48 @@
             const game = gameMap.get(worldCupBracketMatchGameId(match)) || {};
             const merged = {...game, ...match};
             const winnerSide = worldCupBracketWinnerSide(merged);
-            const winnerLabel = worldCupWinnerLabel(merged);
-            const homeLabel = worldCupBracketSlotLabel(merged, 'home');
-            const awayLabel = worldCupBracketSlotLabel(merged, 'away');
+            const homeDisplay = worldCupBracketTeamDisplay(merged, 'home');
+            const awayDisplay = worldCupBracketTeamDisplay(merged, 'away');
             const roundLabel = roundName || worldCupBracketRoundLabel(merged);
             const status = merged.game_status || merged.status || '';
             const scoreText = worldCupBracketScoreText(merged);
+            const penaltyText = worldCupPenaltyText(merged);
             const details = [roundLabel, worldCupBracketStatusLine(merged)].filter(Boolean).join(' · ');
-            const showWinner = Boolean(winnerLabel);
-            const homeStar = winnerSide === 'home' ? '<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large wc-bracket-star" />' : '';
-            const awayStar = winnerSide === 'away' ? '<img src="/static/images/winner-star.png" alt="Winner" class="winner-star-large wc-bracket-star" />' : '';
-            const winnerPill = showWinner ? `<div class="wc-bracket-winner-pill">Winner: ${escapeHtml(winnerLabel)}</div>` : '';
             const finalClass = worldCupBracketRoundOrderFromLabel(roundLabel) >= 60 ? ' wc-bracket-match--final' : '';
+            const winnerStarHome = winnerSide === 'home' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
+            const winnerStarAway = winnerSide === 'away' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
+            const scoreTextDisplay = scoreText || 'TBD';
+            const statusTextValue = status ? escapeHtml(status) : '';
 
             return `
                 <article class="wc-bracket-match${finalClass}${matchClass ? ` ${matchClass}` : ''}" data-match-index="${matchIndex}">
                     <div class="wc-bracket-match-head">
                         <div class="wc-bracket-match-label">${escapeHtml(roundLabel || 'Match')}</div>
-                        ${status ? `<div class="wc-bracket-match-status">${escapeHtml(status)}</div>` : ''}
+                        ${statusTextValue ? `<div class="wc-bracket-match-status">${statusTextValue}</div>` : ''}
                     </div>
                     <div class="${worldCupBracketTeamClass(merged, 'away')}">
-                        <div class="wc-bracket-team-name">${escapeHtml(awayLabel)}</div>
-                        ${awayStar}
+                        <div class="wc-bracket-team-main">
+                            ${awayDisplay.logo}
+                            <div class="wc-bracket-team-copy">
+                                <div class="wc-bracket-team-name">${escapeHtml(awayDisplay.nameText)}</div>
+                                ${awayDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(awayDisplay.record)}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="wc-bracket-team-score">${scoreTextDisplay === 'TBD' ? 'TBD' : escapeHtml(scoreTextDisplay.split(' - ')[0] || '')}${winnerStarAway}</div>
                     </div>
                     <div class="${worldCupBracketTeamClass(merged, 'home')}">
-                        <div class="wc-bracket-team-name">${escapeHtml(homeLabel)}</div>
-                        ${homeStar}
+                        <div class="wc-bracket-team-main">
+                            ${homeDisplay.logo}
+                            <div class="wc-bracket-team-copy">
+                                <div class="wc-bracket-team-name">${escapeHtml(homeDisplay.nameText)}</div>
+                                ${homeDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(homeDisplay.record)}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="wc-bracket-team-score">${scoreTextDisplay === 'TBD' ? 'TBD' : escapeHtml(scoreTextDisplay.split(' - ')[1] || '')}${winnerStarHome}</div>
                     </div>
                     <div class="wc-bracket-match-footer">
-                        ${scoreText ? `<div class="wc-bracket-score">${escapeHtml(scoreText)}</div>` : '<div class="wc-bracket-score wc-bracket-score--empty">vs</div>'}
                         ${details ? `<div class="wc-bracket-details">${escapeHtml(details)}</div>` : ''}
-                        ${winnerPill}
+                        ${penaltyText ? `<div class="wc-bracket-details wc-bracket-details--pk">${escapeHtml(penaltyText)}</div>` : ''}
                     </div>
                 </article>
             `;
@@ -375,7 +455,7 @@
         function worldCupBracketColumnView(label, matches, gameMap, extraClass = '') {
             const safeLabel = String(label || 'Knockout Round').trim();
             const cards = Array.isArray(matches) ? matches.map((match, index) => worldCupBracketMatchView(match, gameMap, safeLabel, index)).join('') : '';
-            const body = cards || `<div class="wc-bracket-empty-slot">${escapeHtml(safeLabel === 'Final' ? 'Final slot' : 'Awaiting match')}</div>`;
+            const body = cards || `<div class="wc-bracket-empty-slot">${escapeHtml(/^(final|third place)$/i.test(safeLabel) ? 'TBD' : 'TBD')}</div>`;
             return `
                 <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" data-round-label="${escapeHtml(safeLabel)}">
                     <div class="wc-bracket-column-title">${escapeHtml(safeLabel)}</div>
