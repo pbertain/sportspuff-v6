@@ -974,7 +974,7 @@ main, .main-content {
 .wc-bracket-layout {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(184px, 228px) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -1002,7 +1002,7 @@ main, .main-content {
   display: grid;
   gap: 0;
   grid-auto-flow: column;
-  grid-auto-columns: 172px;
+  grid-auto-columns: 180px;
   min-width: max-content;
   position: relative;
 }
@@ -1011,8 +1011,8 @@ main, .main-content {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  min-width: 172px;
-  width: 172px;
+  min-width: 180px;
+  width: 180px;
   padding-bottom: 8px;
   position: relative;
 }
@@ -1046,7 +1046,7 @@ main, .main-content {
 }
 
 .wc-bracket-columns .wc-bracket-column:not(:first-child) {
-  margin-left: -26px;
+  margin-left: -32px;
 }
 
 .wc-bracket-empty-slot {
@@ -1107,7 +1107,7 @@ main, .main-content {
   display: flex;
   gap: 4px;
   justify-content: space-between;
-  min-height: 26px;
+  min-height: 30px;
   padding: 3px 5px;
 }
 
@@ -1118,7 +1118,7 @@ main, .main-content {
 .wc-bracket-team-main {
   align-items: center;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -1130,7 +1130,7 @@ main, .main-content {
 
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
@@ -1169,14 +1169,46 @@ main, .main-content {
 }
 
 .wc-bracket-team-score {
-  align-items: center;
+  align-items: end;
   color: #FFF1A8;
-  display: inline-flex;
-  font-size: 0.8rem;
+  display: grid;
+  font-size: 0.74rem;
   font-weight: 800;
-  gap: 3px;
-  margin-left: 4px;
+  gap: 2px;
+  margin-left: 6px;
+  min-width: 50px;
   white-space: nowrap;
+}
+
+.wc-bracket-team-score-main {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+  line-height: 1;
+}
+
+.wc-bracket-team-score-status {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.wc-bracket-team-score-value {
+  color: #FFF1A8;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wc-bracket-team-score-sub {
+  color: #ffd86a;
+  font-size: 0.61rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
 }
 
 .wc-bracket-score {
