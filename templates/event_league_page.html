@@ -166,6 +166,14 @@
             return '';
         }
 
+        function worldCupTeamMatchesLabel(teamName, teamAbbrev, label) {
+            const needle = String(label || '').trim().toLowerCase();
+            if (!needle) return false;
+            const name = String(teamName || '').trim().toLowerCase();
+            const abbrev = String(teamAbbrev || '').trim().toLowerCase();
+            return needle === name || needle === abbrev || needle.includes(name) || needle.includes(abbrev);
+        }
+
         function worldCupBracketWinnerSide(match) {
             const explicit = String(firstValue(match?.winner, match?.wc_winner) || '').trim();
             if (!explicit) return '';

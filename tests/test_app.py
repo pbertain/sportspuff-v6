@@ -863,6 +863,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function chooseWorldCupBracketSource",
             "function worldCupBracketScoreValue",
             "function worldCupBracketTeamLabel",
+            "function worldCupTeamMatchesLabel",
             "match?.visitor_team",
             "const visitorScore = Number(worldCupBracketScoreValue(game, 'visitor'));",
             "World Cup Champion",
