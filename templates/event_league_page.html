@@ -169,10 +169,10 @@
         function worldCupBracketWinnerSide(match) {
             const explicit = String(firstValue(match?.winner, match?.wc_winner) || '').trim();
             if (!explicit) return '';
-            if (worldCupTeamMatchesLabel(match?.home_team, match?.home_team_abbrev || '', explicit) || worldCupTeamMatchesLabel(match?.home_slot, '', explicit)) {
+            if (worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'home'), match?.home_team_abbrev || match?.home_team_code || '', explicit)) {
                 return 'home';
             }
-            if (worldCupTeamMatchesLabel(match?.away_team, match?.away_team_abbrev || '', explicit) || worldCupTeamMatchesLabel(match?.away_slot, '', explicit)) {
+            if (worldCupTeamMatchesLabel(worldCupBracketSlotLabel(match, 'away'), match?.away_team_abbrev || match?.visitor_team_abbrev || match?.away_team_code || '', explicit)) {
                 return 'away';
             }
             return '';
@@ -184,7 +184,8 @@
                 match?.[`${side}Score`],
                 side === 'home' ? match?.home_score : match?.visitor_score,
                 side === 'home' ? match?.homeScore : match?.visitorScore,
-                side === 'visitor' ? match?.away_score : match?.awayScore
+                side === 'visitor' ? match?.away_score : match?.awayScore,
+                side === 'visitor' ? match?.visitor_score : match?.visitorScore
             );
             if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
                 return String(direct).trim();
@@ -192,10 +193,37 @@
             return '';
         }
 
+        function worldCupBracketTeamLabel(match, side) {
+            if (side === 'home') {
+                return firstValue(
+                    match?.home_team,
+                    match?.homeTeam,
+                    match?.home_slot,
+                    match?.homeSlot,
+                    match?.home_name,
+                    match?.homeName,
+                    'TBD'
+                );
+            }
+            return firstValue(
+                match?.away_team,
+                match?.visitor_team,
+                match?.awayTeam,
+                match?.visitorTeam,
+                match?.away_slot,
+                match?.visitor_slot,
+                match?.awaySlot,
+                match?.visitorSlot,
+                match?.away_name,
+                match?.visitor_name,
+                match?.awayName,
+                match?.visitorName,
+                'TBD'
+            );
+        }
+
         function worldCupBracketSlotLabel(match, side) {
-            const team = side === 'home'
-                ? firstValue(match?.home_team, match?.home_slot, match?.homeTeam, 'TBD')
-                : firstValue(match?.away_team, match?.away_slot, match?.awayTeam, 'TBD');
+            const team = worldCupBracketTeamLabel(match, side);
             return String(team || 'TBD').trim();
         }
 
@@ -766,10 +794,12 @@
                     name,
                     matches: matches.map(match => ({
                         ...match,
-                        home_team: match.home_team || match.homeTeam || '',
-                        visitor_team: match.away_team || match.visitor_team || match.awayTeam || '',
+                        home_team: match.home_team || match.homeTeam || match.home_slot || match.homeSlot || match.home_name || match.homeName || '',
+                        visitor_team: match.visitor_team || match.away_team || match.visitorTeam || match.awayTeam || match.visitor_slot || match.away_slot || match.visitorName || match.awayName || '',
+                        away_team: match.away_team || match.visitor_team || match.awayTeam || match.visitorTeam || match.away_slot || match.visitor_slot || '',
                         home_score: match.home_score ?? match.homeScore ?? null,
-                        visitor_score: match.away_score ?? match.visitor_score ?? match.awayScore ?? null,
+                        visitor_score: match.visitor_score ?? match.away_score ?? match.visitorScore ?? match.awayScore ?? null,
+                        away_score: match.away_score ?? match.visitor_score ?? match.awayScore ?? match.visitorScore ?? null,
                         game_status: match.game_status || match.status || '',
                         is_final: match.is_final === true || String(match.game_status || match.status || '').toLowerCase() === 'final',
                         wc_round_label: match.wc_round_label || name
