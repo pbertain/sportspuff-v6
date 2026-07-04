@@ -1000,9 +1000,9 @@ main, .main-content {
 
 .wc-bracket-columns {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
+  grid-auto-columns: minmax(186px, 1fr);
   min-width: max-content;
   position: relative;
 }
@@ -1040,8 +1040,8 @@ main, .main-content {
 
 .wc-bracket-column-matches {
   display: grid;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
 }
 
 .wc-bracket-empty-slot {
@@ -1053,8 +1053,8 @@ main, .main-content {
   font-size: 0.74rem;
   font-weight: 700;
   justify-content: center;
-  min-height: 72px;
-  padding: 10px;
+  min-height: 58px;
+  padding: 8px;
   text-transform: uppercase;
 }
 
@@ -1064,8 +1064,8 @@ main, .main-content {
   border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset;
   display: grid;
-  gap: 6px;
-  padding: 8px;
+  gap: 5px;
+  padding: 7px;
   position: relative;
 }
 
@@ -1102,8 +1102,8 @@ main, .main-content {
   display: flex;
   gap: 6px;
   justify-content: space-between;
-  min-height: 28px;
-  padding: 4px 6px;
+  min-height: 26px;
+  padding: 3px 6px;
 }
 
 .wc-bracket-team .wc-bracket-team-name {
@@ -1125,7 +1125,7 @@ main, .main-content {
 
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.82rem;
+  font-size: 0.79rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
@@ -1136,7 +1136,7 @@ main, .main-content {
 
 .wc-bracket-team-record {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -1167,10 +1167,10 @@ main, .main-content {
   align-items: center;
   color: #FFF1A8;
   display: inline-flex;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 800;
   gap: 4px;
-  margin-left: 8px;
+  margin-left: 6px;
   white-space: nowrap;
 }
 
