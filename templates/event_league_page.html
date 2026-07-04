@@ -253,7 +253,8 @@
                 ? firstValue(match?.home_team_abbrev, match?.home_team_code, '')
                 : firstValue(match?.away_team_abbrev, match?.visitor_team_abbrev, match?.away_team_code, match?.visitor_team_code, '');
             const slot = side === 'home' ? firstValue(match?.home_slot, match?.homeSlot, '') : firstValue(match?.away_slot, match?.visitor_slot, match?.awaySlot, match?.visitorSlot, '');
-            const code = String(abbrev || '').trim().toUpperCase();
+            const mapped = WC_TEAM_CODES[String(name || '').replace(/\s+/g, ' ').trim()] || WC_TEAM_CODES[String(slot || '').replace(/\s+/g, ' ').trim()];
+            const code = String(abbrev || mapped || '').trim().toUpperCase();
             if (code) return code;
             if (name && /^w\d+|^l\d+|^tbd$/i.test(String(slot || ''))) {
                 return String(slot || '').trim().toUpperCase();
