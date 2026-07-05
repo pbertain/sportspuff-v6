@@ -375,12 +375,14 @@
             return String(match?.game_id || match?.match_id || match?.match_number || '').trim();
         }
 
-        function worldCupBracketRoundOffsetPx(label) {
+        function worldCupBracketRoundLayoutMetrics(label, matchCount) {
             const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
             const level = Math.max(Math.floor(order / 10) - 1, 0);
-            if (level === 0) return 0;
-            const baseGap = 28;
-            return Math.round((Math.pow(2, level - 1) - 0.5) * baseGap);
+            const matchHeight = 88;
+            const step = level === 0 ? 92 : 92 * Math.pow(2, level);
+            const offset = level === 0 ? 0 : Math.max(Math.round((step - matchHeight) / 2), 0);
+            const height = Math.max(offset + (Math.max(Number(matchCount) || 0, 1) - 1) * step + matchHeight, matchHeight);
+            return {offset, step, height};
         }
 
         function worldCupBracketRoundBlueprint() {
@@ -693,13 +695,18 @@
 
         function worldCupBracketColumnView(label, matches, gameMap, extraClass = '') {
             const safeLabel = String(label || 'Knockout Round').trim();
-            const offset = worldCupBracketRoundOffsetPx(safeLabel);
-            const cards = Array.isArray(matches) ? matches.map((match, index) => worldCupBracketMatchView(match, gameMap, safeLabel, index)).join('') : '';
+            const safeMatches = Array.isArray(matches) ? matches : [];
+            const metrics = worldCupBracketRoundLayoutMetrics(safeLabel, safeMatches.length);
+            const cards = safeMatches.map((match, index) => `
+                <div class="wc-bracket-match-slot" style="top: ${metrics.offset + (index * metrics.step)}px;">
+                    ${worldCupBracketMatchView(match, gameMap, safeLabel, index)}
+                </div>
+            `).join('');
             const body = cards || `<div class="wc-bracket-empty-slot">${escapeHtml(/^(final|third place)$/i.test(safeLabel) ? 'TBD' : 'TBD')}</div>`;
             return `
-                <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" style="${offset ? `margin-top: ${offset}px;` : ''}" data-round-label="${escapeHtml(safeLabel)}" data-round-order="${worldCupBracketRoundOrderFromLabel(safeLabel)}">
+                <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" data-round-label="${escapeHtml(safeLabel)}" data-round-order="${worldCupBracketRoundOrderFromLabel(safeLabel)}">
                     <div class="wc-bracket-column-title">${escapeHtml(safeLabel)}</div>
-                    <div class="wc-bracket-column-matches">${body}</div>
+                    <div class="wc-bracket-column-matches" style="min-height: ${metrics.height}px;">${body}</div>
                 </section>
             `;
         }

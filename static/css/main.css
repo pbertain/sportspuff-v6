@@ -1009,13 +1009,19 @@ main, .main-content {
 }
 
 .wc-bracket-column-matches {
-  display: grid;
-  gap: 4px;
+  display: block;
   padding: 5px;
+  position: relative;
 }
 
 .wc-bracket-columns .wc-bracket-column:not(:first-child) {
   margin-left: -28px;
+}
+
+.wc-bracket-match-slot {
+  left: 5px;
+  position: absolute;
+  right: 5px;
 }
 
 .wc-bracket-empty-slot {
