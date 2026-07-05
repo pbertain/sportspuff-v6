@@ -379,8 +379,15 @@
             const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
             const level = Math.max(Math.floor(order / 10) - 1, 0);
             const matchHeight = 88;
-            const step = level === 0 ? 92 : 92 * Math.pow(2, level);
-            const offset = level === 0 ? 0 : Math.max(Math.round((step - matchHeight) / 2), 0);
+            if (order >= 50) {
+                const step = 96;
+                const count = Math.max(Number(matchCount) || 0, 1);
+                const height = Math.max(matchHeight, ((count - 1) * step) + matchHeight);
+                return {offset: 0, step, height};
+            }
+            const baseStep = 92;
+            const step = baseStep * Math.pow(2, level);
+            const offset = level === 0 ? 0 : Math.round((baseStep / 2) * (Math.pow(2, level) - 1));
             const height = Math.max(offset + (Math.max(Number(matchCount) || 0, 1) - 1) * step + matchHeight, matchHeight);
             return {offset, step, height};
         }
