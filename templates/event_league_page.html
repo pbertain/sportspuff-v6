@@ -1098,21 +1098,20 @@
             if (EVENT_MODE !== 'world-cup') return '';
             const normalized = normalizeWorldCupBracket(bracket);
             const gameMap = worldCupBracketGameMap(legacyGames);
-            const allRounds = worldCupBracketMatchesFromRounds(normalized?.rounds || []);
-            const round32Label = String(normalized?.rounds?.[0]?.name || 'Round of 32').trim();
-            const leftRounds = worldCupBracketRoundGroups(worldCupBracketMatchesFromSides({left: normalized?.sides?.left || []}, round32Label));
-            const rightRounds = worldCupBracketRoundGroups(worldCupBracketMatchesFromSides({left: normalized?.sides?.right || []}, round32Label));
-            const roundGroups = worldCupBracketRoundGroups(allRounds.flatMap(round => round.matches || []));
-            const count = allRounds.reduce((total, round) => total + (Array.isArray(round?.matches) ? round.matches.length : 0), 0) || worldCupBracketMatchCount(normalized);
+            const standardRounds = worldCupBracketStandardRoundGroups(normalized);
+            const splitRounds = worldCupBracketSplitRoundGroups(standardRounds);
+            const roundGroups = worldCupBracketRoundGroups(
+                standardRounds.flatMap(round => Array.isArray(round.matches) ? round.matches : [])
+            );
+            const count = roundGroups.reduce((total, round) => total + (Array.isArray(round?.matches) ? round.matches.length : 0), 0) || worldCupBracketMatchCount(normalized);
             const champion = worldCupWinnerLabel(worldCupBracketFinalMatch(normalized, gameMap) || {});
-            const sideRounds = leftRounds.filter(round => round.order < 60);
-            const centerRounds = roundGroups.filter(round => round.order >= 50);
+            const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
             const centerCards = centerRounds.length > 0
                 ? centerRounds.map(round => worldCupBracketColumnView(round.label, round.matches, gameMap, 'wc-bracket-column--final')).join('')
                 : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder');
             const winnerBanner = worldCupBracketWinnerBanner(champion);
-            const leftColumns = worldCupBracketRenderSideColumns(sideRounds, 'left', gameMap);
-            const rightColumns = worldCupBracketRenderSideColumns(rightRounds.filter(round => round.order < 60), 'right', gameMap);
+            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap);
+            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap);
 
             return `
                 <div class="wc-knockout-panel mb-3">
