@@ -417,6 +417,70 @@
             };
         }
 
+        function worldCupBracketIsPlaceholderLabel(value) {
+            const text = String(value || '').trim().toUpperCase();
+            return !text || text === 'TBD' || /^W\d+$/.test(text) || /^L\d+$/.test(text);
+        }
+
+        function worldCupBracketAdvancingTeam(match) {
+            const side = worldCupBracketWinnerSide(match);
+            if (!side) return null;
+            const display = worldCupBracketTeamDisplay(match, side);
+            const teamName = String(display.nameText || '').trim();
+            if (!teamName || worldCupBracketIsPlaceholderLabel(teamName)) return null;
+            const teamCode = String(worldCupBracketTeamCode(match, side) || teamName).trim();
+            return {
+                team_name: teamName,
+                team_abbrev: teamCode,
+                team_record: String(display.record || '').trim()
+            };
+        }
+
+        function worldCupBracketRoundHasRealTeams(round) {
+            const matches = Array.isArray(round?.matches) ? round.matches : [];
+            return matches.some(match => {
+                const home = String(worldCupBracketTeamDisplay(match, 'home').nameText || '').trim();
+                const away = String(worldCupBracketTeamDisplay(match, 'away').nameText || '').trim();
+                return !worldCupBracketIsPlaceholderLabel(home) || !worldCupBracketIsPlaceholderLabel(away);
+            });
+        }
+
+        function worldCupBracketDeriveRoundFromPrevious(previousRound, roundLabel, expectedCount) {
+            const prevMatches = Array.isArray(previousRound?.matches) ? previousRound.matches : [];
+            const winners = prevMatches.map(worldCupBracketAdvancingTeam);
+            const matches = [];
+
+            for (let index = 0; index < expectedCount; index += 1) {
+                const homeWinner = winners[index * 2];
+                const awayWinner = winners[index * 2 + 1];
+                matches.push({
+                    match_number: index + 1,
+                    wc_round_label: roundLabel,
+                    game_status: 'scheduled',
+                    status: 'scheduled',
+                    home_team: homeWinner?.team_abbrev || homeWinner?.team_name || `W${(index * 2) + 1}`,
+                    home_team_abbrev: homeWinner?.team_abbrev || '',
+                    home_name: homeWinner?.team_name || '',
+                    home_record: homeWinner?.team_record || '',
+                    home_slot: homeWinner?.team_abbrev || homeWinner?.team_name || `W${(index * 2) + 1}`,
+                    away_team: awayWinner?.team_abbrev || awayWinner?.team_name || `W${(index * 2) + 2}`,
+                    away_team_abbrev: awayWinner?.team_abbrev || '',
+                    away_name: awayWinner?.team_name || '',
+                    away_record: awayWinner?.team_record || '',
+                    away_slot: awayWinner?.team_abbrev || awayWinner?.team_name || `W${(index * 2) + 2}`,
+                    home_score: null,
+                    visitor_score: null,
+                    away_score: null
+                });
+            }
+
+            return {
+                label: roundLabel,
+                order: worldCupBracketRoundOrderFromLabel(roundLabel),
+                matches
+            };
+        }
+
         function worldCupBracketStandardRoundGroups(bracket) {
             const normalized = normalizeWorldCupBracket(bracket);
             const roundMatches = worldCupBracketMatchesFromRounds(normalized?.rounds || []).flatMap(round => round.matches || []);
@@ -424,10 +488,21 @@
             const sideMatches = worldCupBracketMatchesFromSides(normalized?.sides || {}, sideFallbackLabel);
             const roundGroups = worldCupBracketRoundGroups(worldCupBracketUniqueMatches([...roundMatches, ...sideMatches]));
             const groupMap = new Map(roundGroups.map(group => [group.label.toLowerCase(), group]));
-            return worldCupBracketRoundBlueprint().map(def => {
+            const filledRounds = worldCupBracketRoundBlueprint().map(def => {
                 const existing = groupMap.get(def.label.toLowerCase());
                 return worldCupBracketFillRoundGroup(existing || def, def.matches);
             });
+            const enrichedRounds = [];
+            filledRounds.forEach((round, index) => {
+                const previous = enrichedRounds[index - 1];
+                if (index > 0 && previous && previous.matches.length > 0 && !worldCupBracketRoundHasRealTeams(round)) {
+                    const derived = worldCupBracketDeriveRoundFromPrevious(previous, round.label, round.matches.length || 0);
+                    enrichedRounds.push(chooseWorldCupBracketSource(round, derived));
+                    return;
+                }
+                enrichedRounds.push(round);
+            });
+            return enrichedRounds;
         }
 
         function worldCupBracketSplitRoundGroups(roundGroups) {
@@ -1109,7 +1184,6 @@
             const centerCards = centerRounds.length > 0
                 ? centerRounds.map(round => worldCupBracketColumnView(round.label, round.matches, gameMap, 'wc-bracket-column--final')).join('')
                 : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder');
-            const winnerBanner = worldCupBracketWinnerBanner(champion);
             const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap);
             const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap);
 
@@ -1118,12 +1192,11 @@
                     <div class="wc-knockout-header">
                         <div>
                             <h2 class="wc-knockout-title">Knockout Bracket</h2>
-                            <div class="event-league-meta">Single-elimination rounds. One loss ends the run.</div>
-                        </div>
+                        <div class="event-league-meta">Single-elimination rounds. One loss ends the run.</div>
+                    </div>
                         <span class="event-league-pill">${count} ${count === 1 ? 'match' : 'matches'}</span>
                     </div>
                     <div class="wc-bracket" data-world-cup-bracket="true">
-                        ${winnerBanner}
                         <div class="wc-bracket-layout">
                             <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
                             <div class="wc-bracket-center">

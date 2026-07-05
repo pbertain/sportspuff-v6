@@ -932,49 +932,13 @@ main, .main-content {
 }
 
 .wc-bracket-winner-banner {
-  align-items: center;
-  background: linear-gradient(135deg, rgba(178, 34, 34, 0.22), rgba(20, 10, 40, 0.88));
-  border: 1px solid rgba(255, 215, 0, 0.22);
-  border-radius: 8px;
-  display: flex;
-  gap: 14px;
-  justify-content: center;
-  padding: 12px 16px;
-}
-
-.wc-bracket-winner-trophy {
-  display: block;
-  flex: 0 0 auto;
-  height: 54px;
-  object-fit: contain;
-  width: 54px;
-}
-
-.wc-bracket-winner-copy {
-  display: grid;
-  gap: 3px;
-  text-align: left;
-}
-
-.wc-bracket-winner-kicker {
-  color: rgba(255, 230, 160, 0.86);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.wc-bracket-winner-name {
-  color: var(--warm-white);
-  font-size: 1.1rem;
-  font-weight: 900;
-  line-height: 1.1;
+  display: none;
 }
 
 .wc-bracket-layout {
   display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) minmax(0, 1fr);
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) minmax(176px, 208px) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -982,7 +946,7 @@ main, .main-content {
   display: flex;
   gap: 0;
   min-width: 0;
-  align-items: flex-start;
+  align-items: center;
   overflow: visible;
 }
 
@@ -1000,13 +964,14 @@ main, .main-content {
   display: grid;
   gap: 6px;
   min-width: 0;
+  align-self: center;
 }
 
 .wc-bracket-columns {
   display: grid;
   gap: 0;
   grid-auto-flow: column;
-  grid-auto-columns: 208px;
+  grid-auto-columns: 196px;
   min-width: max-content;
   position: relative;
 }
@@ -1015,8 +980,8 @@ main, .main-content {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  min-width: 208px;
-  width: 208px;
+  min-width: 196px;
+  width: 196px;
   padding-bottom: 8px;
   position: relative;
 }
@@ -1045,12 +1010,12 @@ main, .main-content {
 
 .wc-bracket-column-matches {
   display: grid;
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 5px;
 }
 
 .wc-bracket-columns .wc-bracket-column:not(:first-child) {
-  margin-left: -26px;
+  margin-left: -28px;
 }
 
 .wc-bracket-empty-slot {
@@ -1073,8 +1038,8 @@ main, .main-content {
   border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset;
   display: grid;
-  gap: 5px;
-  padding: 7px;
+  gap: 4px;
+  padding: 6px;
   position: relative;
 }
 
@@ -1094,7 +1059,7 @@ main, .main-content {
 .wc-bracket-match-body {
   align-items: center;
   display: grid;
-  gap: 6px 10px;
+  gap: 4px 8px;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
@@ -1124,8 +1089,8 @@ main, .main-content {
   display: flex;
   gap: 4px;
   justify-content: space-between;
-  min-height: 30px;
-  padding: 3px 5px;
+  min-height: 28px;
+  padding: 2px 4px;
 }
 
 .wc-bracket-team .wc-bracket-team-name {
@@ -1147,7 +1112,7 @@ main, .main-content {
 
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
@@ -1158,7 +1123,7 @@ main, .main-content {
 
 .wc-bracket-team-record {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -1179,8 +1144,8 @@ main, .main-content {
 
 .wc-bracket-star {
   position: static;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   flex: 0 0 auto;
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
 }
@@ -1189,18 +1154,18 @@ main, .main-content {
   align-items: center;
   color: #FFF1A8;
   display: flex;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   gap: 0;
   margin-left: 4px;
-  min-width: 30px;
+  min-width: 26px;
   white-space: nowrap;
   justify-content: flex-end;
 }
 
 .wc-bracket-team-score-value {
   color: #FFF1A8;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -1211,20 +1176,20 @@ main, .main-content {
   gap: 2px;
   justify-items: end;
   margin-left: 2px;
-  min-width: 44px;
+  min-width: 38px;
   text-align: right;
 }
 
 .wc-bracket-match-result-status {
   color: #FFF1A8;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .wc-bracket-match-result-pk {
   color: #ffd86a;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   line-height: 1;
 }
