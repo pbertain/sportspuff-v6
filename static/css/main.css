@@ -1091,6 +1091,19 @@ main, .main-content {
   justify-content: space-between;
 }
 
+.wc-bracket-match-body {
+  align-items: center;
+  display: grid;
+  gap: 4px 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.wc-bracket-match-teams {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .wc-bracket-match-label {
   color: var(--warm-white);
   font-size: 0.74rem;
@@ -1173,31 +1186,16 @@ main, .main-content {
 }
 
 .wc-bracket-team-score {
-  align-items: end;
+  align-items: center;
   color: #FFF1A8;
-  display: grid;
+  display: flex;
   font-size: 0.72rem;
   font-weight: 800;
-  gap: 1px;
+  gap: 0;
   margin-left: 4px;
-  min-width: 56px;
+  min-width: 24px;
   white-space: nowrap;
-}
-
-.wc-bracket-team-score-main {
-  align-items: center;
-  display: inline-flex;
-  gap: 4px;
   justify-content: flex-end;
-  line-height: 1;
-}
-
-.wc-bracket-team-score-status {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .wc-bracket-team-score-value {
@@ -1207,12 +1205,28 @@ main, .main-content {
   line-height: 1;
 }
 
-.wc-bracket-team-score-sub {
+.wc-bracket-match-result {
+  align-self: center;
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  margin-left: 2px;
+  min-width: 40px;
+  text-align: right;
+}
+
+.wc-bracket-match-result-status {
+  color: #FFF1A8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wc-bracket-match-result-pk {
   color: #ffd86a;
-  font-size: 0.61rem;
+  font-size: 0.62rem;
   font-weight: 700;
   line-height: 1;
-  text-align: right;
 }
 
 .wc-bracket-score {

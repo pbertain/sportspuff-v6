@@ -333,8 +333,10 @@
         function worldCupBracketScoreText(match) {
             const home = worldCupBracketScoreValue(match, 'home');
             const away = worldCupBracketScoreValue(match, 'visitor');
-            if (!home && !away) return '';
-            return `${away || '0'} - ${home || '0'}`;
+            const hasHome = home !== '';
+            const hasAway = away !== '';
+            if (!hasHome && !hasAway) return '';
+            return `${hasAway ? away : '0'} - ${hasHome ? home : '0'}`;
         }
 
         function worldCupBracketTeamClass(match, side) {
@@ -346,20 +348,25 @@
 
         function worldCupBracketScoreBlock(match, side) {
             const score = worldCupBracketScoreValue(match, side);
-            const penalty = worldCupPenaltyValue(match, side);
+            const scoreText = score === undefined || score === null || String(score).trim() === '' ? 'TBD' : String(score).trim();
+            return `
+                <div class="wc-bracket-team-score">
+                    <span class="wc-bracket-team-score-value">${escapeHtml(scoreText)}</span>
+                </div>
+            `;
+        }
+
+        function worldCupBracketResultBlock(match) {
             const status = String(match?.game_status || match?.status || '').toLowerCase();
             const isFinalish = ['final', 'completed', 'finished', 'off'].includes(status);
             const isLive = ['in_progress', 'live', 'active'].includes(status);
-            const scoreText = score || 'TBD';
-            const label = isFinalish ? 'FT' : (isLive ? 'LIVE' : 'TBD');
-            const pkText = penalty ? `PK ${penalty}` : '';
+            const label = isFinalish ? 'FT' : (isLive ? 'LIVE' : '');
+            const penalty = worldCupPenaltyText(match);
+            if (!label && !penalty) return '';
             return `
-                <div class="wc-bracket-team-score">
-                    <div class="wc-bracket-team-score-main">
-                        <span class="wc-bracket-team-score-status">${escapeHtml(label)}</span>
-                        <span class="wc-bracket-team-score-value">${escapeHtml(scoreText)}</span>
-                    </div>
-                    ${pkText ? `<div class="wc-bracket-team-score-sub">${escapeHtml(pkText)}</div>` : ''}
+                <div class="wc-bracket-match-result">
+                    ${label ? `<div class="wc-bracket-match-result-status">${escapeHtml(label)}</div>` : ''}
+                    ${penalty ? `<div class="wc-bracket-match-result-pk">${escapeHtml(penalty)}</div>` : ''}
                 </div>
             `;
         }
@@ -562,32 +569,37 @@
             const finalClass = worldCupBracketRoundOrderFromLabel(roundName || worldCupBracketRoundLabel(merged)) >= 60 ? ' wc-bracket-match--final' : '';
             const winnerStarHome = winnerSide === 'home' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
             const winnerStarAway = winnerSide === 'away' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
-            const statusTextValue = finalish ? 'FT' : (status ? escapeHtml(status) : '');
+            const statusTextValue = finalish ? '' : (status ? escapeHtml(status) : '');
 
             return `
                 <article class="wc-bracket-match${finalClass}${matchClass ? ` ${matchClass}` : ''}" data-match-index="${matchIndex}">
                     <div class="wc-bracket-match-head">
                         ${statusTextValue ? `<div class="wc-bracket-match-status">${statusTextValue}</div>` : ''}
                     </div>
-                    <div class="${worldCupBracketTeamClass(merged, 'away')}">
-                        <div class="wc-bracket-team-main">
-                            ${awayDisplay.logo}
-                            <div class="wc-bracket-team-copy">
-                                <div class="wc-bracket-team-name">${escapeHtml(awayDisplay.nameText)}</div>
-                                ${awayDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(awayDisplay.record)}</div>` : ''}
+                    <div class="wc-bracket-match-body">
+                        <div class="wc-bracket-match-teams">
+                            <div class="${worldCupBracketTeamClass(merged, 'away')}">
+                                <div class="wc-bracket-team-main">
+                                    ${awayDisplay.logo}
+                                    <div class="wc-bracket-team-copy">
+                                        <div class="wc-bracket-team-name">${escapeHtml(awayDisplay.nameText)}</div>
+                                        ${awayDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(awayDisplay.record)}</div>` : ''}
+                                    </div>
+                                </div>
+                                ${worldCupBracketScoreBlock(merged, 'visitor')}${winnerStarAway}
+                            </div>
+                            <div class="${worldCupBracketTeamClass(merged, 'home')}">
+                                <div class="wc-bracket-team-main">
+                                    ${homeDisplay.logo}
+                                    <div class="wc-bracket-team-copy">
+                                        <div class="wc-bracket-team-name">${escapeHtml(homeDisplay.nameText)}</div>
+                                        ${homeDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(homeDisplay.record)}</div>` : ''}
+                                    </div>
+                                </div>
+                                ${worldCupBracketScoreBlock(merged, 'home')}${winnerStarHome}
                             </div>
                         </div>
-                        ${worldCupBracketScoreBlock(merged, 'visitor')}${winnerStarAway}
-                    </div>
-                    <div class="${worldCupBracketTeamClass(merged, 'home')}">
-                        <div class="wc-bracket-team-main">
-                            ${homeDisplay.logo}
-                            <div class="wc-bracket-team-copy">
-                                <div class="wc-bracket-team-name">${escapeHtml(homeDisplay.nameText)}</div>
-                                ${homeDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(homeDisplay.record)}</div>` : ''}
-                            </div>
-                        </div>
-                        ${worldCupBracketScoreBlock(merged, 'home')}${winnerStarHome}
+                        ${worldCupBracketResultBlock(merged)}
                     </div>
                     <div class="wc-bracket-match-footer">
                         ${details ? `<div class="wc-bracket-details">${escapeHtml(details)}</div>` : ''}
