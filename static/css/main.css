@@ -946,7 +946,7 @@ main, .main-content {
   display: flex;
   gap: 0;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   overflow: visible;
 }
 

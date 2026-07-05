@@ -522,11 +522,40 @@
             return enrichedRounds;
         }
 
-        function worldCupBracketSplitRoundGroups(roundGroups) {
+        function worldCupBracketSplitRoundGroups(roundGroups, bracket) {
+            const normalized = normalizeWorldCupBracket(bracket);
+            const openingRound = (Array.isArray(roundGroups) ? roundGroups : []).find(round => Number(round?.order) === 10) || null;
+            const openingLabel = String(openingRound?.label || 'Round of 32').trim();
+            const leftOpeningMatches = worldCupBracketMatchesFromSide(normalized?.sides?.left, openingLabel);
+            const rightOpeningMatches = worldCupBracketMatchesFromSide(normalized?.sides?.right, openingLabel);
+
             return (Array.isArray(roundGroups) ? roundGroups : []).reduce((split, round) => {
                 if (!round) return split;
                 if (round.order >= 50) {
                     split.center.push(round);
+                    return split;
+                }
+
+                if (round.order === 10 && (leftOpeningMatches.length > 0 || rightOpeningMatches.length > 0)) {
+                    const expectedSideCount = Math.max(Math.ceil((Number(round?.matches?.length) || 0) / 2), 1);
+                    split.left.push({
+                        label: round.label,
+                        order: round.order,
+                        matches: worldCupBracketFillRoundGroup({
+                            label: round.label,
+                            order: round.order,
+                            matches: leftOpeningMatches
+                        }, expectedSideCount).matches
+                    });
+                    split.right.push({
+                        label: round.label,
+                        order: round.order,
+                        matches: worldCupBracketFillRoundGroup({
+                            label: round.label,
+                            order: round.order,
+                            matches: rightOpeningMatches
+                        }, expectedSideCount).matches
+                    });
                     return split;
                 }
 
@@ -561,6 +590,21 @@
                 is_final: match.is_final === true || String(match.game_status || match.status || '').toLowerCase() === 'final',
                 wc_round_label: match.wc_round_label || fallbackRoundLabel
             })));
+        }
+
+        function worldCupBracketMatchesFromSide(sideMatches, fallbackRoundLabel = 'Round of 32') {
+            return (Array.isArray(sideMatches) ? sideMatches : []).map(match => ({
+                ...match,
+                home_team: match.home_team || match.homeTeam || match.home_slot || match.homeSlot || match.home_name || match.homeName || '',
+                visitor_team: match.visitor_team || match.away_team || match.visitorTeam || match.awayTeam || match.visitor_slot || match.away_slot || match.visitorName || match.awayName || '',
+                away_team: match.away_team || match.visitor_team || match.awayTeam || match.visitorTeam || match.away_slot || match.visitor_slot || '',
+                home_score: match.home_score ?? match.homeScore ?? null,
+                visitor_score: match.visitor_score ?? match.away_score ?? match.visitorScore ?? match.awayScore ?? null,
+                away_score: match.away_score ?? match.visitor_score ?? match.awayScore ?? match.visitorScore ?? null,
+                game_status: match.game_status || match.status || '',
+                is_final: match.is_final === true || String(match.game_status || match.status || '').toLowerCase() === 'final',
+                wc_round_label: match.wc_round_label || fallbackRoundLabel
+            }));
         }
 
         function worldCupBracketUniqueMatches(matches) {
@@ -1197,7 +1241,7 @@
             const normalized = normalizeWorldCupBracket(bracket);
             const gameMap = worldCupBracketGameMap(legacyGames);
             const standardRounds = worldCupBracketStandardRoundGroups(normalized);
-            const splitRounds = worldCupBracketSplitRoundGroups(standardRounds);
+            const splitRounds = worldCupBracketSplitRoundGroups(standardRounds, normalized);
             const roundGroups = worldCupBracketRoundGroups(
                 standardRounds.flatMap(round => Array.isArray(round.matches) ? round.matches : [])
             );
