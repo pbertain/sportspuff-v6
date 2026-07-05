@@ -375,6 +375,14 @@
             return String(match?.game_id || match?.match_id || match?.match_number || '').trim();
         }
 
+        function worldCupBracketRoundOffsetPx(label) {
+            const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
+            const level = Math.max(Math.floor(order / 10) - 1, 0);
+            if (level === 0) return 0;
+            const baseGap = 28;
+            return Math.round((Math.pow(2, level - 1) - 0.5) * baseGap);
+        }
+
         function worldCupBracketRoundBlueprint() {
             return [
                 {label: 'Round of 32', order: 10, matches: 16},
@@ -685,10 +693,11 @@
 
         function worldCupBracketColumnView(label, matches, gameMap, extraClass = '') {
             const safeLabel = String(label || 'Knockout Round').trim();
+            const offset = worldCupBracketRoundOffsetPx(safeLabel);
             const cards = Array.isArray(matches) ? matches.map((match, index) => worldCupBracketMatchView(match, gameMap, safeLabel, index)).join('') : '';
             const body = cards || `<div class="wc-bracket-empty-slot">${escapeHtml(/^(final|third place)$/i.test(safeLabel) ? 'TBD' : 'TBD')}</div>`;
             return `
-                <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" data-round-label="${escapeHtml(safeLabel)}" data-round-order="${worldCupBracketRoundOrderFromLabel(safeLabel)}">
+                <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" style="${offset ? `margin-top: ${offset}px;` : ''}" data-round-label="${escapeHtml(safeLabel)}" data-round-order="${worldCupBracketRoundOrderFromLabel(safeLabel)}">
                     <div class="wc-bracket-column-title">${escapeHtml(safeLabel)}</div>
                     <div class="wc-bracket-column-matches">${body}</div>
                 </section>
