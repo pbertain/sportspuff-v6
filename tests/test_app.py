@@ -96,6 +96,16 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"id=\"cycling-standings-panel\"", response.data)
         db.assert_not_called()
 
+    def test_tour_de_france_page_loads_without_database(self):
+        with patch("app.get_db_connection") as db:
+            response = self.client.get("/league/cycling/tour-de-france")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Tour de France", response.data)
+        self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
+        self.assertIn(b"/api/proxy/cycling/tour-de-france/", response.data)
+        db.assert_not_called()
+
     def test_regular_league_page_exposes_schedule_module(self):
         cursor = FakeCursor(
             fetchone_values=[{"league_name_proper": "NFL", "league_name": "nfl"}],
@@ -820,6 +830,30 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_cache.assert_called_once_with("world_cup_bracket", "schedule")
         self.assertEqual(mock_set_cache.call_args.args[0], "world_cup_bracket")
 
+    @patch("app._fetch_api_json")
+    def test_proxy_tour_de_france_exposes_bundle(self, mock_fetch):
+        mock_fetch.return_value = {
+            "race": "Tour de France",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 3, "stage_name": "Valenciennes"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
+        }
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["race"], "Tour de France")
+        self.assertEqual(data["year"], 2026)
+        mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026", timeout=20)
+        mock_cache.assert_called_once_with("cycling_tour_de_france:2026", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
+
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()
 
@@ -889,7 +923,13 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo-125-years.png", app_source)
         self.assertIn("banner_logo_url", event_template)
         self.assertIn("cycling-anniversary-banner", event_template)
+        self.assertIn("tdf-feature-link", event_template)
+        self.assertIn("tour_de_france_page", event_template)
+        self.assertIn("tour_de_france_page", app_source)
+        self.assertIn("api/proxy/cycling/tour-de-france", app_source)
         self.assertIn("cycling-anniversary-banner", css)
+        self.assertIn(".tdf-feature-link", css)
+        self.assertIn(".tdf-stage-grid", css)
         self.assertIn("wc-bracket-column", css)
         self.assertIn("wc-bracket-connectors", css)
         self.assertIn("wc-bracket-layout", css)
@@ -912,6 +952,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function homepageTennisTournamentName", template)
         self.assertIn("homepage-tennis-tournament-divider", template)
         self.assertIn("leagueName === 'ATP' || leagueName === 'WTA'", template)
+        self.assertIn("function tennisPlayerRank(side)", template)
+        self.assertIn("function tennisPlayerLabel(side)", template)
         self.assertIn("const visitorTeamData = (isTennis || isWorldCup) ? null : findTeamData", template)
         self.assertIn("const visitorLogo = isTennis ? ''", template)
         self.assertIn("${isTennis ? '' : `", template)

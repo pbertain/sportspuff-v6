@@ -1570,6 +1570,67 @@ main, .main-content {
   line-height: 1.2;
 }
 
+.tdf-feature-link {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(245, 232, 20, 0.2), rgba(255, 107, 53, 0.16));
+  border: 1px solid rgba(245, 232, 20, 0.35);
+  border-radius: 10px;
+  color: var(--warm-white);
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.tdf-feature-link:hover,
+.tdf-feature-link:focus {
+  color: var(--warm-white);
+  text-decoration: none;
+}
+
+.tdf-feature-link-mark,
+.tdf-hero-mark {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  flex: 0 0 auto;
+  height: 58px;
+  object-fit: contain;
+  padding: 6px;
+  width: 58px;
+}
+
+.tdf-feature-link-kicker,
+.tdf-kicker {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tdf-feature-link-title {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tdf-board-grid,
+.tdf-stage-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.tdf-board-card,
+.tdf-stage-card {
+  height: 100%;
+}
+
+.tdf-board-table th,
+.tdf-board-table td {
+  white-space: nowrap;
+}
+
 .wc-points {
   color: var(--event-accent, #d4af37);
   font-weight: 900;

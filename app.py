@@ -1328,6 +1328,17 @@ def league_page(league_name):
     except Exception as e:
         return render_template('error.html', message=str(e))
 
+
+@app.route('/league/cycling/tour-de-france')
+@app.route('/league/cycling/tour-de-france/<int:year>')
+def tour_de_france_page(year=None):
+    """Detailed Tour de France page backed by sportspuff-api."""
+    return render_template(
+        'tour_de_france_page.html',
+        year=int(year or datetime.now().year),
+        API_BASE_URL=API_BASE_URL,
+    )
+
 def get_team_abbreviation(team_name, league):
     """Get three-letter abbreviation for a team based on league and team name"""
     # NFL abbreviations
@@ -2571,7 +2582,7 @@ def proxy_schedule(league, date):
 def proxy_standings(league):
     """Proxy standings API requests to avoid CORS issues with caching."""
     league_lower = league.lower()
-    if league_lower not in ('mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc'):
+    if league_lower not in ('mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'cycling'):
         return jsonify({'teams': [], 'standings': [], 'available': False}), 400
 
     # World Cup standings changed shape to include full group data; version the key
@@ -2606,6 +2617,49 @@ def proxy_standings(league):
             logger.warning("Returning expired cached standings due to unexpected error")
             return jsonify(expired_cache)
         return jsonify({'teams': [], 'standings': [], 'groups': [], 'available': False}), 200
+
+
+@app.route('/api/proxy/cycling/tour-de-france')
+@app.route('/api/proxy/cycling/tour-de-france/<int:year>')
+def proxy_cycling_tour_de_france(year=None):
+    """Proxy the Tour de France detail bundle."""
+    suffix = str(int(year)) if year else 'current'
+    cache_key = f'cycling_tour_de_france:{suffix}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path = f'/api/v1/cycling/tour-de-france/{int(year)}' if year else '/api/v1/cycling/tour-de-france'
+    try:
+        data = _fetch_api_json(path, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Tour de France API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Tour de France bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Tour de France bundle due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Tour de France bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Tour de France bundle due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': 'Tour de France',
+        'year': int(year or datetime.now().year),
+        'stages': [],
+        'latest_classifications': {},
+        'teams': [],
+        'riders': [],
+        'available': False,
+        'meta': {},
+    }), 200
 
 
 @app.route('/api/proxy/world-cup/bracket')

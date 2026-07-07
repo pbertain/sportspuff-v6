@@ -1406,6 +1406,21 @@
                         return parts.length > 1 ? parts[parts.length - 1] : clean;
                     }
 
+                    function tennisPlayerRank(side) {
+                        const raw = side === 'home'
+                            ? firstValue(game.home_rank, game.home_player_rank, game.player1_rank, game.player_1_rank, game.home_seed, game.player1_seed, game.player_1_seed)
+                            : firstValue(game.visitor_rank, game.away_rank, game.away_player_rank, game.player2_rank, game.player_2_rank, game.visitor_seed, game.away_seed, game.player2_seed, game.player_2_seed);
+                        const text = String(raw ?? '').trim();
+                        if (!text) return '';
+                        return text.startsWith('#') ? text : `#${text}`;
+                    }
+
+                    function tennisPlayerLabel(side) {
+                        const name = tennisPlayerName(side);
+                        const rank = tennisPlayerRank(side);
+                        return rank ? `${rank} ${name}` : name;
+                    }
+
                     // Cycling: events are calendar entries, not matchups. Render as a single
                     // colspan banner with race + stage + status. Skip the team-vs-team layout.
                     if (isCyclingEvent) {
@@ -1524,8 +1539,8 @@
                     }
                     // Get full team names from database if available, otherwise use API team name
                     // Use real_team_name first (has spaces between words)
-                    const visitorFullName = isTennis ? tennisPlayerName('visitor') : (visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team);
-                    const homeFullName = isTennis ? tennisPlayerName('home') : (homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team);
+                    const visitorFullName = isTennis ? tennisPlayerLabel('visitor') : (visitorTeamData?.real_team_name || visitorTeamData?.full_team_name || game.visitor_team);
+                    const homeFullName = isTennis ? tennisPlayerLabel('home') : (homeTeamData?.real_team_name || homeTeamData?.full_team_name || game.home_team);
                     const visitorShortName = getShortTeamName(visitorFullName);
                     const homeShortName = getShortTeamName(homeFullName);
                     

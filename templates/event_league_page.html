@@ -54,6 +54,17 @@
             <i class="fas fa-arrow-up-right-from-square ms-auto"></i>
         </a>
         {% endif %}
+        {% if league_config.mode == 'cycling' %}
+        <a class="tdf-feature-link mb-4" href="{{ url_for('tour_de_france_page') }}">
+            <img class="tdf-feature-link-mark" src="{{ url_for('static', filename='images/events/cycling/tour-de-france-mark.svg') }}" alt="Tour de France mark">
+            <div>
+                <div class="tdf-feature-link-kicker">Detailed Race View</div>
+                <div class="tdf-feature-link-title">Tour de France</div>
+                <div class="event-league-meta">Stages, classifications, teams, riders, and freshness from SPApi.</div>
+            </div>
+            <i class="fas fa-arrow-right ms-auto"></i>
+        </a>
+        {% endif %}
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
         {% if league_config.mode == 'world-cup' %}
@@ -1017,6 +1028,21 @@
             return parts.length > 1 ? parts[parts.length - 1] : clean;
         }
 
+        function tennisPlayerRank(game, side) {
+            const raw = side === 'home'
+                ? firstValue(game.home_rank, game.home_player_rank, game.player1_rank, game.player_1_rank, game.home_seed, game.player1_seed, game.player_1_seed)
+                : firstValue(game.visitor_rank, game.away_rank, game.away_player_rank, game.player2_rank, game.player_2_rank, game.visitor_seed, game.away_seed, game.player2_seed, game.player_2_seed);
+            const text = String(raw ?? '').trim();
+            if (!text) return '';
+            return text.startsWith('#') ? text : `#${text}`;
+        }
+
+        function tennisPlayerLabel(game, side) {
+            const name = tennisPlayerName(game, side);
+            const rank = tennisPlayerRank(game, side);
+            return rank ? `${rank} ${name}` : name;
+        }
+
         function scoreText(game) {
             if (EVENT_MODE === 'cycling') return statusText(game);
             const hasScore = game.home_score !== undefined && game.visitor_score !== undefined
@@ -1154,8 +1180,8 @@
             }
 
             const details = detailLine(game);
-            const visitorName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'visitor') : (game.visitor_team || 'TBD');
-            const homeName = EVENT_MODE === 'tennis' ? tennisPlayerName(game, 'home') : (game.home_team || 'TBD');
+            const visitorName = EVENT_MODE === 'tennis' ? tennisPlayerLabel(game, 'visitor') : (game.visitor_team || 'TBD');
+            const homeName = EVENT_MODE === 'tennis' ? tennisPlayerLabel(game, 'home') : (game.home_team || 'TBD');
             const sideLabel = EVENT_MODE === 'tennis' ? 'Player' : 'Team';
             const isWorldCupKnockout = EVENT_MODE === 'world-cup' && Boolean(game.__wcKnockout);
             const worldCupWinner = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';
