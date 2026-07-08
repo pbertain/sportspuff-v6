@@ -854,6 +854,26 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_cache.assert_called_once_with("cycling_tour_de_france:2026", "schedule")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
 
+    def test_tour_de_france_template_formats_rider_names_and_three_column_boards(self):
+        template = (PROJECT_ROOT / "templates/tour_de_france_page.html").read_text()
+        css = (PROJECT_ROOT / "static/css/main.css").read_text()
+
+        for snippet in [
+            "function slugToFullName(slug)",
+            "function buildRiderLookup(data)",
+            "function classificationValue(row, boardType, index)",
+            "King of the Mountains (KOM)",
+            "buildRiderLookup(data);",
+        ]:
+            self.assertIn(snippet, template)
+
+        for snippet in [
+            ".tdf-board-grid {",
+            "grid-template-columns: repeat(3, minmax(0, 1fr));",
+            ".tdf-board-meta",
+        ]:
+            self.assertIn(snippet, css)
+
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()
 

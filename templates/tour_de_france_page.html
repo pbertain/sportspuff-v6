@@ -43,6 +43,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const TOUR_YEAR = {{ year | tojson }};
+        let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
 
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -72,6 +73,55 @@
             return parsed.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
 
+        function toProperCase(value) {
+            return String(value ?? '')
+                .toLowerCase()
+                .split(/(\s+|-|')/)
+                .map(part => /^[\s-']+$/.test(part) ? part : part.charAt(0).toUpperCase() + part.slice(1))
+                .join('');
+        }
+
+        function slugToFullName(slug) {
+            if (!slug) return '';
+            return String(slug)
+                .split('/')
+                .pop()
+                .split('-')
+                .filter(Boolean)
+                .map(toProperCase)
+                .join(' ');
+        }
+
+        function cleanRiderKey(name) {
+            return String(name ?? '')
+                .split('|')[0]
+                .replace(/#\d+/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function buildRiderLookup(data) {
+            const bySlug = new Map();
+            const byShortName = new Map();
+            const riders = Array.isArray(data?.riders) ? data.riders : [];
+
+            riders.forEach(rider => {
+                const shortName = cleanRiderKey(firstValue(rider.rider_name, rider.short_name, ''));
+                const slug = firstValue(rider.rider_slug, '');
+                const fullName = firstValue(
+                    rider.full_name,
+                    rider.rider_full_name,
+                    slugToFullName(slug),
+                    toProperCase(shortName)
+                );
+
+                if (slug) bySlug.set(slug, fullName);
+                if (shortName) byShortName.set(shortName.toUpperCase(), fullName);
+            });
+
+            TOUR_RIDER_LOOKUP = { bySlug, byShortName };
+        }
+
         function freshnessText(payload) {
             const meta = payload?.meta || {};
             const bits = [
@@ -81,23 +131,67 @@
             return bits.join(' • ');
         }
 
-        function classificationValue(row) {
-            return firstValue(row.time, row.points, row.gap, row.bonus, '');
+        function normalizedGap(value) {
+            const raw = String(value ?? '').trim();
+            if (!raw) return '';
+            if (raw === '-' || raw === '0' || raw === '+0' || raw === '00:00' || raw === '00:00:00') return '';
+            return raw.startsWith('+') ? raw : `+${raw}`;
+        }
+
+        function boardValueLabel(boardType) {
+            if (boardType === 'points' || boardType === 'kom') return 'Points';
+            return 'Time';
+        }
+
+        function classificationValue(row, boardType, index) {
+            if (boardType === 'points' || boardType === 'kom') {
+                return firstValue(normalizedGap(row.gap), row.points, row.value, '');
+            }
+
+            if (index === 0) {
+                return firstValue(row.time, row.total_time, row.elapsed_time, normalizedGap(row.gap), '');
+            }
+
+            return firstValue(
+                normalizedGap(row.gap),
+                normalizedGap(row.time_back),
+                normalizedGap(row.behind),
+                row.time,
+                row.total_time,
+                ''
+            );
         }
 
         function classificationName(row) {
-            return firstValue(row.rider_name, row.team_name, 'TBD');
+            const slug = firstValue(row.rider_slug, row.slug, '');
+            if (slug && TOUR_RIDER_LOOKUP.bySlug.has(slug)) {
+                return TOUR_RIDER_LOOKUP.bySlug.get(slug);
+            }
+
+            const riderName = cleanRiderKey(firstValue(row.rider_full_name, row.full_name, row.rider_name, ''));
+            if (riderName && TOUR_RIDER_LOOKUP.byShortName.has(riderName.toUpperCase())) {
+                return TOUR_RIDER_LOOKUP.byShortName.get(riderName.toUpperCase());
+            }
+
+            return riderName ? toProperCase(riderName) : firstValue(row.team_name, 'TBD');
         }
 
-        function renderBoard(title, rows) {
+        function classificationMeta(row, boardType) {
+            if (boardType === 'teams') return '';
+            return firstValue(row.team_name, '');
+        }
+
+        function renderBoard(title, boardType, rows) {
             const safeRows = Array.isArray(rows) ? rows.slice(0, 10) : [];
             if (safeRows.length === 0) return '';
-            const tableRows = safeRows.map(row => `
+            const tableRows = safeRows.map((row, index) => `
                 <tr>
                     <td>${escapeHtml(row.rank ?? '')}</td>
-                    <td>${escapeHtml(classificationName(row))}</td>
-                    <td>${escapeHtml(firstValue(row.team_name, ''))}</td>
-                    <td>${escapeHtml(classificationValue(row))}</td>
+                    <td>
+                        <div class="tdf-board-name">${escapeHtml(classificationName(row))}</div>
+                        ${classificationMeta(row, boardType) ? `<div class="tdf-board-meta">${escapeHtml(classificationMeta(row, boardType))}</div>` : ''}
+                    </td>
+                    <td>${escapeHtml(classificationValue(row, boardType, index))}</td>
                 </tr>
             `).join('');
             return `
@@ -109,7 +203,7 @@
                     <div class="table-responsive">
                         <table class="table table-sm table-dark align-middle mb-0 tdf-board-table">
                             <thead>
-                                <tr><th>#</th><th>Name</th><th>Team</th><th>Value</th></tr>
+                                <tr><th>#</th><th>${boardType === 'teams' ? 'Team' : 'Rider'}</th><th>${boardValueLabel(boardType)}</th></tr>
                             </thead>
                             <tbody>${tableRows}</tbody>
                         </table>
@@ -185,6 +279,7 @@
             try {
                 const response = await fetch(`/api/proxy/cycling/tour-de-france/${encodeURIComponent(TOUR_YEAR)}`);
                 const data = response.ok ? await response.json() : {};
+                buildRiderLookup(data);
                 const freshnessLabel = freshnessText(data);
                 if (freshnessLabel) {
                     freshness.textContent = `Updated: ${freshnessLabel}`;
@@ -197,11 +292,11 @@
 
                 const latest = data?.latest_classifications || {};
                 boards.innerHTML = [
-                    renderBoard('General Classification', latest.gc),
-                    renderBoard('Points', latest.points),
-                    renderBoard('King of the Mountains', latest.kom),
-                    renderBoard('Youth', latest.youth),
-                    renderBoard('Teams', latest.teams),
+                    renderBoard('General Classification', 'gc', latest.gc),
+                    renderBoard('Points', 'points', latest.points),
+                    renderBoard('King of the Mountains (KOM)', 'kom', latest.kom),
+                    renderBoard('Youth', 'youth', latest.youth),
+                    renderBoard('Teams', 'teams', latest.teams),
                 ].filter(Boolean).join('');
 
                 const stageCards = Array.isArray(data?.stages) ? data.stages.map(renderStageCard).join('') : '';
