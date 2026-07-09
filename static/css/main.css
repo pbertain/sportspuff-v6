@@ -346,6 +346,18 @@ main, .main-content {
   margin-bottom: 0;
 }
 
+.site-footer-deployment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  justify-content: center;
+  line-height: 1.35;
+}
+
+.site-footer-deployment a {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .site-footer-theme-control {
   grid-column: 3;
   justify-self: end;

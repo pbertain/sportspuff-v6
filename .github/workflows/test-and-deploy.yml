@@ -75,6 +75,11 @@ jobs:
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
           -e target_env=dev \
+          -e deployment_tag="dev-${{ github.run_id }}" \
+          -e deployment_run_id="${{ github.run_id }}" \
+          -e deployment_run_number="${{ github.run_number }}" \
+          -e deployment_run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          -e deployment_sha="${{ github.sha }}" \
           -e db_password_secret="${{ secrets.DB_PASSWORD }}" \
           -e vault_rapidapi_key="${{ secrets.RAPIDAPI_KEY }}" \
           -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"
@@ -117,6 +122,11 @@ jobs:
           --private-key ~/.ssh/nirdclub_id_ed25519 \
           ansible/playbooks/deploy.yml \
           -e target_env=prod \
+          -e deployment_tag="prod-${{ github.run_id }}" \
+          -e deployment_run_id="${{ github.run_id }}" \
+          -e deployment_run_number="${{ github.run_number }}" \
+          -e deployment_run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          -e deployment_sha="${{ github.sha }}" \
           -e db_password_secret="${{ secrets.DB_PASSWORD }}" \
           -e vault_rapidapi_key="${{ secrets.RAPIDAPI_KEY }}" \
           -e vault_wnba_api_key="${{ secrets.WNBA_API_KEY }}"

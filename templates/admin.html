@@ -118,6 +118,30 @@
             </div>
         </div>
 
+        {% if deployment_info.tag or deployment_info.deployed_at %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-dark border-0 admin-deployment-card mb-0">
+                    <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between">
+                        <div>
+                            <div class="text-uppercase small fw-semibold text-white-50">Deployment</div>
+                            <div class="h5 mb-0">{{ deployment_info.tag or 'local' }}{% if deployment_info.sha %} <span class="text-white-50">({{ deployment_info.sha }})</span>{% endif %}</div>
+                        </div>
+                        <div class="text-end">
+                            {% if deployment_info.deployed_at %}
+                            <div class="small text-white-50">Deployed</div>
+                            <div class="fw-semibold">{{ deployment_info.deployed_at }}</div>
+                            {% endif %}
+                            {% if deployment_info.run_url %}
+                            <a href="{{ deployment_info.run_url }}" class="small text-decoration-none" target="_blank" rel="noopener noreferrer">Open GitHub Run</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Statistics Cards -->
         <div class="row mb-5">
             <div class="col-lg-4 col-md-6 mb-4">

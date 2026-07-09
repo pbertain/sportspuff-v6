@@ -786,6 +786,43 @@ CORS(app, resources={r"/api/proxy/*": {"origins": "*"}})
 API_BASE_URL = os.getenv('SPORTSPUFF_API_BASE_URL', 'https://api.sportspuff.net')
 logger.info(f"API_BASE_URL configured as: {API_BASE_URL}")
 
+
+def _format_deployment_timestamp(value):
+    raw = str(value or '').strip()
+    if not raw:
+        return ''
+
+    normalized = raw.replace('Z', '+00:00')
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return raw
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    parsed_utc = parsed.astimezone(timezone.utc)
+    return parsed_utc.strftime('%b %d, %Y %I:%M %p UTC').replace(' 0', ' ')
+
+
+DEPLOYMENT_TAG = os.getenv('SPORTSPUFF_DEPLOYMENT_TAG', '').strip()
+DEPLOYMENT_SHA = os.getenv('SPORTSPUFF_DEPLOYMENT_SHA', '').strip()
+DEPLOYMENT_RUN_ID = os.getenv('SPORTSPUFF_DEPLOYMENT_RUN_ID', '').strip()
+DEPLOYMENT_RUN_NUMBER = os.getenv('SPORTSPUFF_DEPLOYMENT_RUN_NUMBER', '').strip()
+DEPLOYMENT_RUN_URL = os.getenv('SPORTSPUFF_DEPLOYMENT_RUN_URL', '').strip()
+DEPLOYMENT_AT = _format_deployment_timestamp(os.getenv('SPORTSPUFF_DEPLOYED_AT', ''))
+
+if not DEPLOYMENT_TAG and DEPLOYMENT_RUN_ID:
+    DEPLOYMENT_TAG = f"run-{DEPLOYMENT_RUN_ID}"
+
+DEPLOYMENT_INFO = {
+    'tag': DEPLOYMENT_TAG,
+    'sha': DEPLOYMENT_SHA[:7] if DEPLOYMENT_SHA else '',
+    'run_id': DEPLOYMENT_RUN_ID,
+    'run_number': DEPLOYMENT_RUN_NUMBER,
+    'run_url': DEPLOYMENT_RUN_URL,
+    'deployed_at': DEPLOYMENT_AT,
+}
+
 # Start background cache refresh thread (avoid duplicate in Flask reloader)
 if os.getenv('DISABLE_BACKGROUND_CACHE_REFRESH') != '1' and (
     not os.environ.get('WERKZEUG_RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
@@ -796,7 +833,7 @@ if os.getenv('DISABLE_BACKGROUND_CACHE_REFRESH') != '1' and (
 
 @app.context_processor
 def inject_globals():
-    return {'API_BASE_URL': API_BASE_URL}
+    return {'API_BASE_URL': API_BASE_URL, 'deployment_info': DEPLOYMENT_INFO}
 
 SEASON_DATES = {
     'MLB': {

@@ -396,6 +396,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         self.assertIn('id="tournament-theme-select"', footer)
         self.assertIn("site-footer-theme-control", footer)
+        self.assertIn("site-footer-deployment", footer)
+        self.assertIn("deployment_info.tag or deployment_info.deployed_at", footer)
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
         self.assertIn('class="collapse navbar-collapse navbar-main-panel"', header)
         self.assertNotIn('id="tournament-theme-select"', header)
@@ -417,6 +419,13 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "australian-open",
         ]:
             self.assertIn(f'value="{theme}"', footer)
+
+    def test_admin_template_exposes_deployment_metadata(self):
+        admin_template = (PROJECT_ROOT / "templates/admin.html").read_text()
+
+        self.assertIn("admin-deployment-card", admin_template)
+        self.assertIn("deployment_info.tag or deployment_info.deployed_at", admin_template)
+        self.assertIn("Open GitHub Run", admin_template)
 
     def test_shared_header_links_to_event_leagues(self):
         header = (PROJECT_ROOT / "templates/shared_header.html").read_text()
@@ -1122,6 +1131,9 @@ class TestDatabaseAndConfig(unittest.TestCase):
         self.assertIn('service_name: "sportspuff-v6-prod"', prod_config)
         self.assertIn("app_port: 34080", prod_config)
         self.assertIn('branch: "main"', prod_config)
+        env_template = (PROJECT_ROOT / "ansible/roles/sportspuff-app/templates/.env.j2").read_text()
+        self.assertIn("SPORTSPUFF_DEPLOYMENT_TAG", env_template)
+        self.assertIn("SPORTSPUFF_DEPLOYMENT_RUN_URL", env_template)
 
 
 if __name__ == "__main__":

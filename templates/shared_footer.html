@@ -3,6 +3,15 @@
         <div class="site-footer-content">
             <div class="site-footer-brand">
                 <p>&copy;2026 SportsPuff. Part of the CloudPuff™ family!</p>
+                {% if deployment_info.tag or deployment_info.deployed_at %}
+                <div class="site-footer-deployment small text-white-50 mt-2">
+                    <span class="fw-semibold text-white-75">Deployment</span>
+                    {% if deployment_info.tag %}<span>{{ deployment_info.tag }}</span>{% endif %}
+                    {% if deployment_info.sha %}<span>• {{ deployment_info.sha }}</span>{% endif %}
+                    {% if deployment_info.deployed_at %}<span>• {{ deployment_info.deployed_at }}</span>{% endif %}
+                    {% if deployment_info.run_url %}<a href="{{ deployment_info.run_url }}" target="_blank" rel="noopener noreferrer">GitHub Run</a>{% endif %}
+                </div>
+                {% endif %}
                 <div class="mt-3">
                     <a href="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" target="_blank">
                         <img src="https://www.elementspuff.net/static/img/powered-by-puhfph-cloud-logo.png" alt="Powered by CloudPuff™" style="height: 80px; opacity: 0.9;" onerror="this.style.display='none';">
