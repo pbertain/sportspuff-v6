@@ -867,6 +867,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function stageRaceType(stage, schedule)",
             "function stageWindowText(stage, schedule)",
             "function stageStatusText(stage, schedule)",
+            "id=\"tdf-timezone-select\"",
+            "function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris')",
+            "function tourDisplayTimeZone()",
         ]:
             self.assertIn(snippet, template)
 
@@ -964,6 +967,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function cyclingRaceTypeText(game)",
             "function cyclingDistanceText(game)",
             "function cyclingStageWindowText(game)",
+            "function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris')",
+            "function timezoneValueToIana(value)",
             "images/branding/favicon-32x32.png",
             "images/branding/apple-touch-icon.png",
         ]:

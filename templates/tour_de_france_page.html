@@ -23,7 +23,18 @@
                     <div class="event-league-meta">Detailed stage coverage, classifications, teams, and riders.</div>
                     <div id="tdf-freshness" class="event-data-freshness" style="display: none;"></div>
                 </div>
-                <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+                    <div>
+                        <label for="tdf-timezone-select" class="form-label text-white fw-bold mb-1">Timezone</label>
+                        <select id="tdf-timezone-select" class="form-select">
+                            <option value="pt" selected>Pacific Time</option>
+                            <option value="et">Eastern Time</option>
+                            <option value="ct">Central Time</option>
+                            <option value="mt">Mountain Time</option>
+                            <option value="Europe/London">London</option>
+                            <option value="Europe/Paris">Paris</option>
+                        </select>
+                    </div>
                     <a class="btn btn-outline-light" href="{{ url_for('league_page', league_name='CYCLING') }}">Back to Cycling</a>
                     <span class="event-league-pill" id="tdf-year-pill">{{ year }}</span>
                 </div>
@@ -46,6 +57,7 @@
     <script>
         const TOUR_YEAR = {{ year | tojson }};
         let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
+        let TOUR_PAYLOAD = null;
 
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -66,6 +78,20 @@
             const parsed = new Date(value);
             if (Number.isNaN(parsed.getTime())) return String(value);
             return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function timezoneValueToIana(value) {
+            const normalized = String(value || '').trim();
+            if (normalized === 'pt') return 'America/Los_Angeles';
+            if (normalized === 'mt') return 'America/Denver';
+            if (normalized === 'ct') return 'America/Chicago';
+            if (normalized === 'et') return 'America/New_York';
+            return normalized || 'America/Los_Angeles';
+        }
+
+        function tourDisplayTimeZone() {
+            const select = document.getElementById('tdf-timezone-select');
+            return timezoneValueToIana(select ? select.value : 'pt');
         }
 
         function prettyDateTime(value) {
@@ -94,6 +120,59 @@
                 }
             }
             return raw;
+        }
+
+        function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris') {
+            const dateText = String(dateValue || '').trim();
+            const timeText = String(timeValue || '').trim();
+            if (!dateText || !timeText) return null;
+
+            const dateMatch = dateText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const timeMatch = timeText.match(/(\d{1,2}):(\d{2})/);
+            if (!dateMatch || !timeMatch) return null;
+
+            const [, yearText, monthText, dayText] = dateMatch;
+            const [, hourText, minuteText] = timeMatch;
+            const target = {
+                year: Number(yearText),
+                month: Number(monthText),
+                day: Number(dayText),
+                hour: Number(hourText),
+                minute: Number(minuteText),
+            };
+
+            let guess = new Date(Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute));
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: sourceTimeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23',
+            });
+
+            for (let index = 0; index < 3; index += 1) {
+                const parts = Object.fromEntries(
+                    formatter.formatToParts(guess)
+                        .filter(part => part.type !== 'literal')
+                        .map(part => [part.type, part.value])
+                );
+
+                const observedUtc = Date.UTC(
+                    Number(parts.year),
+                    Number(parts.month) - 1,
+                    Number(parts.day),
+                    Number(parts.hour),
+                    Number(parts.minute)
+                );
+                const desiredUtc = Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute);
+                const deltaMs = desiredUtc - observedUtc;
+                if (deltaMs === 0) break;
+                guess = new Date(guess.getTime() + deltaMs);
+            }
+
+            return guess;
         }
 
         function toProperCase(value) {
@@ -170,9 +249,26 @@
             return firstValue(stage.race_type, schedule.race_type, '');
         }
 
+        function stageStartDateTime(stage, schedule) {
+            return zonedStageDateTime(
+                firstValue(stage.date, schedule.date, ''),
+                firstValue(stage.stage_start_local, schedule.stage_start_local, '')
+            );
+        }
+
         function stageWindowText(stage, schedule) {
-            const start = prettyTime(firstValue(stage.stage_start_local, schedule.stage_start_local, ''));
-            const finish = prettyTime(firstValue(stage.stage_finish_expected_local, schedule.stage_finish_expected_local, ''));
+            const displayTimeZone = tourDisplayTimeZone();
+            const stageDate = firstValue(stage.date, schedule.date, '');
+            const startValue = firstValue(stage.stage_start_local, schedule.stage_start_local, '');
+            const finishValue = firstValue(stage.stage_finish_expected_local, schedule.stage_finish_expected_local, '');
+            const startDate = zonedStageDateTime(stageDate, startValue);
+            const finishDate = zonedStageDateTime(stageDate, finishValue);
+            const start = startDate
+                ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
+                : prettyTime(startValue);
+            const finish = finishDate
+                ? finishDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
+                : prettyTime(finishValue);
             if (start && finish) return `${start} - ${finish}`;
             return start || finish || '';
         }
@@ -260,8 +356,9 @@
             const stageNumber = firstValue(stage.stage_number, schedule.stage_number, '');
             const title = firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, 'Current Stage');
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
+            const startDate = stageStartDateTime(stage, schedule);
             const meta = [
-                stage.date ? prettyDate(stage.date) : '',
+                startDate ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tourDisplayTimeZone() }) : (stage.date ? prettyDate(stage.date) : ''),
                 stageRaceType(stage, schedule),
                 route,
                 stage.distance_km ? `${stage.distance_km} km` : '',
@@ -291,8 +388,9 @@
             const stageNumber = firstValue(stage.stage_number, schedule.stage_number, '');
             const title = firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, 'Stage');
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
+            const startDate = stageStartDateTime(stage, schedule);
             const meta = [
-                stage.date ? prettyDate(stage.date) : '',
+                startDate ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tourDisplayTimeZone() }) : (stage.date ? prettyDate(stage.date) : ''),
                 stageRaceType(stage, schedule),
                 route,
                 stage.distance_km ? `${stage.distance_km} km` : '',
@@ -322,6 +420,7 @@
             try {
                 const response = await fetch(`/api/proxy/cycling/tour-de-france/${encodeURIComponent(TOUR_YEAR)}`);
                 const data = response.ok ? await response.json() : {};
+                TOUR_PAYLOAD = data;
                 buildRiderLookup(data);
                 const freshnessLabel = freshnessText(data);
                 if (freshnessLabel) {
@@ -351,7 +450,36 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadTour);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tdf-timezone-select').addEventListener('change', () => {
+                if (!TOUR_PAYLOAD) {
+                    loadTour();
+                    return;
+                }
+
+                const summary = document.getElementById('tdf-summary-panel');
+                const boards = document.getElementById('tdf-boards-panel');
+                const stages = document.getElementById('tdf-stages-panel');
+
+                summary.innerHTML = TOUR_PAYLOAD?.current_stage
+                    ? renderCurrentStage(TOUR_PAYLOAD.current_stage)
+                    : `<div class="event-league-meta">No current Tour de France stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
+
+                const latest = TOUR_PAYLOAD?.latest_classifications || {};
+                boards.innerHTML = [
+                    renderBoard('General Classification', 'gc', latest.gc),
+                    renderBoard('Points', 'points', latest.points),
+                    renderBoard('King of the Mountains (KOM)', 'kom', latest.kom),
+                    renderBoard('Youth', 'youth', latest.youth),
+                    renderBoard('Teams', 'teams', latest.teams),
+                ].filter(Boolean).join('');
+
+                const stageCards = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.map(renderStageCard).join('') : '';
+                stages.innerHTML = stageCards || `<div class="event-league-card"><div class="event-league-meta">No stage data is available yet.</div></div>`;
+            });
+
+            loadTour();
+        });
     </script>
 </body>
 </html>

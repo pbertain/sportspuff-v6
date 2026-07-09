@@ -1428,6 +1428,73 @@
                         return String(raw ?? '').trim() ? `Stage ${String(raw).trim()}` : '';
                     }
 
+                    function timezoneValueToIana(value) {
+                        const normalized = String(value || '').trim();
+                        if (normalized === 'pt') return 'America/Los_Angeles';
+                        if (normalized === 'mt') return 'America/Denver';
+                        if (normalized === 'ct') return 'America/Chicago';
+                        if (normalized === 'et') return 'America/New_York';
+                        return normalized || 'America/Los_Angeles';
+                    }
+
+                    function cyclingDisplayTimeZone() {
+                        const select = document.getElementById('timezone-select');
+                        return timezoneValueToIana(select ? select.value : 'pt');
+                    }
+
+                    function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris') {
+                        const dateText = String(dateValue || '').trim();
+                        const timeText = String(timeValue || '').trim();
+                        if (!dateText || !timeText) return null;
+
+                        const dateMatch = dateText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                        const timeMatch = timeText.match(/(\d{1,2}):(\d{2})/);
+                        if (!dateMatch || !timeMatch) return null;
+
+                        const [, yearText, monthText, dayText] = dateMatch;
+                        const [, hourText, minuteText] = timeMatch;
+                        const target = {
+                            year: Number(yearText),
+                            month: Number(monthText),
+                            day: Number(dayText),
+                            hour: Number(hourText),
+                            minute: Number(minuteText),
+                        };
+
+                        let guess = new Date(Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute));
+                        const formatter = new Intl.DateTimeFormat('en-CA', {
+                            timeZone: sourceTimeZone,
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hourCycle: 'h23',
+                        });
+
+                        for (let index = 0; index < 3; index += 1) {
+                            const parts = Object.fromEntries(
+                                formatter.formatToParts(guess)
+                                    .filter(part => part.type !== 'literal')
+                                    .map(part => [part.type, part.value])
+                            );
+
+                            const observedUtc = Date.UTC(
+                                Number(parts.year),
+                                Number(parts.month) - 1,
+                                Number(parts.day),
+                                Number(parts.hour),
+                                Number(parts.minute)
+                            );
+                            const desiredUtc = Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute);
+                            const deltaMs = desiredUtc - observedUtc;
+                            if (deltaMs === 0) break;
+                            guess = new Date(guess.getTime() + deltaMs);
+                        }
+
+                        return guess;
+                    }
+
                     function cyclingRaceTypeText(game) {
                         return String(firstValue(game.race_type, game.cycling_race_type, '') || '').trim();
                     }
@@ -1466,8 +1533,18 @@
                     }
 
                     function cyclingStageWindowText(game) {
-                        const start = formatCyclingLocalTimeValue(firstValue(game.stage_start_local, game.cycling_stage_start_local, ''));
-                        const finish = formatCyclingLocalTimeValue(firstValue(game.stage_finish_expected_local, game.cycling_stage_finish_expected_local, ''));
+                        const stageDate = firstValue(game.game_date, game.stage_date, game.date, '');
+                        const displayTimeZone = cyclingDisplayTimeZone();
+                        const startValue = firstValue(game.stage_start_local, game.cycling_stage_start_local, '');
+                        const finishValue = firstValue(game.stage_finish_expected_local, game.cycling_stage_finish_expected_local, '');
+                        const startDate = zonedStageDateTime(stageDate, startValue);
+                        const finishDate = zonedStageDateTime(stageDate, finishValue);
+                        const start = startDate
+                            ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
+                            : formatCyclingLocalTimeValue(startValue);
+                        const finish = finishDate
+                            ? finishDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
+                            : formatCyclingLocalTimeValue(finishValue);
                         if (start && finish) return `${start} - ${finish}`;
                         return start || finish || '';
                     }
