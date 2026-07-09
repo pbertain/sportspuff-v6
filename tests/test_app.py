@@ -862,6 +862,13 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function slugToFullName(slug)",
             "function buildRiderLookup(data)",
             "function classificationValue(row, boardType, index)",
+            "function riderSlugFromUrl(value)",
+            "function riderDisplayName(name, slug = '', url = '')",
+            "function renderRiderName(name, options = {})",
+            "function stageResultRows(stageDetail)",
+            "function renderStageResults(stageDetail)",
+            "let TOUR_SELECTED_STAGE_KEY = null;",
+            "document.getElementById('tdf-stages-panel').addEventListener('click'",
             "King of the Mountains (KOM)",
             "buildRiderLookup(data);",
             "function stageRaceType(stage, schedule)",
@@ -877,6 +884,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
             ".tdf-board-grid {",
             "grid-template-columns: repeat(3, minmax(0, 1fr));",
             ".tdf-board-meta",
+            ".tdf-rider-link",
+            ".tdf-stage-card.is-selected",
         ]:
             self.assertIn(snippet, css)
 

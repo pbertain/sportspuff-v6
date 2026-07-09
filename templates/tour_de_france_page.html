@@ -58,6 +58,7 @@
         const TOUR_YEAR = {{ year | tojson }};
         let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
         let TOUR_PAYLOAD = null;
+        let TOUR_SELECTED_STAGE_KEY = null;
 
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -202,6 +203,13 @@
                 .trim();
         }
 
+        function riderSlugFromUrl(value) {
+            const text = String(value ?? '').trim();
+            if (!text) return '';
+            const parts = text.split('/').filter(Boolean);
+            return parts[parts.length - 1] || '';
+        }
+
         function buildRiderLookup(data) {
             const bySlug = new Map();
             const byShortName = new Map();
@@ -301,7 +309,7 @@
         }
 
         function classificationName(row) {
-            const slug = firstValue(row.rider_slug, row.slug, '');
+            const slug = firstValue(row.rider_slug, row.slug, riderSlugFromUrl(row.rider_url), '');
             if (slug && TOUR_RIDER_LOOKUP.bySlug.has(slug)) {
                 return TOUR_RIDER_LOOKUP.bySlug.get(slug);
             }
@@ -314,9 +322,111 @@
             return riderName ? toProperCase(riderName) : firstValue(row.team_name, 'TBD');
         }
 
+        function riderDisplayName(name, slug = '', url = '') {
+            const slugValue = firstValue(slug, riderSlugFromUrl(url), '');
+            if (slugValue && TOUR_RIDER_LOOKUP.bySlug.has(slugValue)) {
+                return TOUR_RIDER_LOOKUP.bySlug.get(slugValue);
+            }
+
+            const riderName = cleanRiderKey(name);
+            if (riderName && TOUR_RIDER_LOOKUP.byShortName.has(riderName.toUpperCase())) {
+                return TOUR_RIDER_LOOKUP.byShortName.get(riderName.toUpperCase());
+            }
+
+            return riderName ? toProperCase(riderName) : '';
+        }
+
+        function renderRiderName(name, options = {}) {
+            const displayName = riderDisplayName(name, options.slug, options.url) || String(name || 'TBD');
+            const safeLabel = escapeHtml(displayName);
+            const href = String(options.url || '').trim();
+            if (!href) return safeLabel;
+            return `<a class="tdf-rider-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+        }
+
         function classificationMeta(row, boardType) {
             if (boardType === 'teams') return '';
             return firstValue(row.team_name, '');
+        }
+
+        function stageKey(stageDetail) {
+            const stage = stageDetail?.stage || {};
+            const schedule = stageDetail?.schedule || {};
+            return [
+                firstValue(stage.stage_number, schedule.stage_number, ''),
+                firstValue(stage.date, schedule.date, ''),
+                firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, '')
+            ].join('|');
+        }
+
+        function stageResultRows(stageDetail) {
+            const classifications = Array.isArray(stageDetail?.classifications) ? stageDetail.classifications : [];
+            const stageRows = classifications.filter(row => String(row?.classification_type || '').toLowerCase() === 'stage');
+            if (stageRows.length > 0) return stageRows;
+
+            const grouped = new Map();
+            classifications.forEach(row => {
+                const type = String(row?.classification_type || '').toLowerCase();
+                if (!type) return;
+                if (!grouped.has(type)) grouped.set(type, []);
+                grouped.get(type).push(row);
+            });
+
+            return grouped.get('gc') || grouped.values().next().value || [];
+        }
+
+        function selectedStageDetail() {
+            if (!TOUR_PAYLOAD) return null;
+            const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
+            if (TOUR_SELECTED_STAGE_KEY) {
+                const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
+                if (selected) return selected;
+            }
+
+            const current = TOUR_PAYLOAD?.current_stage;
+            if (current?.stage || current?.schedule || current?.classifications) {
+                const currentKey = stageKey(current);
+                const matched = stages.find(stageDetail => stageKey(stageDetail) === currentKey);
+                return matched || current;
+            }
+
+            return stages[0] || null;
+        }
+
+        function renderStageResults(stageDetail) {
+            const rows = stageResultRows(stageDetail).slice(0, 10);
+            if (!rows.length) {
+                return `<div class="event-league-meta mt-3">Stage results are not available yet.</div>`;
+            }
+
+            const tableRows = rows.map((row, index) => `
+                <tr>
+                    <td>${escapeHtml(row.rank ?? index + 1)}</td>
+                    <td>
+                        <div class="tdf-board-name">${renderRiderName(classificationName(row), { slug: row.rider_slug || row.slug, url: row.rider_url })}</div>
+                        ${classificationMeta(row, 'stage') ? `<div class="tdf-board-meta">${escapeHtml(classificationMeta(row, 'stage'))}</div>` : ''}
+                    </td>
+                    <td>${escapeHtml(classificationValue(row, 'gc', index))}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-dark align-middle mb-0 tdf-board-table tdf-stage-results-table">
+                        <thead>
+                            <tr><th>#</th><th>Rider</th><th>Result</th></tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function selectedStageKicker(currentStage, stageDetail) {
+            const selectedKey = stageKey(stageDetail);
+            const currentKey = stageKey(currentStage);
+            if (selectedKey && currentKey && selectedKey === currentKey) return 'Current Stage';
+            return 'Stage Results';
         }
 
         function renderBoard(title, boardType, rows) {
@@ -326,7 +436,7 @@
                 <tr>
                     <td>${escapeHtml(row.rank ?? '')}</td>
                     <td>
-                        <div class="tdf-board-name">${escapeHtml(classificationName(row))}</div>
+                        <div class="tdf-board-name">${boardType === 'teams' ? escapeHtml(classificationName(row)) : renderRiderName(classificationName(row), { slug: row.rider_slug || row.slug, url: row.rider_url })}</div>
                         ${classificationMeta(row, boardType) ? `<div class="tdf-board-meta">${escapeHtml(classificationMeta(row, boardType))}</div>` : ''}
                     </td>
                     <td>${escapeHtml(classificationValue(row, boardType, index))}</td>
@@ -350,9 +460,10 @@
             `;
         }
 
-        function renderCurrentStage(currentStage) {
-            const stage = currentStage?.stage || {};
-            const schedule = currentStage?.schedule || {};
+        function renderCurrentStage(currentStage, stageDetail) {
+            const effectiveStage = stageDetail || currentStage || {};
+            const stage = effectiveStage?.stage || {};
+            const schedule = effectiveStage?.schedule || {};
             const stageNumber = firstValue(stage.stage_number, schedule.stage_number, '');
             const title = firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, 'Current Stage');
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
@@ -368,17 +479,19 @@
                 stage.cycling_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.cycling_url}" target="_blank" rel="noopener noreferrer">Stage Page</a>` : '',
                 stage.rankings_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.rankings_url}" target="_blank" rel="noopener noreferrer">Rankings</a>` : '',
             ].filter(Boolean).join('');
+            const winnerName = riderDisplayName(stage.winner, '', stage.winner_url);
             return `
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                     <div>
-                        <div class="tdf-kicker">Current Stage</div>
+                        <div class="tdf-kicker">${escapeHtml(selectedStageKicker(currentStage, effectiveStage))}</div>
                         <h2 class="event-league-title mb-1">${escapeHtml(stageNumber ? `Stage ${stageNumber}: ${title}` : title)}</h2>
                         <div class="event-league-meta">${escapeHtml(meta)}</div>
-                        ${stage.winner ? `<div class="event-league-meta mt-2">Winner: ${escapeHtml(stage.winner)}</div>` : ''}
+                        ${winnerName ? `<div class="event-league-meta mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
                         ${schedule.recommended_poll_minutes ? `<div class="event-league-meta mt-1">Recommended refresh: every ${escapeHtml(schedule.recommended_poll_minutes)} minutes</div>` : ''}
                     </div>
                     <div class="d-flex gap-2 flex-wrap">${links}</div>
                 </div>
+                ${renderStageResults(effectiveStage)}
             `;
         }
 
@@ -389,6 +502,9 @@
             const title = firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, 'Stage');
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
             const startDate = stageStartDateTime(stage, schedule);
+            const key = stageKey(stageDetail);
+            const isSelected = key === TOUR_SELECTED_STAGE_KEY;
+            const hasResults = stageResultRows(stageDetail).length > 0;
             const meta = [
                 startDate ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tourDisplayTimeZone() }) : (stage.date ? prettyDate(stage.date) : ''),
                 stageRaceType(stage, schedule),
@@ -396,25 +512,50 @@
                 stage.distance_km ? `${stage.distance_km} km` : '',
                 stageStatusText(stage, schedule),
             ].filter(Boolean).join(' • ');
-            const winner = firstValue(stage.winner, '');
+            const winnerName = riderDisplayName(stage.winner, '', stage.winner_url);
             return `
-                <article class="event-league-card tdf-stage-card">
+                <article class="event-league-card tdf-stage-card${isSelected ? ' is-selected' : ''}" data-stage-key="${escapeHtml(key)}">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <div>
                             <div class="tdf-kicker">${escapeHtml(stageNumber ? `Stage ${stageNumber}` : 'Stage')}</div>
                             <h3 class="event-league-title fs-5 mb-1">${escapeHtml(title)}</h3>
                             <div class="event-league-meta">${escapeHtml(meta)}</div>
-                            ${winner ? `<div class="event-league-meta mt-2">Winner: ${escapeHtml(winner)}</div>` : ''}
+                            ${winnerName ? `<div class="event-league-meta mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
                         </div>
+                        ${hasResults ? '<span class="event-league-pill">Results</span>' : ''}
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-light tdf-stage-select" type="button" data-stage-key="${escapeHtml(key)}">${hasResults ? (isSelected ? 'Showing Results' : 'View Results') : 'View Stage'}</button>
                     </div>
                 </article>
             `;
         }
 
-        async function loadTour() {
+        function renderTourView() {
             const summary = document.getElementById('tdf-summary-panel');
             const boards = document.getElementById('tdf-boards-panel');
             const stages = document.getElementById('tdf-stages-panel');
+            const selectedStage = selectedStageDetail();
+
+            summary.innerHTML = selectedStage
+                ? renderCurrentStage(TOUR_PAYLOAD?.current_stage, selectedStage)
+                : `<div class="event-league-meta">No current Tour de France stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
+
+            const latest = TOUR_PAYLOAD?.latest_classifications || {};
+            boards.innerHTML = [
+                renderBoard('General Classification', 'gc', latest.gc),
+                renderBoard('Points', 'points', latest.points),
+                renderBoard('King of the Mountains (KOM)', 'kom', latest.kom),
+                renderBoard('Youth', 'youth', latest.youth),
+                renderBoard('Teams', 'teams', latest.teams),
+            ].filter(Boolean).join('');
+
+            const stageCards = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.map(renderStageCard).join('') : '';
+            stages.innerHTML = stageCards || `<div class="event-league-card"><div class="event-league-meta">No stage data is available yet.</div></div>`;
+        }
+
+        async function loadTour() {
+            const summary = document.getElementById('tdf-summary-panel');
             const freshness = document.getElementById('tdf-freshness');
 
             try {
@@ -422,31 +563,20 @@
                 const data = response.ok ? await response.json() : {};
                 TOUR_PAYLOAD = data;
                 buildRiderLookup(data);
+                if (!TOUR_SELECTED_STAGE_KEY) {
+                    const selected = selectedStageDetail();
+                    TOUR_SELECTED_STAGE_KEY = selected ? stageKey(selected) : null;
+                }
                 const freshnessLabel = freshnessText(data);
                 if (freshnessLabel) {
                     freshness.textContent = `Updated: ${freshnessLabel}`;
                     freshness.style.display = '';
                 }
-
-                summary.innerHTML = data?.current_stage
-                    ? renderCurrentStage(data.current_stage)
-                    : `<div class="event-league-meta">No current Tour de France stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
-
-                const latest = data?.latest_classifications || {};
-                boards.innerHTML = [
-                    renderBoard('General Classification', 'gc', latest.gc),
-                    renderBoard('Points', 'points', latest.points),
-                    renderBoard('King of the Mountains (KOM)', 'kom', latest.kom),
-                    renderBoard('Youth', 'youth', latest.youth),
-                    renderBoard('Teams', 'teams', latest.teams),
-                ].filter(Boolean).join('');
-
-                const stageCards = Array.isArray(data?.stages) ? data.stages.map(renderStageCard).join('') : '';
-                stages.innerHTML = stageCards || `<div class="event-league-card"><div class="event-league-meta">No stage data is available yet.</div></div>`;
+                renderTourView();
             } catch (error) {
                 summary.innerHTML = `<div class="alert alert-warning mb-0">Unable to load Tour de France: ${escapeHtml(error.message || error)}</div>`;
-                boards.innerHTML = '';
-                stages.innerHTML = '';
+                document.getElementById('tdf-boards-panel').innerHTML = '';
+                document.getElementById('tdf-stages-panel').innerHTML = '';
             }
         }
 
@@ -456,26 +586,16 @@
                     loadTour();
                     return;
                 }
+                renderTourView();
+            });
 
-                const summary = document.getElementById('tdf-summary-panel');
-                const boards = document.getElementById('tdf-boards-panel');
-                const stages = document.getElementById('tdf-stages-panel');
-
-                summary.innerHTML = TOUR_PAYLOAD?.current_stage
-                    ? renderCurrentStage(TOUR_PAYLOAD.current_stage)
-                    : `<div class="event-league-meta">No current Tour de France stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
-
-                const latest = TOUR_PAYLOAD?.latest_classifications || {};
-                boards.innerHTML = [
-                    renderBoard('General Classification', 'gc', latest.gc),
-                    renderBoard('Points', 'points', latest.points),
-                    renderBoard('King of the Mountains (KOM)', 'kom', latest.kom),
-                    renderBoard('Youth', 'youth', latest.youth),
-                    renderBoard('Teams', 'teams', latest.teams),
-                ].filter(Boolean).join('');
-
-                const stageCards = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.map(renderStageCard).join('') : '';
-                stages.innerHTML = stageCards || `<div class="event-league-card"><div class="event-league-meta">No stage data is available yet.</div></div>`;
+            document.getElementById('tdf-stages-panel').addEventListener('click', event => {
+                const button = event.target.closest('.tdf-stage-select');
+                if (!button) return;
+                const nextKey = String(button.dataset.stageKey || '').trim();
+                if (!nextKey) return;
+                TOUR_SELECTED_STAGE_KEY = nextKey;
+                renderTourView();
             });
 
             loadTour();
