@@ -375,15 +375,27 @@
             return grouped.get('gc') || grouped.values().next().value || [];
         }
 
+        function stageNumberValue(stageDetail) {
+            const stage = stageDetail?.stage || {};
+            const schedule = stageDetail?.schedule || {};
+            return firstValue(stage.stage_number, schedule.stage_number, '');
+        }
+
         function selectedStageDetail() {
             if (!TOUR_PAYLOAD) return null;
             const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
+            const current = TOUR_PAYLOAD?.current_stage || {};
+            const currentStageNumber = stageNumberValue(current);
+            if (currentStageNumber) {
+                const byNumber = stages.find(stageDetail => String(stageNumberValue(stageDetail)) === String(currentStageNumber));
+                if (byNumber) return byNumber;
+            }
+
             if (TOUR_SELECTED_STAGE_KEY) {
                 const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
                 if (selected) return selected;
             }
 
-            const current = TOUR_PAYLOAD?.current_stage;
             if (current?.stage || current?.schedule || current?.classifications) {
                 const currentKey = stageKey(current);
                 const matched = stages.find(stageDetail => stageKey(stageDetail) === currentKey);
@@ -406,7 +418,8 @@
                         <div class="tdf-board-name">${renderRiderName(classificationName(row), { slug: row.rider_slug || row.slug, url: row.rider_url })}</div>
                         ${classificationMeta(row, 'stage') ? `<div class="tdf-board-meta">${escapeHtml(classificationMeta(row, 'stage'))}</div>` : ''}
                     </td>
-                    <td>${escapeHtml(classificationValue(row, 'gc', index))}</td>
+                    <td>${escapeHtml(firstValue(row.time, row.total_time, row.elapsed_time, ''))}</td>
+                    <td>${escapeHtml(firstValue(normalizedGap(row.gap), normalizedGap(row.time_back), normalizedGap(row.behind), ''))}</td>
                 </tr>
             `).join('');
 
@@ -414,7 +427,7 @@
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-dark align-middle mb-0 tdf-board-table tdf-stage-results-table">
                         <thead>
-                            <tr><th>#</th><th>Rider</th><th>Result</th></tr>
+                            <tr><th>#</th><th>Rider</th><th>Time</th><th>Time Behind</th></tr>
                         </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
