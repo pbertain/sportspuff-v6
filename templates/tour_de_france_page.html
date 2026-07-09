@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tour de France - Sportspuff v6</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/branding/favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/branding/apple-touch-icon.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
@@ -71,6 +73,27 @@
             const parsed = new Date(value);
             if (Number.isNaN(parsed.getTime())) return String(value);
             return parsed.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        function prettyTime(value) {
+            if (!value) return '';
+            const raw = String(value).trim();
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+            const timeMatch = raw.match(/(\d{1,2}:\d{2})(?::\d{2})?/);
+            if (timeMatch) {
+                const pieces = timeMatch[1].split(':');
+                const hours = Number(pieces[0]);
+                const minutes = pieces[1];
+                if (Number.isFinite(hours)) {
+                    const suffix = hours >= 12 ? 'PM' : 'AM';
+                    const hour12 = hours % 12 || 12;
+                    return `${hour12}:${minutes} ${suffix}`;
+                }
+            }
+            return raw;
         }
 
         function toProperCase(value) {
@@ -141,6 +164,25 @@
         function boardValueLabel(boardType) {
             if (boardType === 'points' || boardType === 'kom') return 'Points';
             return 'Time';
+        }
+
+        function stageRaceType(stage, schedule) {
+            return firstValue(stage.race_type, schedule.race_type, '');
+        }
+
+        function stageWindowText(stage, schedule) {
+            const start = prettyTime(firstValue(stage.stage_start_local, schedule.stage_start_local, ''));
+            const finish = prettyTime(firstValue(stage.stage_finish_expected_local, schedule.stage_finish_expected_local, ''));
+            if (start && finish) return `${start} - ${finish}`;
+            return start || finish || '';
+        }
+
+        function stageStatusText(stage, schedule) {
+            const status = String(firstValue(stage.status, schedule.status, schedule.poll_state, '') || '').trim().toLowerCase();
+            const window = stageWindowText(stage, schedule);
+            if (['in_progress', 'live', 'active'].includes(status) && window) return `Live · ${window}`;
+            if (['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
+            return window || firstValue(stage.status, schedule.status, schedule.poll_state, '');
         }
 
         function classificationValue(row, boardType, index) {
@@ -218,12 +260,12 @@
             const stageNumber = firstValue(stage.stage_number, schedule.stage_number, '');
             const title = firstValue(stage.stage_name, schedule.stage_name, stage.cycling_event_label, 'Current Stage');
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
-            const status = firstValue(stage.status, schedule.poll_state, '');
             const meta = [
                 stage.date ? prettyDate(stage.date) : '',
+                stageRaceType(stage, schedule),
                 route,
                 stage.distance_km ? `${stage.distance_km} km` : '',
-                status,
+                stageStatusText(stage, schedule),
             ].filter(Boolean).join(' • ');
             const links = [
                 stage.cycling_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.cycling_url}" target="_blank" rel="noopener noreferrer">Stage Page</a>` : '',
@@ -251,9 +293,10 @@
             const route = [stage.start_city, stage.finish_city].filter(Boolean).join(' to ');
             const meta = [
                 stage.date ? prettyDate(stage.date) : '',
+                stageRaceType(stage, schedule),
                 route,
                 stage.distance_km ? `${stage.distance_km} km` : '',
-                firstValue(stage.status, schedule.poll_state, ''),
+                stageStatusText(stage, schedule),
             ].filter(Boolean).join(' • ');
             const winner = firstValue(stage.winner, '');
             return `

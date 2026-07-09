@@ -864,6 +864,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function classificationValue(row, boardType, index)",
             "King of the Mountains (KOM)",
             "buildRiderLookup(data);",
+            "function stageRaceType(stage, schedule)",
+            "function stageWindowText(stage, schedule)",
+            "function stageStatusText(stage, schedule)",
         ]:
             self.assertIn(snippet, template)
 
@@ -956,6 +959,16 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("wc-bracket-winner-banner", css)
         self.assertIn("wc-groups-split", css)
         self.assertIn("https://www.uci.org/the-uci-celebrates-its-125th-anniversary/7cSGKuFPEiLx1fVHx7YCDe", app_source)
+
+        for snippet in [
+            "function cyclingRaceTypeText(game)",
+            "function cyclingDistanceText(game)",
+            "function cyclingStageWindowText(game)",
+            "images/branding/favicon-32x32.png",
+            "images/branding/apple-touch-icon.png",
+        ]:
+            self.assertIn(snippet, index_template)
+            self.assertIn(snippet, event_template)
 
     def test_shared_header_dropdown_stays_above_page_content(self):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()

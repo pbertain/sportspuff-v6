@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ league_config.display_name }} - Sportspuff v6</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/branding/favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/branding/apple-touch-icon.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
@@ -111,7 +113,69 @@
             }[char]));
         }
 
+        function firstValue(...values) {
+            return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+        }
+
+        function cyclingStageNumberText(game) {
+            const raw = firstValue(game.cycling_stage_number, game.stage_number, '');
+            return String(raw ?? '').trim() ? `Stage ${String(raw).trim()}` : '';
+        }
+
+        function cyclingRaceTypeText(game) {
+            return String(firstValue(game.race_type, game.cycling_race_type, '') || '').trim();
+        }
+
+        function cyclingDistanceText(game) {
+            const raw = String(firstValue(game.distance_km, game.cycling_distance_km, '') || '').trim();
+            return raw ? `${raw} km` : '';
+        }
+
+        function cyclingStageNameText(game) {
+            const stageNumber = cyclingStageNumberText(game).toLowerCase();
+            const label = String(firstValue(game.cycling_stage_label, game.visitor_team, '') || '').trim();
+            if (!label) return '';
+            return label.toLowerCase() === stageNumber ? '' : label;
+        }
+
+        function formatCyclingLocalTimeValue(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+            const timeMatch = raw.match(/(\d{1,2}:\d{2})(?::\d{2})?/);
+            if (timeMatch) {
+                const pieces = timeMatch[1].split(':');
+                const hours = Number(pieces[0]);
+                const minutes = pieces[1];
+                if (Number.isFinite(hours)) {
+                    const suffix = hours >= 12 ? 'PM' : 'AM';
+                    const hour12 = hours % 12 || 12;
+                    return `${hour12}:${minutes} ${suffix}`;
+                }
+            }
+            return raw;
+        }
+
+        function cyclingStageWindowText(game) {
+            const start = formatCyclingLocalTimeValue(firstValue(game.stage_start_local, game.cycling_stage_start_local, ''));
+            const finish = formatCyclingLocalTimeValue(firstValue(game.stage_finish_expected_local, game.cycling_stage_finish_expected_local, ''));
+            if (start && finish) return `${start} - ${finish}`;
+            return start || finish || '';
+        }
+
         function statusText(game) {
+            if (EVENT_MODE === 'cycling') {
+                const status = String(firstValue(game.status, game.game_status, '') || '').trim().toLowerCase();
+                const window = cyclingStageWindowText(game);
+                if (['in_progress', 'live', 'active'].includes(status) && window) return `Live · ${window}`;
+                if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
+                if (window) return window;
+                if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
+                return game.game_status || game.status || 'Scheduled';
+            }
             const status = (game.game_status || '').toLowerCase();
             if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
             if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
@@ -122,10 +186,6 @@
                 }
             }
             return game.game_status || 'Scheduled';
-        }
-
-        function firstValue(...values) {
-            return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
         }
 
         function worldCupPenaltyValue(game, side) {
@@ -1150,7 +1210,13 @@
                 return game.tennis_round || game.round ? `R${game.tennis_round || game.round}` : '';
             }
             if (EVENT_MODE === 'cycling') {
-                return [game.cycling_race || game.home_team, game.cycling_stage_label || game.visitor_team, game.cycling_country].filter(Boolean).join(' · ');
+                return [
+                    cyclingStageNumberText(game),
+                    cyclingRaceTypeText(game),
+                    cyclingStageNameText(game),
+                    cyclingDistanceText(game),
+                    game.cycling_country
+                ].filter(Boolean).join(' · ');
             }
             if (EVENT_MODE === 'world-cup') {
                 const round = (game.wc_round_label || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -1162,11 +1228,18 @@
         function renderGame(game) {
             if (EVENT_MODE === 'cycling') {
                 const race = game.cycling_race || game.home_team || 'Cycling event';
-                const stage = game.cycling_stage_label || game.visitor_team || '';
+                const stage = cyclingStageNameText(game);
                 const winner = game.cycling_winner || '';
                 const rank = game.cycling_rank;
-                const title = game.cycling_event_label || race;
-                const detailParts = [stage, winner ? `Winner: ${winner}` : '', rank !== undefined && rank !== null && String(rank).trim() !== '' ? `GC ${rank}` : '', game.cycling_stage_number ? `Stage ${game.cycling_stage_number}` : ''].filter(Boolean);
+                const title = race || game.cycling_event_label || 'Cycling event';
+                const detailParts = [
+                    cyclingStageNumberText(game),
+                    cyclingRaceTypeText(game),
+                    stage,
+                    cyclingDistanceText(game),
+                    winner ? `Winner: ${winner}` : '',
+                    rank !== undefined && rank !== null && String(rank).trim() !== '' ? `GC ${rank}` : ''
+                ].filter(Boolean);
                 const details = detailParts.length ? detailParts.join(' · ') : detailLine(game);
                 return `<div class="event-league-card">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
