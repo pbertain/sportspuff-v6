@@ -947,6 +947,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "id=\"tdf-timezone-select\"",
             "function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris')",
             "function tourDisplayTimeZone()",
+            "const TOUR_RACE_TITLE =",
+            "Loading {{ race_title or 'Tour de France' }}...",
         ]:
             self.assertIn(snippet, template)
 

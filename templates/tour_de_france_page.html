@@ -44,7 +44,7 @@
         <div id="tdf-summary-panel" class="event-league-card mb-3">
             <div class="text-center py-4">
                 <div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div>
-                <div class="event-league-meta mt-2">Loading Tour de France...</div>
+                <div class="event-league-meta mt-2">Loading {{ race_title or 'Tour de France' }}...</div>
             </div>
         </div>
         <div id="tdf-boards-panel" class="tdf-board-grid mb-3"></div>
@@ -55,12 +55,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const TOUR_RACE_TITLE = {{ race_title | default('Tour de France') | tojson }};
         const TOUR_YEAR = {{ year | tojson }};
         const TOUR_API_SLUG = {{ race_api_slug | default('tour-de-france') | tojson }};
         let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
         let TOUR_PAYLOAD = null;
         let TOUR_STAGE_DETAIL_CACHE = new Map();
         let TOUR_SELECTED_STAGE_KEY = null;
+        let TOUR_SELECTED_STAGE_NUMBER = null;
 
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -454,6 +456,9 @@
         function selectedStageDetail() {
             if (!TOUR_PAYLOAD) return null;
             const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
+            if (TOUR_SELECTED_STAGE_NUMBER && TOUR_STAGE_DETAIL_CACHE.has(String(TOUR_SELECTED_STAGE_NUMBER))) {
+                return TOUR_STAGE_DETAIL_CACHE.get(String(TOUR_SELECTED_STAGE_NUMBER));
+            }
             if (TOUR_SELECTED_STAGE_KEY) {
                 const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
                 if (selected) {
@@ -650,7 +655,7 @@
 
             summary.innerHTML = selectedStage
                 ? renderCurrentStage(TOUR_PAYLOAD?.current_stage, selectedStage)
-                : `<div class="event-league-meta">No current Tour de France stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
+                : `<div class="event-league-meta">No current ${escapeHtml(TOUR_RACE_TITLE)} stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
 
             const latest = TOUR_PAYLOAD?.latest_classifications || {};
             boards.innerHTML = [
@@ -681,6 +686,7 @@
                 const selectedStage = selectedStageDetail();
                 const selectedStageNumber = stageNumberForDetail(selectedStage);
                 if (selectedStageNumber) {
+                    TOUR_SELECTED_STAGE_NUMBER = selectedStageNumber;
                     const stageDetail = await fetchStageDetail(selectedStageNumber);
                     if (stageDetail) {
                         TOUR_STAGE_DETAIL_CACHE.set(String(selectedStageNumber), stageDetail);
@@ -716,6 +722,7 @@
                 TOUR_SELECTED_STAGE_KEY = nextKey;
                 const selected = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.find(stageDetail => stageKey(stageDetail) === nextKey) : null;
                 const nextStageNumber = stageNumberForDetail(selected);
+                TOUR_SELECTED_STAGE_NUMBER = nextStageNumber || null;
                 if (!nextStageNumber) {
                     renderTourView();
                     return;
