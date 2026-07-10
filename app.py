@@ -2773,7 +2773,7 @@ def proxy_cycling_vuelta(year=None):
     if cached_response:
         return jsonify(cached_response)
 
-    path = f'/api/v1/cycling/vuelta/{int(year)}' if year else '/api/v1/cycling/vuelta'
+    path = f'/api/v1/cycling/la-vuelta/{int(year)}' if year else '/api/v1/cycling/la-vuelta'
     try:
         data = _fetch_api_json(path, timeout=20)
         if isinstance(data, dict) and 'error' in data:

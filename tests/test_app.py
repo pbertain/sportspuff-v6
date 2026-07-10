@@ -876,6 +876,29 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
 
     @patch("app._fetch_api_json")
+    def test_proxy_vuelta_exposes_bundle_from_la_vuelta_feed(self, mock_fetch):
+        mock_fetch.return_value = {
+            "race": "La Vuelta a España",
+            "year": 2026,
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
+        }
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/vuelta/2026")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["race"], "La Vuelta a España")
+        self.assertEqual(data["year"], 2026)
+        mock_fetch.assert_called_once_with("/api/v1/cycling/la-vuelta/2026", timeout=20)
+        mock_cache.assert_called_once_with("cycling_vuelta:2026", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_vuelta:2026")
+
+    @patch("app._fetch_api_json")
     def test_proxy_tour_de_france_exposes_stage_results(self, mock_fetch):
         mock_fetch.return_value = {
             "race": "Tour de France",
