@@ -910,6 +910,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function renderRiderName(name, options = {})",
             "function isPlaceholderStageResult(row)",
             "function stageResultRows(stageDetail)",
+            "function stageTimeText(stage, schedule, timeValue)",
             "classification_rows",
             "function renderStageResults(stageDetail)",
             "let TOUR_SELECTED_STAGE_KEY = null;",
@@ -1031,6 +1032,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         for snippet in [
             "function cyclingRaceTypeText(game)",
             "function cyclingDistanceText(game)",
+            "function cyclingStageTimeText(dateValue, timeValue)",
             "function cyclingStageWindowText(game)",
             "function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris')",
             "function timezoneValueToIana(value)",

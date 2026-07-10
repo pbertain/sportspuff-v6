@@ -1532,19 +1532,27 @@
                         return raw;
                     }
 
+                    function cyclingStageTimeText(dateValue, timeValue) {
+                        const raw = String(timeValue || '').trim();
+                        if (!raw) return '';
+                        const displayTimeZone = cyclingDisplayTimeZone();
+                        const parsed = new Date(raw);
+                        if ((raw.includes('T') || raw.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(raw)) && !Number.isNaN(parsed.getTime())) {
+                            return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone });
+                        }
+                        const zoned = dateValue ? zonedStageDateTime(dateValue, raw) : null;
+                        if (zoned) {
+                            return zoned.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone });
+                        }
+                        return formatCyclingLocalTimeValue(raw);
+                    }
+
                     function cyclingStageWindowText(game) {
                         const stageDate = firstValue(game.game_date, game.stage_date, game.date, '');
-                        const displayTimeZone = cyclingDisplayTimeZone();
-                        const startValue = firstValue(game.stage_start_local, game.cycling_stage_start_local, '');
+                        const startValue = firstValue(game.stage_start_local, game.cycling_stage_start_local, game.game_time, '');
                         const finishValue = firstValue(game.stage_finish_expected_local, game.cycling_stage_finish_expected_local, '');
-                        const startDate = zonedStageDateTime(stageDate, startValue);
-                        const finishDate = zonedStageDateTime(stageDate, finishValue);
-                        const start = startDate
-                            ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
-                            : formatCyclingLocalTimeValue(startValue);
-                        const finish = finishDate
-                            ? finishDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
-                            : formatCyclingLocalTimeValue(finishValue);
+                        const start = cyclingStageTimeText(stageDate, startValue);
+                        const finish = cyclingStageTimeText(stageDate, finishValue);
                         if (start && finish) return `${start} - ${finish}`;
                         return start || finish || '';
                     }
@@ -1724,23 +1732,25 @@
                         } else {
                             statusDisplay = 'Live';
                         }
-                    } else if (game.current_period && game.time_remaining) {
-                        if (gameLeague === 'MLB') {
-                            const inning = parseInt(game.current_period) || 1;
-                            const halfRaw = (game.time_remaining || '').toLowerCase();
-                            const half = halfRaw.includes('top') ? 'Top' :
+                        } else if (game.current_period && game.time_remaining) {
+                            if (gameLeague === 'MLB') {
+                                const inning = parseInt(game.current_period) || 1;
+                                const halfRaw = (game.time_remaining || '').toLowerCase();
+                                const half = halfRaw.includes('top') ? 'Top' :
                                          halfRaw.includes('mid') ? 'Mid' :
                                          halfRaw.includes('bot') ? 'Bot' :
                                          halfRaw.includes('end') ? 'End' : halfRaw;
                             statusDisplay = half ? `${half} ${inning}` : `Inn ${inning}`;
                         } else {
-                            statusDisplay = formatTimedPeriodStatus(game, gameLeague) || 'Live';
-                        }
-                    } else if (isScheduled && game.game_time) {
-                        let gameDate;
-                        try {
-                            gameDate = new Date(game.game_time);
-                            if (isNaN(gameDate.getTime())) {
+                                statusDisplay = formatTimedPeriodStatus(game, gameLeague) || 'Live';
+                            }
+                        } else if (isCyclingEvent && cyclingStageWindowText(game)) {
+                            statusDisplay = cyclingStageWindowText(game);
+                        } else if (isScheduled && game.game_time) {
+                            let gameDate;
+                            try {
+                                gameDate = new Date(game.game_time);
+                                if (isNaN(gameDate.getTime())) {
                                 gameDate = null;
                             }
                         } catch (e) {

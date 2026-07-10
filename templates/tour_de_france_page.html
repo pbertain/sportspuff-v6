@@ -262,23 +262,32 @@
         function stageStartDateTime(stage, schedule) {
             return zonedStageDateTime(
                 firstValue(stage.date, schedule.date, ''),
-                firstValue(stage.stage_start_local, schedule.stage_start_local, '')
+                firstValue(stage.stage_start_local, schedule.stage_start_local, stage.game_time, schedule.game_time, '')
             );
         }
 
-        function stageWindowText(stage, schedule) {
+        function stageTimeText(stage, schedule, timeValue) {
+            const raw = String(timeValue || '').trim();
+            if (!raw) return '';
             const displayTimeZone = tourDisplayTimeZone();
+            const parsed = new Date(raw);
+            if ((raw.includes('T') || raw.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(raw)) && !Number.isNaN(parsed.getTime())) {
+                return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone });
+            }
             const stageDate = firstValue(stage.date, schedule.date, '');
-            const startValue = firstValue(stage.stage_start_local, schedule.stage_start_local, '');
+            const zoned = stageDate ? zonedStageDateTime(stageDate, raw) : null;
+            if (zoned) {
+                return zoned.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone });
+            }
+            return prettyTime(raw);
+        }
+
+        function stageWindowText(stage, schedule) {
+            const stageDate = firstValue(stage.date, schedule.date, '');
+            const startValue = firstValue(stage.stage_start_local, schedule.stage_start_local, stage.game_time, schedule.game_time, '');
             const finishValue = firstValue(stage.stage_finish_expected_local, schedule.stage_finish_expected_local, '');
-            const startDate = zonedStageDateTime(stageDate, startValue);
-            const finishDate = zonedStageDateTime(stageDate, finishValue);
-            const start = startDate
-                ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
-                : prettyTime(startValue);
-            const finish = finishDate
-                ? finishDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: displayTimeZone })
-                : prettyTime(finishValue);
+            const start = stageTimeText(stage, schedule, startValue);
+            const finish = stageTimeText(stage, schedule, finishValue);
             if (start && finish) return `${start} - ${finish}`;
             return start || finish || '';
         }
