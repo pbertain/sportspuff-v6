@@ -335,6 +335,30 @@
             return riderName ? toProperCase(riderName) : firstValue(row.team_name, 'TBD');
         }
 
+        function isPlaceholderStageResult(row) {
+            const label = String(classificationName(row) || '').trim().toLowerCase();
+            if (label !== 'tbd') return false;
+            return !firstValue(
+                row.rank,
+                row.time,
+                row.total_time,
+                row.elapsed_time,
+                row.result_time,
+                row.stage_time,
+                row.finish_time,
+                row.elapsed,
+                row.gap,
+                row.time_back,
+                row.behind,
+                row.time_diff,
+                row.time_difference,
+                row.delta,
+                row.points,
+                row.value,
+                ''
+            );
+        }
+
         function riderDisplayName(name, slug = '', url = '') {
             const slugValue = firstValue(slug, riderSlugFromUrl(url), '');
             if (slugValue && TOUR_RIDER_LOOKUP.bySlug.has(slugValue)) {
@@ -392,16 +416,17 @@
                 ];
                 classifications.push(...stageCollections);
             }
-            const stageRows = classifications.filter(row => String(row?.classification_type || '').toLowerCase() === 'stage');
+            const resultRows = classifications.filter(row => !isPlaceholderStageResult(row));
+            const stageRows = resultRows.filter(row => String(row?.classification_type || '').toLowerCase() === 'stage');
             if (stageRows.length > 0) return stageRows;
-            const resultRows = classifications.filter(row => {
+            const classifiedRows = resultRows.filter(row => {
                 const kind = String(firstValue(row?.classification_type, row?.type, row?.result_type, row?.category, '') || '').toLowerCase();
                 return ['stage', 'result', 'results', 'gc', 'general', 'general_classification', 'overall'].includes(kind);
             });
-            if (resultRows.length > 0) return resultRows;
+            if (classifiedRows.length > 0) return classifiedRows;
 
             const grouped = new Map();
-            classifications.forEach(row => {
+            resultRows.forEach(row => {
                 const type = String(firstValue(row?.classification_type, row?.type, row?.result_type, row?.category, '') || '').toLowerCase();
                 if (!type) return;
                 if (!grouped.has(type)) grouped.set(type, []);

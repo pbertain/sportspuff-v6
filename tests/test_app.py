@@ -908,6 +908,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function riderSlugFromUrl(value)",
             "function riderDisplayName(name, slug = '', url = '')",
             "function renderRiderName(name, options = {})",
+            "function isPlaceholderStageResult(row)",
             "function stageResultRows(stageDetail)",
             "classification_rows",
             "function renderStageResults(stageDetail)",
