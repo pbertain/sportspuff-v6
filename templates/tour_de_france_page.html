@@ -59,6 +59,7 @@
         const TOUR_API_SLUG = {{ race_api_slug | default('tour-de-france') | tojson }};
         let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
         let TOUR_PAYLOAD = null;
+        let TOUR_STAGE_DETAIL_CACHE = new Map();
         let TOUR_SELECTED_STAGE_KEY = null;
 
         function escapeHtml(value) {
@@ -315,7 +316,18 @@
                 return TOUR_RIDER_LOOKUP.bySlug.get(slug);
             }
 
-            const riderName = cleanRiderKey(firstValue(row.rider_full_name, row.full_name, row.rider_name, ''));
+            const riderName = cleanRiderKey(firstValue(
+                row.rider_full_name,
+                row.full_name,
+                row.rider_name,
+                row.name,
+                row.participant_name,
+                row.competitor_name,
+                row.display_name,
+                row.short_name,
+                row.team_name,
+                ''
+            ));
             if (riderName && TOUR_RIDER_LOOKUP.byShortName.has(riderName.toUpperCase())) {
                 return TOUR_RIDER_LOOKUP.byShortName.get(riderName.toUpperCase());
             }
@@ -361,19 +373,42 @@
         }
 
         function stageResultRows(stageDetail) {
-            const classifications = Array.isArray(stageDetail?.classifications) ? stageDetail.classifications : [];
+            const classifications = [
+                ...(Array.isArray(stageDetail?.classifications) ? stageDetail.classifications : []),
+                ...(Array.isArray(stageDetail?.classification_rows) ? stageDetail.classification_rows : []),
+                ...(Array.isArray(stageDetail?.results) ? stageDetail.results : []),
+                ...(Array.isArray(stageDetail?.stage_results) ? stageDetail.stage_results : []),
+                ...(Array.isArray(stageDetail?.riders) ? stageDetail.riders : []),
+                ...(Array.isArray(stageDetail?.entries) ? stageDetail.entries : []),
+            ];
+            if (classifications.length === 0 && stageDetail?.stage) {
+                const stage = stageDetail.stage || {};
+                const stageCollections = [
+                    ...(Array.isArray(stage.classifications) ? stage.classifications : []),
+                    ...(Array.isArray(stage.classification_rows) ? stage.classification_rows : []),
+                    ...(Array.isArray(stage.results) ? stage.results : []),
+                    ...(Array.isArray(stage.stage_results) ? stage.stage_results : []),
+                    ...(Array.isArray(stage.riders) ? stage.riders : []),
+                ];
+                classifications.push(...stageCollections);
+            }
             const stageRows = classifications.filter(row => String(row?.classification_type || '').toLowerCase() === 'stage');
             if (stageRows.length > 0) return stageRows;
+            const resultRows = classifications.filter(row => {
+                const kind = String(firstValue(row?.classification_type, row?.type, row?.result_type, row?.category, '') || '').toLowerCase();
+                return ['stage', 'result', 'results', 'gc', 'general', 'general_classification', 'overall'].includes(kind);
+            });
+            if (resultRows.length > 0) return resultRows;
 
             const grouped = new Map();
             classifications.forEach(row => {
-                const type = String(row?.classification_type || '').toLowerCase();
+                const type = String(firstValue(row?.classification_type, row?.type, row?.result_type, row?.category, '') || '').toLowerCase();
                 if (!type) return;
                 if (!grouped.has(type)) grouped.set(type, []);
                 grouped.get(type).push(row);
             });
 
-            return grouped.get('gc') || grouped.values().next().value || [];
+            return grouped.get('gc') || grouped.get('general') || grouped.get('overall') || grouped.values().next().value || [];
         }
 
         function stageNumberValue(stageDetail) {
@@ -387,7 +422,13 @@
             const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
             if (TOUR_SELECTED_STAGE_KEY) {
                 const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
-                if (selected) return selected;
+                if (selected) {
+                    const selectedStageNumber = stageNumberValue(selected);
+                    if (selectedStageNumber && TOUR_STAGE_DETAIL_CACHE.has(String(selectedStageNumber))) {
+                        return TOUR_STAGE_DETAIL_CACHE.get(String(selectedStageNumber));
+                    }
+                    return selected;
+                }
             }
 
             const current = TOUR_PAYLOAD?.current_stage || {};
@@ -406,6 +447,28 @@
             return stages[0] || null;
         }
 
+        function stageNumberForDetail(stageDetail) {
+            if (!stageDetail) return '';
+            const direct = stageNumberValue(stageDetail);
+            if (direct) return String(direct).trim();
+            const nestedStage = stageNumberValue(stageDetail?.stage || {});
+            if (nestedStage) return String(nestedStage).trim();
+            const nestedSchedule = stageNumberValue(stageDetail?.schedule || {});
+            return nestedSchedule ? String(nestedSchedule).trim() : '';
+        }
+
+        async function fetchStageDetail(stageNumber) {
+            const key = String(stageNumber || '').trim();
+            if (!key) return null;
+            if (TOUR_STAGE_DETAIL_CACHE.has(key)) return TOUR_STAGE_DETAIL_CACHE.get(key);
+
+            const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}/stages/${encodeURIComponent(key)}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data) TOUR_STAGE_DETAIL_CACHE.set(key, data);
+            return data;
+        }
+
         function renderStageResults(stageDetail) {
             const rows = stageResultRows(stageDetail).slice(0, 10);
             if (!rows.length) {
@@ -419,8 +482,8 @@
                         <div class="tdf-board-name">${renderRiderName(classificationName(row), { slug: row.rider_slug || row.slug, url: row.rider_url })}</div>
                         ${classificationMeta(row, 'stage') ? `<div class="tdf-board-meta">${escapeHtml(classificationMeta(row, 'stage'))}</div>` : ''}
                     </td>
-                    <td>${escapeHtml(firstValue(row.time, row.total_time, row.elapsed_time, ''))}</td>
-                    <td>${escapeHtml(firstValue(normalizedGap(row.gap), normalizedGap(row.time_back), normalizedGap(row.behind), ''))}</td>
+                    <td>${escapeHtml(firstValue(row.time, row.total_time, row.elapsed_time, row.result_time, row.stage_time, row.finish_time, row.elapsed, ''))}</td>
+                    <td>${escapeHtml(firstValue(normalizedGap(row.gap), normalizedGap(row.time_back), normalizedGap(row.behind), normalizedGap(row.time_diff), normalizedGap(row.time_difference), normalizedGap(row.delta), ''))}</td>
                 </tr>
             `).join('');
 
@@ -581,6 +644,14 @@
                     const selected = selectedStageDetail();
                     TOUR_SELECTED_STAGE_KEY = selected ? stageKey(selected) : null;
                 }
+                const selectedStage = selectedStageDetail();
+                const selectedStageNumber = stageNumberForDetail(selectedStage);
+                if (selectedStageNumber) {
+                    const stageDetail = await fetchStageDetail(selectedStageNumber);
+                    if (stageDetail) {
+                        TOUR_STAGE_DETAIL_CACHE.set(String(selectedStageNumber), stageDetail);
+                    }
+                }
                 const freshnessLabel = freshnessText(data);
                 if (freshnessLabel) {
                     freshness.textContent = `Updated: ${freshnessLabel}`;
@@ -609,7 +680,18 @@
                 const nextKey = String(button.dataset.stageKey || '').trim();
                 if (!nextKey) return;
                 TOUR_SELECTED_STAGE_KEY = nextKey;
-                renderTourView();
+                const selected = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.find(stageDetail => stageKey(stageDetail) === nextKey) : null;
+                const nextStageNumber = stageNumberForDetail(selected);
+                if (!nextStageNumber) {
+                    renderTourView();
+                    return;
+                }
+                fetchStageDetail(nextStageNumber)
+                    .then(stageDetail => {
+                        if (stageDetail) TOUR_STAGE_DETAIL_CACHE.set(String(nextStageNumber), stageDetail);
+                        renderTourView();
+                    })
+                    .catch(() => renderTourView());
             });
 
             loadTour();

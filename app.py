@@ -2722,6 +2722,47 @@ def proxy_cycling_tour_de_france(year=None):
     }), 200
 
 
+@app.route('/api/proxy/cycling/tour-de-france/<int:year>/stages/<int:stage_number>')
+def proxy_cycling_tour_de_france_stage(year, stage_number):
+    """Proxy a single Tour de France stage."""
+    cache_key = f'cycling_tour_de_france:{int(year)}:stage:{int(stage_number)}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path = f'/api/v1/cycling/tour-de-france/{int(year)}/stages/{int(stage_number)}'
+    try:
+        data = _fetch_api_json(path, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Tour de France stage API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Tour de France stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Tour de France stage due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Tour de France stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Tour de France stage due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': 'Tour de France',
+        'year': int(year),
+        'stage_number': int(stage_number),
+        'stage_results': [],
+        'classifications': [],
+        'classification_rows': [],
+        'meta': {},
+        'available': False,
+    }), 200
+
+
 @app.route('/api/proxy/cycling/vuelta')
 @app.route('/api/proxy/cycling/vuelta/<int:year>')
 def proxy_cycling_vuelta(year=None):
@@ -2762,6 +2803,47 @@ def proxy_cycling_vuelta(year=None):
         'riders': [],
         'available': False,
         'meta': {},
+    }), 200
+
+
+@app.route('/api/proxy/cycling/vuelta/<int:year>/stages/<int:stage_number>')
+def proxy_cycling_vuelta_stage(year, stage_number):
+    """Proxy a single Vuelta stage."""
+    cache_key = f'cycling_vuelta:{int(year)}:stage:{int(stage_number)}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path = f'/api/v1/cycling/la-vuelta/{int(year)}/stages/{int(stage_number)}'
+    try:
+        data = _fetch_api_json(path, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Vuelta stage API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Vuelta stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Vuelta stage due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Vuelta stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Vuelta stage due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': 'La Vuelta a España',
+        'year': int(year),
+        'stage_number': int(stage_number),
+        'stage_results': [],
+        'classifications': [],
+        'classification_rows': [],
+        'meta': {},
+        'available': False,
     }), 200
 
 

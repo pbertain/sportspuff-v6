@@ -875,6 +875,28 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_cache.assert_called_once_with("cycling_tour_de_france:2026", "schedule")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
 
+    @patch("app._fetch_api_json")
+    def test_proxy_tour_de_france_exposes_stage_results(self, mock_fetch):
+        mock_fetch.return_value = {
+            "race": "Tour de France",
+            "year": 2026,
+            "stage_number": 4,
+            "stage_results": [{"rank": 1, "rider_name": "Mads Pedersen"}],
+            "classification_rows": [{"classification_type": "stage", "rank": 1, "rider_name": "Mads Pedersen"}],
+            "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
+        }
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026/stages/4")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["stage_number"], 4)
+        self.assertEqual(data["stage_results"][0]["rider_name"], "Mads Pedersen")
+        mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026/stages/4", timeout=20)
+        mock_cache.assert_called_once_with("cycling_tour_de_france:2026:stage:4", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026:stage:4")
+
     def test_tour_de_france_template_formats_rider_names_and_three_column_boards(self):
         template = (PROJECT_ROOT / "templates/tour_de_france_page.html").read_text()
         css = (PROJECT_ROOT / "static/css/main.css").read_text()
@@ -887,6 +909,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function riderDisplayName(name, slug = '', url = '')",
             "function renderRiderName(name, options = {})",
             "function stageResultRows(stageDetail)",
+            "classification_rows",
             "function renderStageResults(stageDetail)",
             "let TOUR_SELECTED_STAGE_KEY = null;",
             "const TOUR_API_SLUG =",
@@ -991,7 +1014,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("tour_de_france_page", app_source)
         self.assertIn("vuelta_page", app_source)
         self.assertIn("api/proxy/cycling/tour-de-france", app_source)
+        self.assertIn("api/proxy/cycling/tour-de-france/<int:year>/stages/<int:stage_number>", app_source)
         self.assertIn("api/proxy/cycling/vuelta", app_source)
+        self.assertIn("api/proxy/cycling/vuelta/<int:year>/stages/<int:stage_number>", app_source)
         self.assertIn("cycling-anniversary-banner", css)
         self.assertIn(".tdf-feature-link", css)
         self.assertIn(".tdf-stage-grid", css)

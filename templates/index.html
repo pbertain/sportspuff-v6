@@ -1552,7 +1552,7 @@
                     function cyclingStatusLabel(game) {
                         const status = String(firstValue(game.status, game.game_status, '') || '').trim().toLowerCase();
                         const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
-                        if (['final', 'completed', 'finished', 'off'].includes(status) || winner) return 'Final';
+                        if (['f', 'ft', 'final', 'completed', 'finished', 'off'].includes(status) || winner) return 'Final';
                         if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
                         return '';
                     }
