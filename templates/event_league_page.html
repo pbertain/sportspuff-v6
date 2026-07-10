@@ -66,6 +66,15 @@
             </div>
             <i class="fas fa-arrow-right ms-auto"></i>
         </a>
+        <a class="tdf-feature-link mb-4" href="{{ url_for('vuelta_page') }}">
+            <img class="tdf-feature-link-mark" src="{{ url_for('static', filename='images/events/cycling/tour-de-france-mark.svg') }}" alt="Cycling stage race mark">
+            <div>
+                <div class="tdf-feature-link-kicker">Coming Soon</div>
+                <div class="tdf-feature-link-title">La Vuelta a España</div>
+                <div class="event-league-meta">Dedicated stage pages once SPApi exposes the race feed.</div>
+            </div>
+            <i class="fas fa-arrow-right ms-auto"></i>
+        </a>
         {% endif %}
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
@@ -247,8 +256,9 @@
             if (EVENT_MODE === 'cycling') {
                 const status = String(firstValue(game.status, game.game_status, '') || '').trim().toLowerCase();
                 const window = cyclingStageWindowText(game);
+                const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
                 if (['in_progress', 'live', 'active'].includes(status) && window) return `Live · ${window}`;
-                if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
+                if (game.is_final || ['final', 'completed', 'finished', 'off'].includes(status) || winner) return 'Final';
                 if (window) return window;
                 if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
                 return game.game_status || game.status || 'Scheduled';
@@ -1306,7 +1316,7 @@
             if (EVENT_MODE === 'cycling') {
                 const race = game.cycling_race || game.home_team || 'Cycling event';
                 const stage = cyclingStageNameText(game);
-                const winner = game.cycling_winner || '';
+                const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
                 const rank = game.cycling_rank;
                 const title = race || game.cycling_event_label || 'Cycling event';
                 const detailParts = [
@@ -1318,13 +1328,15 @@
                     rank !== undefined && rank !== null && String(rank).trim() !== '' ? `GC ${rank}` : ''
                 ].filter(Boolean);
                 const details = detailParts.length ? detailParts.join(' · ') : detailLine(game);
+                const status = statusText(game);
                 return `<div class="event-league-card">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h3 class="event-league-title fs-5">${escapeHtml(title)}</h3>
                             <div class="event-league-meta">${escapeHtml(details)}</div>
+                            ${winner ? `<div class="event-league-meta mt-1">Winner: ${escapeHtml(winner)}</div>` : ''}
                         </div>
-                        <div class="event-league-score">${escapeHtml(statusText(game))}</div>
+                        <div class="event-league-score">${escapeHtml(status)}</div>
                     </div>
                 </div>`;
             }

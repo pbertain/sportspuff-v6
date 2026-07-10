@@ -1551,7 +1551,8 @@
 
                     function cyclingStatusLabel(game) {
                         const status = String(firstValue(game.status, game.game_status, '') || '').trim().toLowerCase();
-                        if (['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
+                        const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
+                        if (['final', 'completed', 'finished', 'off'].includes(status) || winner) return 'Final';
                         if (['in_progress', 'live', 'active'].includes(status)) return 'Live';
                         return '';
                     }
@@ -1571,7 +1572,7 @@
                         const race = game.cycling_race || game.home_team || '';
                         const stage = cyclingStageNameText(game);
                         const country = game.cycling_country || '';
-                        const winner = game.cycling_winner || '';
+                        const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
                         const rank = game.cycling_rank !== undefined && game.cycling_rank !== null && String(game.cycling_rank).trim() !== ''
                             ? game.cycling_rank
                             : '';
@@ -1591,6 +1592,7 @@
                                             <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${eventLabel}</div>
                                             ${country ? `<div style="font-size: 0.8rem; opacity: 0.75;">${country}</div>` : ''}
                                             ${metaParts.length ? `<div style="font-size: 0.78rem; opacity: 0.85; margin-top: 2px;">${metaParts.map(escapeHtml).join(' · ')}</div>` : ''}
+                                            ${winner ? `<div style="font-size: 0.78rem; opacity: 0.9; margin-top: 2px;">Winner: ${escapeHtml(winner)}</div>` : ''}
                                         </div>
                                         ${statusText ? `<div style="font-size: 0.85rem; opacity: 0.85; white-space: nowrap;">${statusText}</div>` : ''}
                                     </div>

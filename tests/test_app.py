@@ -103,7 +103,19 @@ class TestPageSmoke(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Tour de France", response.data)
         self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
-        self.assertIn(b"/api/proxy/cycling/tour-de-france/", response.data)
+        self.assertIn(b"const TOUR_API_SLUG = \"tour-de-france\";", response.data)
+        self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
+        db.assert_not_called()
+
+    def test_vuelta_page_loads_without_database(self):
+        with patch("app.get_db_connection") as db:
+            response = self.client.get("/league/cycling/vuelta")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"La Vuelta a Espa\xc3\xb1a", response.data)
+        self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
+        self.assertIn(b"const TOUR_API_SLUG = \"vuelta\";", response.data)
+        self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
         db.assert_not_called()
 
     def test_regular_league_page_exposes_schedule_module(self):
@@ -877,6 +889,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function stageResultRows(stageDetail)",
             "function renderStageResults(stageDetail)",
             "let TOUR_SELECTED_STAGE_KEY = null;",
+            "const TOUR_API_SLUG =",
             "document.getElementById('tdf-stages-panel').addEventListener('click'",
             "King of the Mountains (KOM)",
             "buildRiderLookup(data);",
@@ -888,6 +901,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function tourDisplayTimeZone()",
         ]:
             self.assertIn(snippet, template)
+
+        self.assertLess(
+            template.index("if (TOUR_SELECTED_STAGE_KEY)"),
+            template.index("const current = TOUR_PAYLOAD?.current_stage || {}"),
+        )
 
         for snippet in [
             ".tdf-board-grid {",
@@ -969,8 +987,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("cycling-anniversary-banner", event_template)
         self.assertIn("tdf-feature-link", event_template)
         self.assertIn("tour_de_france_page", event_template)
+        self.assertIn("vuelta_page", event_template)
         self.assertIn("tour_de_france_page", app_source)
+        self.assertIn("vuelta_page", app_source)
         self.assertIn("api/proxy/cycling/tour-de-france", app_source)
+        self.assertIn("api/proxy/cycling/vuelta", app_source)
         self.assertIn("cycling-anniversary-banner", css)
         self.assertIn(".tdf-feature-link", css)
         self.assertIn(".tdf-stage-grid", css)

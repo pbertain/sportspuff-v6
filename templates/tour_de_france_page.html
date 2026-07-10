@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tour de France - Sportspuff v6</title>
+    <title>{{ race_title or 'Tour de France' }} - Sportspuff v6</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/branding/favicon-32x32.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/branding/apple-touch-icon.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -16,11 +16,11 @@
     <div class="container event-league-shell my-4">
         <div class="event-league-hero mb-4">
             <div class="d-flex flex-wrap align-items-center gap-3">
-                <img class="event-league-logo" src="https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png" alt="Tour de France logo" onerror="this.style.display='none';">
-                <img class="tdf-hero-mark" src="{{ url_for('static', filename='images/events/cycling/tour-de-france-mark.svg') }}" alt="Tour de France mark">
+                <img class="event-league-logo" src="{{ race_logo_url or 'https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png' }}" alt="{{ race_title or 'Tour de France' }} logo" onerror="this.style.display='none';">
+                <img class="tdf-hero-mark" src="{{ race_mark_url or url_for('static', filename='images/events/cycling/tour-de-france-mark.svg') }}" alt="{{ race_title or 'Tour de France' }} mark">
                 <div class="flex-grow-1">
-                    <h1 class="mb-1">Tour de France</h1>
-                    <div class="event-league-meta">Detailed stage coverage, classifications, teams, and riders.</div>
+                    <h1 class="mb-1">{{ race_title or 'Tour de France' }}</h1>
+                    <div class="event-league-meta">{{ race_subtitle or 'Detailed stage coverage, classifications, teams, and riders.' }}</div>
                     <div id="tdf-freshness" class="event-data-freshness" style="display: none;"></div>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-end">
@@ -35,7 +35,7 @@
                             <option value="Europe/Paris">Paris</option>
                         </select>
                     </div>
-                    <a class="btn btn-outline-light" href="{{ url_for('league_page', league_name='CYCLING') }}">Back to Cycling</a>
+                    <a class="btn btn-outline-light" href="{{ back_url or url_for('league_page', league_name='CYCLING') }}">Back to Cycling</a>
                     <span class="event-league-pill" id="tdf-year-pill">{{ year }}</span>
                 </div>
             </div>
@@ -56,6 +56,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const TOUR_YEAR = {{ year | tojson }};
+        const TOUR_API_SLUG = {{ race_api_slug | default('tour-de-france') | tojson }};
         let TOUR_RIDER_LOOKUP = { bySlug: new Map(), byShortName: new Map() };
         let TOUR_PAYLOAD = null;
         let TOUR_SELECTED_STAGE_KEY = null;
@@ -384,16 +385,16 @@
         function selectedStageDetail() {
             if (!TOUR_PAYLOAD) return null;
             const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
+            if (TOUR_SELECTED_STAGE_KEY) {
+                const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
+                if (selected) return selected;
+            }
+
             const current = TOUR_PAYLOAD?.current_stage || {};
             const currentStageNumber = stageNumberValue(current);
             if (currentStageNumber) {
                 const byNumber = stages.find(stageDetail => String(stageNumberValue(stageDetail)) === String(currentStageNumber));
                 if (byNumber) return byNumber;
-            }
-
-            if (TOUR_SELECTED_STAGE_KEY) {
-                const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
-                if (selected) return selected;
             }
 
             if (current?.stage || current?.schedule || current?.classifications) {
@@ -572,7 +573,7 @@
             const freshness = document.getElementById('tdf-freshness');
 
             try {
-                const response = await fetch(`/api/proxy/cycling/tour-de-france/${encodeURIComponent(TOUR_YEAR)}`);
+                const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`);
                 const data = response.ok ? await response.json() : {};
                 TOUR_PAYLOAD = data;
                 buildRiderLookup(data);

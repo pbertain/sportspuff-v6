@@ -1373,6 +1373,29 @@ def tour_de_france_page(year=None):
     return render_template(
         'tour_de_france_page.html',
         year=int(year or datetime.now().year),
+        race_title='Tour de France',
+        race_subtitle='Detailed stage coverage, classifications, teams, and riders.',
+        race_api_slug='tour-de-france',
+        race_logo_url='https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png',
+        race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
+        back_url=url_for('league_page', league_name='CYCLING'),
+        API_BASE_URL=API_BASE_URL,
+    )
+
+
+@app.route('/league/cycling/vuelta')
+@app.route('/league/cycling/vuelta/<int:year>')
+def vuelta_page(year=None):
+    """Detailed Vuelta page backed by sportspuff-api."""
+    return render_template(
+        'tour_de_france_page.html',
+        year=int(year or datetime.now().year),
+        race_title='La Vuelta a España',
+        race_subtitle='Detailed stage coverage, classifications, teams, and riders.',
+        race_api_slug='vuelta',
+        race_logo_url='https://www.splitsp.lat/logos/cycling/uci/uci-logo.png',
+        race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
+        back_url=url_for('league_page', league_name='CYCLING'),
         API_BASE_URL=API_BASE_URL,
     )
 
@@ -2689,6 +2712,49 @@ def proxy_cycling_tour_de_france(year=None):
 
     return jsonify({
         'race': 'Tour de France',
+        'year': int(year or datetime.now().year),
+        'stages': [],
+        'latest_classifications': {},
+        'teams': [],
+        'riders': [],
+        'available': False,
+        'meta': {},
+    }), 200
+
+
+@app.route('/api/proxy/cycling/vuelta')
+@app.route('/api/proxy/cycling/vuelta/<int:year>')
+def proxy_cycling_vuelta(year=None):
+    """Proxy the Vuelta detail bundle."""
+    suffix = str(int(year)) if year else 'current'
+    cache_key = f'cycling_vuelta:{suffix}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path = f'/api/v1/cycling/vuelta/{int(year)}' if year else '/api/v1/cycling/vuelta'
+    try:
+        data = _fetch_api_json(path, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Vuelta API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Vuelta bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Vuelta bundle due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Vuelta bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Vuelta bundle due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': 'La Vuelta a España',
         'year': int(year or datetime.now().year),
         'stages': [],
         'latest_classifications': {},
