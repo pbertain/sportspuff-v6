@@ -370,14 +370,17 @@
         }
 
         function worldCupBracketScoreValue(match, side) {
-            const direct = firstValue(
-                match?.[`${side}_score`],
-                match?.[`${side}Score`],
-                side === 'home' ? match?.home_score : match?.visitor_score,
-                side === 'home' ? match?.homeScore : match?.visitorScore,
-                side === 'visitor' ? match?.away_score : match?.awayScore,
-                side === 'visitor' ? match?.visitor_score : match?.visitorScore
-            );
+            const direct = side === 'home'
+                ? firstValue(
+                    match?.home_score,
+                    match?.homeScore
+                )
+                : firstValue(
+                    match?.visitor_score,
+                    match?.away_score,
+                    match?.visitorScore,
+                    match?.awayScore
+                );
             if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
                 return String(direct).trim();
             }
@@ -558,14 +561,14 @@
         function worldCupBracketRoundLayoutMetrics(label, matchCount) {
             const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
             const level = Math.max(Math.floor(order / 10) - 1, 0);
-            const matchHeight = order >= 50 ? 108 : 112;
+            const matchHeight = order >= 50 ? 114 : 122;
             if (order >= 50) {
-                const step = 132;
+                const step = 140;
                 const count = Math.max(Number(matchCount) || 0, 1);
                 const height = Math.max(matchHeight, ((count - 1) * step) + matchHeight);
                 return {offset: 0, step, height};
             }
-            const baseStep = 120;
+            const baseStep = 128;
             const step = baseStep * Math.pow(2, level);
             const offset = level === 0 ? 0 : Math.round((baseStep / 2) * (Math.pow(2, level) - 1));
             const height = Math.max(offset + (Math.max(Number(matchCount) || 0, 1) - 1) * step + matchHeight, matchHeight);
@@ -1118,8 +1121,8 @@
             const safeLabel = String(label || 'Knockout Round').trim();
             const safeMatches = Array.isArray(matches) ? matches : [];
             const metrics = worldCupBracketRoundLayoutMetrics(safeLabel, safeMatches.length);
-            const containerHeight = Math.max(Number(sharedHeight) || 0, metrics.height);
-            const centeredOffset = metrics.offset + Math.max(Math.round((containerHeight - metrics.height) / 2), 0);
+            const containerHeight = Math.max(Number(sharedHeight) || 0, metrics.height) + 24;
+            const centeredOffset = metrics.offset + Math.max(Math.round((containerHeight - metrics.height) / 2), 12);
             const cards = safeMatches.map((match, index) => `
                 <div class="wc-bracket-match-slot" style="top: ${centeredOffset + (index * metrics.step)}px;">
                     ${worldCupBracketMatchView(match, gameMap, safeLabel, index)}
