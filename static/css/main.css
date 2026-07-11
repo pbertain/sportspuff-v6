@@ -784,7 +784,9 @@ main, .main-content {
 .league-card.cycling::before { background: #F5E814; }
 
 .event-league-shell {
-  max-width: 1180px;
+  margin-inline: auto;
+  max-width: min(1540px, calc(100% - clamp(1rem, 3vw, 3rem)));
+  width: 100%;
 }
 
 .event-league-shell--world-cup {

@@ -14,7 +14,7 @@
 <body style="--event-accent: {{ league_config.accent }};">
     {% include 'shared_header.html' %}
 
-    <div class="container event-league-shell event-league-shell--{{ league_config.mode }} my-4">
+    <div class="container-fluid event-league-shell event-league-shell--{{ league_config.mode }} my-4 px-3 px-md-4">
         <div class="event-league-hero mb-4">
             <div class="d-flex flex-wrap align-items-center gap-3">
                 <img class="event-league-logo" src="{{ league_config.logo_url }}" alt="{{ league_config.display_name }} logo" onerror="this.style.display='none';">
@@ -62,16 +62,16 @@
             <div>
                 <div class="tdf-feature-link-kicker">Detailed Race View</div>
                 <div class="tdf-feature-link-title fw-bold">Tour de France</div>
-                <div class="event-league-meta">Stages, classifications, teams and rider info.</div>
+                <div class="event-league-meta">Stages, classifications, teams, rider info, times and more.</div>
             </div>
             <i class="fas fa-arrow-right ms-auto"></i>
         </a>
         <a class="tdf-feature-link mb-4" href="{{ url_for('vuelta_page') }}">
             <img class="tdf-feature-link-mark" src="https://www.splitsp.lat/logos/cycling/vae/vae-logo.png" alt="La Vuelta a España mark">
             <div>
-                <div class="tdf-feature-link-kicker">Coming Soon</div>
+                <div class="tdf-feature-link-kicker">Detailed Race View</div>
                 <div class="tdf-feature-link-title fw-bold">La Vuelta a España</div>
-                <div class="event-league-meta">Dedicated stage pages once the race feed is available.</div>
+                <div class="event-league-meta">Stages, classifications, teams, rider info, times and more.</div>
             </div>
             <i class="fas fa-arrow-right ms-auto"></i>
         </a>
@@ -714,6 +714,81 @@
             return ordered;
         }
 
+        function worldCupBracketSlotMatchScore(candidateMatch, slotMatch) {
+            if (!candidateMatch || !slotMatch) return -1;
+            const slotTokens = worldCupBracketMatchReferenceTokens(slotMatch);
+            const candidateTokens = worldCupBracketMatchReferenceTokens(candidateMatch);
+            let score = 0;
+            slotTokens.forEach(token => {
+                if (candidateTokens.has(token)) score += 2;
+            });
+
+            ['home', 'away'].forEach(side => {
+                const slotDisplay = worldCupBracketTeamDisplay(slotMatch, side);
+                const candidateDisplay = worldCupBracketTeamDisplay(candidateMatch, side);
+                const slotCode = String(worldCupBracketTeamCode(slotMatch, side) || '').trim().toUpperCase();
+                const candidateCode = String(worldCupBracketTeamCode(candidateMatch, side) || '').trim().toUpperCase();
+                if (slotCode && candidateCode && slotCode === candidateCode) score += 5;
+                const slotName = String(slotDisplay.nameText || '').trim().toUpperCase();
+                const candidateName = String(candidateDisplay.nameText || '').trim().toUpperCase();
+                if (slotName && candidateName && slotName === candidateName) score += 4;
+            });
+
+            const candidateNumber = String(firstValue(candidateMatch?.match_number, candidateMatch?.game_id, '') || '').trim();
+            const slotNumber = String(firstValue(slotMatch?.match_number, slotMatch?.game_id, '') || '').trim();
+            if (candidateNumber && slotNumber && candidateNumber === slotNumber) score += 1;
+            return score;
+        }
+
+        function worldCupBracketOverlayMatch(slotMatch, sourceMatch) {
+            if (!sourceMatch) return slotMatch;
+            return {
+                ...slotMatch,
+                ...sourceMatch,
+                home_team: firstValue(sourceMatch?.home_team, sourceMatch?.homeTeam, slotMatch?.home_team, ''),
+                away_team: firstValue(sourceMatch?.away_team, sourceMatch?.visitor_team, sourceMatch?.awayTeam, sourceMatch?.visitorTeam, slotMatch?.away_team, ''),
+                visitor_team: firstValue(sourceMatch?.visitor_team, sourceMatch?.away_team, sourceMatch?.visitorTeam, sourceMatch?.awayTeam, slotMatch?.visitor_team, slotMatch?.away_team, ''),
+                home_slot: firstValue(sourceMatch?.home_slot, sourceMatch?.homeSlot, slotMatch?.home_slot, slotMatch?.home_team, ''),
+                away_slot: firstValue(sourceMatch?.away_slot, sourceMatch?.visitor_slot, sourceMatch?.awaySlot, sourceMatch?.visitorSlot, slotMatch?.away_slot, slotMatch?.away_team, ''),
+                visitor_slot: firstValue(sourceMatch?.visitor_slot, sourceMatch?.away_slot, sourceMatch?.visitorSlot, sourceMatch?.awaySlot, slotMatch?.visitor_slot, slotMatch?.away_slot, slotMatch?.away_team, ''),
+                home_record: firstValue(sourceMatch?.home_record, sourceMatch?.homeRecord, slotMatch?.home_record, ''),
+                away_record: firstValue(sourceMatch?.away_record, sourceMatch?.visitor_record, sourceMatch?.awayRecord, sourceMatch?.visitorRecord, slotMatch?.away_record, ''),
+                visitor_record: firstValue(sourceMatch?.visitor_record, sourceMatch?.away_record, sourceMatch?.visitorRecord, sourceMatch?.awayRecord, slotMatch?.visitor_record, slotMatch?.away_record, ''),
+                home_team_abbrev: firstValue(sourceMatch?.home_team_abbrev, sourceMatch?.home_team_code, slotMatch?.home_team_abbrev, ''),
+                away_team_abbrev: firstValue(sourceMatch?.away_team_abbrev, sourceMatch?.visitor_team_abbrev, sourceMatch?.away_team_code, sourceMatch?.visitor_team_code, slotMatch?.away_team_abbrev, ''),
+                visitor_team_abbrev: firstValue(sourceMatch?.visitor_team_abbrev, sourceMatch?.away_team_abbrev, sourceMatch?.visitor_team_code, sourceMatch?.away_team_code, slotMatch?.visitor_team_abbrev, slotMatch?.away_team_abbrev, '')
+            };
+        }
+
+        function worldCupBracketAssignMatchesToSlots(slotMatches, candidateMatches) {
+            const slots = Array.isArray(slotMatches) ? slotMatches : [];
+            const candidates = Array.isArray(candidateMatches) ? candidateMatches : [];
+            const assigned = new Array(slots.length).fill(null);
+            const used = new Set();
+
+            slots.forEach((slotMatch, slotIndex) => {
+                let bestIndex = -1;
+                let bestScore = 0;
+                candidates.forEach((candidateMatch, candidateIndex) => {
+                    if (used.has(candidateIndex)) return;
+                    const score = worldCupBracketSlotMatchScore(candidateMatch, slotMatch);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestIndex = candidateIndex;
+                    }
+                });
+                if (bestIndex >= 0) {
+                    used.add(bestIndex);
+                    assigned[slotIndex] = candidates[bestIndex];
+                }
+            });
+
+            return {
+                matches: slots.map((slotMatch, slotIndex) => worldCupBracketOverlayMatch(slotMatch, assigned[slotIndex])),
+                unassigned: candidates.filter((_, candidateIndex) => !used.has(candidateIndex))
+            };
+        }
+
         function worldCupBracketRoundHasRealTeams(round) {
             const matches = Array.isArray(round?.matches) ? round.matches : [];
             return matches.some(match => {
@@ -823,24 +898,22 @@
                 const sourceMatches = Array.isArray(round.matches) ? round.matches : [];
                 const previousLeftMatches = split.left.length > 0 ? split.left[split.left.length - 1].matches : [];
                 const previousRightMatches = split.right.length > 0 ? split.right[split.right.length - 1].matches : [];
-                const midpoint = Math.ceil(sourceMatches.length / 2);
-                const orderedLeftMatches = worldCupBracketOrderSideMatchesFromPrevious(previousLeftMatches, sourceMatches, midpoint);
-                const remainingRightPool = sourceMatches.filter(match => !orderedLeftMatches.includes(match));
-                const orderedRightMatches = worldCupBracketOrderSideMatchesFromPrevious(
-                    previousRightMatches,
-                    remainingRightPool.length > 0 ? remainingRightPool : sourceMatches,
-                    Math.max(sourceMatches.length - midpoint, 0)
-                );
+                const leftExpected = Math.max(Math.ceil(previousLeftMatches.length / 2), Math.ceil(sourceMatches.length / 2), 1);
+                const rightExpected = Math.max(Math.ceil(previousRightMatches.length / 2), Math.max(sourceMatches.length - leftExpected, 0), 1);
+                const leftDerived = worldCupBracketDeriveRoundFromPrevious({matches: previousLeftMatches}, round.label, leftExpected).matches;
+                const rightDerived = worldCupBracketDeriveRoundFromPrevious({matches: previousRightMatches}, round.label, rightExpected).matches;
+                const assignedLeft = worldCupBracketAssignMatchesToSlots(leftDerived, sourceMatches);
+                const assignedRight = worldCupBracketAssignMatchesToSlots(rightDerived, assignedLeft.unassigned);
 
                 split.left.push({
                     label: round.label,
                     order: round.order,
-                    matches: orderedLeftMatches.length ? orderedLeftMatches : worldCupBracketPlaceholderMatches(round.label, Math.max(midpoint, 1))
+                    matches: assignedLeft.matches.length ? assignedLeft.matches : worldCupBracketPlaceholderMatches(round.label, leftExpected)
                 });
                 split.right.push({
                     label: round.label,
                     order: round.order,
-                    matches: orderedRightMatches.length ? orderedRightMatches : worldCupBracketPlaceholderMatches(round.label, Math.max(sourceMatches.length - midpoint, 1))
+                    matches: assignedRight.matches.length ? assignedRight.matches : worldCupBracketPlaceholderMatches(round.label, rightExpected)
                 });
                 return split;
             }, {left: [], right: [], center: []});
@@ -1255,6 +1328,48 @@
             }
             target.textContent = `Updated: ${labels.join(' • ')}`;
             target.style.display = '';
+        }
+
+        function isoDateOffset(isoDate, dayOffset) {
+            const base = new Date(`${String(isoDate).trim()}T12:00:00Z`);
+            if (Number.isNaN(base.getTime())) return String(isoDate || '').trim();
+            base.setUTCDate(base.getUTCDate() + Number(dayOffset || 0));
+            return base.toISOString().slice(0, 10);
+        }
+
+        function mergeScheduleAndScores(scheduleGames, scoreGames) {
+            const byId = {};
+            (Array.isArray(scheduleGames) ? scheduleGames : []).forEach(game => {
+                byId[game.game_id || `${game.home_team}-${game.visitor_team}-${game.game_time}`] = game;
+            });
+            (Array.isArray(scoreGames) ? scoreGames : []).forEach(score => {
+                const key = score.game_id || `${score.home_team}-${score.visitor_team}-${score.game_time}`;
+                byId[key] = {...(byId[key] || {}), ...score};
+            });
+            return Object.values(byId).sort((a, b) => {
+                if (a.game_time && b.game_time) return new Date(a.game_time) - new Date(b.game_time);
+                if (a.game_time) return -1;
+                if (b.game_time) return 1;
+                return 0;
+            });
+        }
+
+        function renderCyclingDaySection(dateText, games) {
+            const items = Array.isArray(games) ? games : [];
+            const heading = escapeHtml(prettyDate(dateText));
+            const countLabel = items.length === 0
+                ? 'No stages scheduled'
+                : `${items.length} ${items.length === 1 ? 'event' : 'events'}`;
+            const content = items.length === 0
+                ? `<div class="event-league-card"><div class="event-league-meta">No stages scheduled</div></div>`
+                : items.map(renderGame).join('');
+            return `<div class="event-league-tournament-group">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="fs-4 mb-0">${heading}</h2>
+                    <span class="event-league-pill">${escapeHtml(countLabel)}</span>
+                </div>
+                ${content}
+            </div>`;
         }
 
         function renderCyclingStandings(data) {
@@ -1781,16 +1896,26 @@
             const tz = document.getElementById('event-timezone-select').value;
             const today = new Date().toISOString().slice(0, 10);
             const picked = datePicker.value || today;
-            const apiDate = picked === today ? 'today' : picked;
             const league = EVENT_LEAGUE.toLowerCase();
 
             results.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
             try {
-            const [seasonRes, scheduleRes, scoresRes, standingsRes, bracketRes] = await Promise.all([
+                const dayWindow = EVENT_MODE === 'cycling'
+                    ? [isoDateOffset(picked, -1), picked, isoDateOffset(picked, 1)]
+                    : [picked];
+                const apiDateFor = dateText => dateText === today ? 'today' : dateText;
+
+                const [seasonRes, dayPayloads, standingsRes, bracketRes] = await Promise.all([
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-                    fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
-                    fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
+                    Promise.all(dayWindow.map(async dateText => {
+                        const apiDate = apiDateFor(dateText);
+                        const [scheduleRes, scoresRes] = await Promise.all([
+                            fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
+                            fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
+                        ]);
+                        return {dateText, scheduleRes, scoresRes};
+                    })),
                     EVENT_MODE === 'world-cup' || EVENT_MODE === 'cycling'
                         ? fetch(`/api/proxy/standings/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                         : Promise.resolve({}),
@@ -1806,26 +1931,16 @@
                 renderWorldCupStandings(standingsRes);
                 renderCyclingStandings(standingsRes);
                 renderFreshnessLine([
-                    freshnessLabel('scores', scoresRes),
-                    freshnessLabel('schedule', scheduleRes),
+                    freshnessLabel('scores', dayPayloads[0]?.scoresRes),
+                    freshnessLabel('schedule', dayPayloads[0]?.scheduleRes),
                     freshnessLabel('standings', standingsRes),
                     freshnessLabel('season', seasonRes),
                 ]);
 
-                const byId = {};
-                (scheduleRes.games || []).forEach(game => { byId[game.game_id || `${game.home_team}-${game.visitor_team}-${game.game_time}`] = game; });
-                (scoresRes.scores || []).forEach(score => {
-                    const key = score.game_id || `${score.home_team}-${score.visitor_team}-${score.game_time}`;
-                    byId[key] = {...(byId[key] || {}), ...score};
-                });
-                const games = Object.values(byId).sort((a, b) => {
-                    if (a.game_time && b.game_time) return new Date(a.game_time) - new Date(b.game_time);
-                    if (a.game_time) return -1;
-                    if (b.game_time) return 1;
-                    return 0;
-                });
+                const selectedDayPayload = dayPayloads.find(payload => payload.dateText === picked) || dayPayloads[0] || {scheduleRes: {games: []}, scoresRes: {scores: []}};
+                const games = mergeScheduleAndScores(selectedDayPayload.scheduleRes.games || [], selectedDayPayload.scoresRes.scores || []);
 
-                if (games.length === 0) {
+                if (games.length === 0 && EVENT_MODE !== 'cycling') {
                     const phase = seasonRes.current_phase || '';
                     const noun = EVENT_MODE === 'cycling' ? 'stages' : 'matches';
                     const prefix = phase && !['Off Season', 'Off Tour', 'Regular Season'].includes(phase) ? `${phase} — ` : '';
@@ -1845,10 +1960,17 @@
                 const groupGames = EVENT_MODE === 'world-cup'
                     ? games.filter(game => !knockoutIds.has(String(game.game_id || '')) && !isWorldCupKnockout(game))
                     : games;
-                const renderedEvents = EVENT_MODE === 'tennis'
+                const renderedEvents = EVENT_MODE === 'cycling'
+                    ? dayPayloads.map(payload => renderCyclingDaySection(
+                        payload.dateText,
+                        mergeScheduleAndScores(payload.scheduleRes.games || [], payload.scoresRes.scores || [])
+                    )).join('')
+                    : EVENT_MODE === 'tennis'
                     ? renderTennisGroups(games)
                     : `${knockoutBlock}${groupGames.map(renderGame).join('')}`;
-                results.innerHTML = `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                results.innerHTML = EVENT_MODE === 'cycling'
+                    ? renderedEvents
+                    : `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h2 class="fs-4 mb-0">${escapeHtml(prettyDate(picked))}</h2>
                     <span class="event-league-pill">${games.length} ${games.length === 1 ? 'event' : 'events'}</span>
                 </div>${renderedEvents}`;

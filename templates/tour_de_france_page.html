@@ -13,7 +13,7 @@
 <body style="--event-accent: #F5E814;" data-sport-theme="cycling">
     {% include 'shared_header.html' %}
 
-    <div class="container event-league-shell my-4">
+    <div class="container-fluid event-league-shell my-4 px-3 px-md-4">
         <div class="event-league-hero mb-4">
             <div class="d-flex flex-wrap align-items-center gap-3">
                 <img class="event-league-logo" src="{{ race_logo_url or 'https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png' }}" alt="{{ race_title or 'Tour de France' }} logo" onerror="this.style.display='none';">
