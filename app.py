@@ -1393,7 +1393,7 @@ def vuelta_page(year=None):
         race_title='La Vuelta a España',
         race_subtitle='Detailed stage coverage, classifications, teams, and riders.',
         race_api_slug='vuelta',
-        race_logo_url='https://www.splitsp.lat/logos/cycling/uci/uci-logo.png',
+        race_logo_url='https://www.splitsp.lat/logos/cycling/vae/vae-logo.png',
         race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
         back_url=url_for('league_page', league_name='CYCLING'),
         API_BASE_URL=API_BASE_URL,

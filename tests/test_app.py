@@ -1033,6 +1033,8 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo.png", index_template)
         self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo.png", app_source)
         self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo-125-years.png", app_source)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf-logo.png", event_template)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/vae/vae-logo.png", event_template)
         self.assertIn("banner_logo_url", event_template)
         self.assertIn("cycling-anniversary-banner", event_template)
         self.assertIn("tdf-feature-link", event_template)
