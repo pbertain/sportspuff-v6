@@ -1069,6 +1069,12 @@ class TestTournamentThemeAssets(unittest.TestCase):
             self.assertIn(snippet, index_template)
             self.assertIn(snippet, event_template)
 
+        tdf_template = (PROJECT_ROOT / "templates/tour_de_france_page.html").read_text()
+        self.assertIn("function stageIsFuturePreview(stageDetail)", tdf_template)
+        self.assertIn("function mergeStageDetail(bundleDetail, fetchedDetail)", tdf_template)
+        self.assertIn("return 'Upcoming Stage';", tdf_template)
+        self.assertIn("Unable to load ${escapeHtml(TOUR_RACE_TITLE)}", tdf_template)
+
     def test_shared_header_dropdown_stays_above_page_content(self):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()
 

@@ -268,6 +268,30 @@
             );
         }
 
+        function stageDateOnly(stage, schedule) {
+            const raw = String(firstValue(stage?.date, schedule?.date, '') || '').trim();
+            if (!raw) return null;
+            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return null;
+            const [, yearText, monthText, dayText] = match;
+            return new Date(Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText), 12, 0, 0));
+        }
+
+        function todayInDisplayZone() {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: tourDisplayTimeZone(),
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = Object.fromEntries(
+                formatter.formatToParts(new Date())
+                    .filter(part => part.type !== 'literal')
+                    .map(part => [part.type, part.value])
+            );
+            return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), 12, 0, 0));
+        }
+
         function stageTimeText(stage, schedule, timeValue) {
             const raw = String(timeValue || '').trim();
             if (!raw) return '';
@@ -300,6 +324,17 @@
             if (['in_progress', 'live', 'active'].includes(status) && window) return `Live · ${window}`;
             if (['final', 'completed', 'finished', 'off'].includes(status)) return 'Final';
             return window || firstValue(stage.status, schedule.status, schedule.poll_state, '');
+        }
+
+        function stageIsFuturePreview(stageDetail) {
+            const stage = stageDetail?.stage || {};
+            const schedule = stageDetail?.schedule || {};
+            const stageDay = stageDateOnly(stage, schedule);
+            if (!stageDay) return false;
+            const today = todayInDisplayZone();
+            const status = String(firstValue(stage.status, schedule.status, schedule.poll_state, '') || '').trim().toLowerCase();
+            if (stageDay.getTime() > today.getTime()) return true;
+            return stageDay.getTime() === today.getTime() && ['scheduled', 'pre_stage', 'unknown'].includes(status);
         }
 
         function classificationValue(row, boardType, index) {
@@ -408,6 +443,7 @@
         }
 
         function stageResultRows(stageDetail) {
+            if (stageIsFuturePreview(stageDetail)) return [];
             const classifications = [
                 ...(Array.isArray(stageDetail?.classifications) ? stageDetail.classifications : []),
                 ...(Array.isArray(stageDetail?.classification_rows) ? stageDetail.classification_rows : []),
@@ -447,6 +483,44 @@
             return grouped.get('gc') || grouped.get('general') || grouped.get('overall') || grouped.values().next().value || [];
         }
 
+        function mergeStageDetail(bundleDetail, fetchedDetail) {
+            if (!bundleDetail) return fetchedDetail || null;
+            if (!fetchedDetail) return bundleDetail;
+
+            const merged = {
+                ...bundleDetail,
+                ...fetchedDetail,
+                stage: {
+                    ...(bundleDetail.stage || {}),
+                    ...(fetchedDetail.stage || {}),
+                },
+                schedule: {
+                    ...(bundleDetail.schedule || {}),
+                    ...(fetchedDetail.schedule || {}),
+                },
+                meta: {
+                    ...(bundleDetail.meta || {}),
+                    ...(fetchedDetail.meta || {}),
+                },
+            };
+
+            const bundleRows = stageResultRows(bundleDetail);
+            const fetchedRows = stageResultRows(fetchedDetail);
+            if (fetchedRows.length === 0 && bundleRows.length > 0) {
+                merged.stage_results = bundleRows;
+                merged.classification_rows = bundleRows;
+                if (!firstValue(merged.stage?.winner, '')) {
+                    merged.stage = {
+                        ...merged.stage,
+                        winner: bundleDetail.stage?.winner || '',
+                        winner_url: bundleDetail.stage?.winner_url || '',
+                    };
+                }
+            }
+
+            return merged;
+        }
+
         function stageNumberValue(stageDetail) {
             const stage = stageDetail?.stage || {};
             const schedule = stageDetail?.schedule || {};
@@ -457,14 +531,16 @@
             if (!TOUR_PAYLOAD) return null;
             const stages = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages : [];
             if (TOUR_SELECTED_STAGE_NUMBER && TOUR_STAGE_DETAIL_CACHE.has(String(TOUR_SELECTED_STAGE_NUMBER))) {
-                return TOUR_STAGE_DETAIL_CACHE.get(String(TOUR_SELECTED_STAGE_NUMBER));
+                const cached = TOUR_STAGE_DETAIL_CACHE.get(String(TOUR_SELECTED_STAGE_NUMBER));
+                const bundled = stages.find(stageDetail => String(stageNumberValue(stageDetail)) === String(TOUR_SELECTED_STAGE_NUMBER));
+                return mergeStageDetail(bundled, cached);
             }
             if (TOUR_SELECTED_STAGE_KEY) {
                 const selected = stages.find(stageDetail => stageKey(stageDetail) === TOUR_SELECTED_STAGE_KEY);
                 if (selected) {
                     const selectedStageNumber = stageNumberValue(selected);
                     if (selectedStageNumber && TOUR_STAGE_DETAIL_CACHE.has(String(selectedStageNumber))) {
-                        return TOUR_STAGE_DETAIL_CACHE.get(String(selectedStageNumber));
+                        return mergeStageDetail(selected, TOUR_STAGE_DETAIL_CACHE.get(String(selectedStageNumber)));
                     }
                     return selected;
                 }
@@ -539,6 +615,7 @@
         }
 
         function selectedStageKicker(currentStage, stageDetail) {
+            if (stageIsFuturePreview(stageDetail)) return 'Upcoming Stage';
             const selectedKey = stageKey(stageDetail);
             const currentKey = stageKey(currentStage);
             if (selectedKey && currentKey && selectedKey === currentKey) return 'Current Stage';
@@ -595,7 +672,7 @@
                 stage.cycling_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.cycling_url}" target="_blank" rel="noopener noreferrer">Stage Page</a>` : '',
                 stage.rankings_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.rankings_url}" target="_blank" rel="noopener noreferrer">Rankings</a>` : '',
             ].filter(Boolean).join('');
-            const winnerName = riderDisplayName(stage.winner, '', stage.winner_url);
+            const winnerName = stageIsFuturePreview(effectiveStage) ? '' : riderDisplayName(stage.winner, '', stage.winner_url);
             return `
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                     <div>
@@ -628,7 +705,7 @@
                 stage.distance_km ? `${stage.distance_km} km` : '',
                 stageStatusText(stage, schedule),
             ].filter(Boolean).join(' • ');
-            const winnerName = riderDisplayName(stage.winner, '', stage.winner_url);
+            const winnerName = stageIsFuturePreview(stageDetail) ? '' : riderDisplayName(stage.winner, '', stage.winner_url);
             return `
                 <article class="event-league-card tdf-stage-card${isSelected ? ' is-selected' : ''}" data-stage-key="${escapeHtml(key)}">
                     <div class="d-flex justify-content-between align-items-start gap-2">
@@ -699,7 +776,7 @@
                 }
                 renderTourView();
             } catch (error) {
-                summary.innerHTML = `<div class="alert alert-warning mb-0">Unable to load Tour de France: ${escapeHtml(error.message || error)}</div>`;
+                summary.innerHTML = `<div class="alert alert-warning mb-0">Unable to load ${escapeHtml(TOUR_RACE_TITLE)}: ${escapeHtml(error.message || error)}</div>`;
                 document.getElementById('tdf-boards-panel').innerHTML = '';
                 document.getElementById('tdf-stages-panel').innerHTML = '';
             }
