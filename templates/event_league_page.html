@@ -387,12 +387,12 @@
         function worldCupBracketTeamLabel(match, side) {
             if (side === 'home') {
                 return firstValue(
-                    match?.home_slot,
                     match?.home_team,
                     match?.homeTeam,
-                    match?.homeSlot,
                     match?.home_name,
                     match?.homeName,
+                    match?.home_slot,
+                    match?.homeSlot,
                     'TBD'
                 );
             }
@@ -466,7 +466,14 @@
             const label = worldCupBracketTeamLabel(match, side);
             const code = worldCupBracketTeamCode(match, side);
             const record = worldCupBracketTeamRecordText(match, side);
-            const isPlaceholder = !firstValue(isHome ? match?.home_team : (match?.away_team || match?.visitor_team), isHome ? match?.homeTeam : match?.awayTeam, isHome ? match?.home_name : match?.away_name, '');
+            const actualText = String(firstValue(
+                isHome ? match?.home_team : firstValue(match?.away_team, match?.visitor_team, ''),
+                isHome ? match?.homeTeam : firstValue(match?.awayTeam, match?.visitorTeam, ''),
+                isHome ? match?.home_name : firstValue(match?.away_name, match?.visitor_name, ''),
+                isHome ? match?.homeName : firstValue(match?.awayName, match?.visitorName, ''),
+                ''
+            ) || '').trim();
+            const isPlaceholder = !actualText || worldCupBracketIsPlaceholderLabel(actualText);
             const displayName = code || label;
             const slot = String(label || '').trim();
             const nameText = slot && /^w\d+|^l\d+|^tbd$/i.test(slot) ? slot.toUpperCase() : displayName;
@@ -551,14 +558,14 @@
         function worldCupBracketRoundLayoutMetrics(label, matchCount) {
             const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
             const level = Math.max(Math.floor(order / 10) - 1, 0);
-            const matchHeight = 88;
+            const matchHeight = order >= 50 ? 108 : 112;
             if (order >= 50) {
-                const step = 96;
+                const step = 132;
                 const count = Math.max(Number(matchCount) || 0, 1);
                 const height = Math.max(matchHeight, ((count - 1) * step) + matchHeight);
                 return {offset: 0, step, height};
             }
-            const baseStep = 92;
+            const baseStep = 120;
             const step = baseStep * Math.pow(2, level);
             const offset = level === 0 ? 0 : Math.round((baseStep / 2) * (Math.pow(2, level) - 1));
             const height = Math.max(offset + (Math.max(Number(matchCount) || 0, 1) - 1) * step + matchHeight, matchHeight);
@@ -949,6 +956,13 @@
             }));
         }
 
+        function worldCupBracketSharedHeight(roundGroups) {
+            return Math.max(...(Array.isArray(roundGroups) ? roundGroups : []).map(round => {
+                const metrics = worldCupBracketRoundLayoutMetrics(round?.label, Array.isArray(round?.matches) ? round.matches.length : 0);
+                return metrics.height;
+            }), 0);
+        }
+
         function worldCupBracketUniqueMatches(matches) {
             const seen = new Set();
             return (Array.isArray(matches) ? matches : []).filter(match => {
@@ -1100,12 +1114,14 @@
             `;
         }
 
-        function worldCupBracketColumnView(label, matches, gameMap, extraClass = '') {
+        function worldCupBracketColumnView(label, matches, gameMap, extraClass = '', sharedHeight = null) {
             const safeLabel = String(label || 'Knockout Round').trim();
             const safeMatches = Array.isArray(matches) ? matches : [];
             const metrics = worldCupBracketRoundLayoutMetrics(safeLabel, safeMatches.length);
+            const containerHeight = Math.max(Number(sharedHeight) || 0, metrics.height);
+            const centeredOffset = metrics.offset + Math.max(Math.round((containerHeight - metrics.height) / 2), 0);
             const cards = safeMatches.map((match, index) => `
-                <div class="wc-bracket-match-slot" style="top: ${metrics.offset + (index * metrics.step)}px;">
+                <div class="wc-bracket-match-slot" style="top: ${centeredOffset + (index * metrics.step)}px;">
                     ${worldCupBracketMatchView(match, gameMap, safeLabel, index)}
                 </div>
             `).join('');
@@ -1113,7 +1129,7 @@
             return `
                 <section class="wc-bracket-column${extraClass ? ` ${extraClass}` : ''}" data-round-label="${escapeHtml(safeLabel)}" data-round-order="${worldCupBracketRoundOrderFromLabel(safeLabel)}">
                     <div class="wc-bracket-column-title">${escapeHtml(safeLabel)}</div>
-                    <div class="wc-bracket-column-matches" style="min-height: ${metrics.height}px;">${body}</div>
+                    <div class="wc-bracket-column-matches" style="min-height: ${containerHeight}px;">${body}</div>
                 </section>
             `;
         }
@@ -1146,19 +1162,23 @@
             return {sideRounds, centerRounds};
         }
 
-        function worldCupBracketRenderSideColumns(roundGroups, side, gameMap) {
+        function worldCupBracketRenderSideColumns(roundGroups, side, gameMap, sharedHeight) {
             const ordered = Array.isArray(roundGroups) ? [...roundGroups] : [];
-            return ordered.map(round => worldCupBracketColumnView(round.label, round.matches, gameMap, `wc-bracket-column--${side}`)).join('');
+            return ordered.map(round => worldCupBracketColumnView(round.label, round.matches, gameMap, `wc-bracket-column--${side}`, sharedHeight)).join('');
         }
 
-        function worldCupBracketWinnerBanner(championLabel) {
-            if (!championLabel) return '';
+        function worldCupBracketFinalHero(finalMatch, championLabel) {
+            const status = String(finalMatch?.game_status || finalMatch?.status || '').toLowerCase();
+            const isActive = ['in_progress', 'live', 'active'].includes(status);
+            const isFinalish = ['final', 'completed', 'finished', 'off'].includes(status);
+            if (!isActive && !isFinalish) return '';
+            const heroText = isFinalish && championLabel ? championLabel : 'Final In Progress';
             return `
                 <div class="wc-bracket-winner-banner">
-                    <img src="https://splitsp.lat/logos/wc/wc-trophy.png" alt="World Cup trophy" class="wc-bracket-winner-trophy" loading="lazy" onerror="this.src='https://splitsp.lat/logos/wc/wc-trophy-bare.png';">
+                    <img src="https://splitsp.lat/logos/wc/wc-trophy-bare.png" alt="World Cup trophy" class="wc-bracket-winner-trophy" loading="lazy">
                     <div class="wc-bracket-winner-copy">
-                        <div class="wc-bracket-winner-kicker">World Cup Champion</div>
-                        <div class="wc-bracket-winner-name">${escapeHtml(championLabel)}</div>
+                        <div class="wc-bracket-winner-kicker">${isFinalish ? 'World Cup Champion' : 'World Cup Final'}</div>
+                        <div class="wc-bracket-winner-name">${escapeHtml(heroText)}</div>
                     </div>
                 </div>
             `;
@@ -1678,13 +1698,19 @@
                 standardRounds.flatMap(round => Array.isArray(round.matches) ? round.matches : [])
             );
             const count = roundGroups.reduce((total, round) => total + (Array.isArray(round?.matches) ? round.matches.length : 0), 0) || worldCupBracketMatchCount(normalized);
-            const champion = worldCupWinnerLabel(worldCupBracketFinalMatch(normalized, gameMap) || {});
+            const finalMatch = worldCupBracketFinalMatch(normalized, gameMap) || {};
+            const champion = worldCupWinnerLabel(finalMatch);
             const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
-            const centerCards = centerRounds.length > 0
-                ? centerRounds.map(round => worldCupBracketColumnView(round.label, round.matches, gameMap, 'wc-bracket-column--final')).join('')
-                : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder');
-            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap);
-            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap);
+            const finalRound = centerRounds.find(round => round.order >= 60) || null;
+            const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
+            const bracketHeight = worldCupBracketSharedHeight([...splitRounds.left, ...splitRounds.right, ...(finalRound ? [finalRound] : []), ...(thirdPlaceRound ? [thirdPlaceRound] : [])]);
+            const centerCards = [
+                finalRound ? worldCupBracketColumnView(finalRound.label, finalRound.matches, gameMap, 'wc-bracket-column--final wc-bracket-column--hero', bracketHeight)
+                    : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder wc-bracket-column--hero', bracketHeight),
+                thirdPlaceRound ? worldCupBracketColumnView(thirdPlaceRound.label, thirdPlaceRound.matches, gameMap, 'wc-bracket-column--final', bracketHeight) : ''
+            ].filter(Boolean).join('');
+            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap, bracketHeight);
+            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap, bracketHeight);
 
             return `
                 <div class="wc-knockout-panel mb-3">
@@ -1696,6 +1722,7 @@
                         <span class="event-league-pill">${count} ${count === 1 ? 'match' : 'matches'}</span>
                     </div>
                     <div class="wc-bracket" data-world-cup-bracket="true">
+                        ${worldCupBracketFinalHero(finalMatch, champion)}
                         <div class="wc-bracket-layout">
                             <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
                             <div class="wc-bracket-center">

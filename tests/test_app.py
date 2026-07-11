@@ -1014,7 +1014,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "match?.visitor_team",
             "const visitorScore = Number(worldCupBracketScoreValue(game, 'visitor'));",
             "World Cup Champion",
-            "https://splitsp.lat/logos/wc/wc-trophy.png",
+            "https://splitsp.lat/logos/wc/wc-trophy-bare.png",
             "winner-star.png",
         ]:
             self.assertIn(snippet, event_template)

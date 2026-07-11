@@ -946,14 +946,21 @@ main, .main-content {
 }
 
 .wc-bracket-winner-banner {
-  display: none;
+  align-items: center;
+  background: rgba(20, 10, 40, 0.76);
+  border: 1px solid rgba(255, 215, 0, 0.24);
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 10px 14px;
 }
 
 .wc-bracket-layout {
   display: grid;
-  gap: 4px;
-  grid-template-columns: minmax(0, 1fr) minmax(176px, 208px) minmax(0, 1fr);
-  align-items: start;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(252px, 280px) minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .wc-bracket-side {
@@ -976,16 +983,16 @@ main, .main-content {
 
 .wc-bracket-center {
   display: grid;
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
-  align-self: start;
+  align-self: stretch;
 }
 
 .wc-bracket-columns {
   display: grid;
   gap: 0;
   grid-auto-flow: column;
-  grid-auto-columns: 196px;
+  grid-auto-columns: 236px;
   min-width: max-content;
   position: relative;
 }
@@ -994,8 +1001,8 @@ main, .main-content {
   background: rgba(20, 10, 40, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  min-width: 196px;
-  width: 196px;
+  min-width: 236px;
+  width: 236px;
   padding-bottom: 8px;
   position: relative;
 }
@@ -1029,7 +1036,7 @@ main, .main-content {
 }
 
 .wc-bracket-columns .wc-bracket-column:not(:first-child) {
-  margin-left: -28px;
+  margin-left: -20px;
 }
 
 .wc-bracket-match-slot {
@@ -1059,13 +1066,18 @@ main, .main-content {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset;
   display: grid;
   gap: 4px;
-  padding: 6px;
+  min-height: 102px;
+  padding: 8px;
   position: relative;
 }
 
 .wc-bracket-match--final {
   background: rgba(33, 19, 8, 0.94);
   border-color: rgba(255, 215, 0, 0.28);
+}
+
+.wc-bracket-column--hero {
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.1) inset, 0 16px 36px rgba(0, 0, 0, 0.16);
 }
 
 .wc-bracket-match-head,
@@ -1109,8 +1121,8 @@ main, .main-content {
   display: flex;
   gap: 4px;
   justify-content: space-between;
-  min-height: 28px;
-  padding: 2px 4px;
+  min-height: 36px;
+  padding: 4px 6px;
 }
 
 .wc-bracket-team .wc-bracket-team-name {
@@ -1132,7 +1144,7 @@ main, .main-content {
 
 .wc-bracket-team-name {
   color: var(--warm-white);
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 700;
   line-height: 1.1;
   min-width: 0;
@@ -1143,7 +1155,7 @@ main, .main-content {
 
 .wc-bracket-team-record {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -1164,8 +1176,8 @@ main, .main-content {
 
 .wc-bracket-star {
   position: static;
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
   flex: 0 0 auto;
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
 }
@@ -1174,18 +1186,18 @@ main, .main-content {
   align-items: center;
   color: #FFF1A8;
   display: flex;
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   font-weight: 800;
   gap: 0;
   margin-left: 4px;
-  min-width: 26px;
+  min-width: 30px;
   white-space: nowrap;
   justify-content: flex-end;
 }
 
 .wc-bracket-team-score-value {
   color: #FFF1A8;
-  font-size: 0.88rem;
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -1196,20 +1208,20 @@ main, .main-content {
   gap: 2px;
   justify-items: end;
   margin-left: 2px;
-  min-width: 38px;
+  min-width: 46px;
   text-align: right;
 }
 
 .wc-bracket-match-result-status {
   color: #FFF1A8;
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .wc-bracket-match-result-pk {
   color: #ffd86a;
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -1226,7 +1238,7 @@ main, .main-content {
 
 .wc-bracket-details {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   line-height: 1.25;
 }
 
@@ -1266,9 +1278,35 @@ main, .main-content {
 .wc-bracket-team-logo {
   display: block;
   flex: 0 0 auto;
-  height: 16px;
+  height: 18px;
   object-fit: contain;
-  width: 16px;
+  width: 18px;
+}
+
+.wc-bracket-winner-trophy {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.wc-bracket-winner-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.wc-bracket-winner-kicker {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wc-bracket-winner-name {
+  color: #ffe9a3;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .wc-standings-header {
