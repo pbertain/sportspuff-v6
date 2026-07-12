@@ -118,6 +118,17 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
         db.assert_not_called()
 
+    def test_giro_page_loads_without_database(self):
+        with patch("app.get_db_connection") as db:
+            response = self.client.get("/league/cycling/giro")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Giro d&#39;Italia", response.data)
+        self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
+        self.assertIn(b"const TOUR_API_SLUG = \"giro\";", response.data)
+        self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
+        db.assert_not_called()
+
     def test_regular_league_page_exposes_schedule_module(self):
         cursor = FakeCursor(
             fetchone_values=[{"league_name_proper": "NFL", "league_name": "nfl"}],
@@ -1015,6 +1026,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "const visitorScore = Number(worldCupBracketScoreValue(game, 'visitor'));",
             "World Cup Champion",
             "https://splitsp.lat/logos/wc/wc-trophy-bare.png",
+            "wc-floating-logos",
+            "wc-floating-logo--trophy",
+            "function worldCupFinalDayVisible(finalMatch)",
             "winner-star.png",
         ]:
             self.assertIn(snippet, event_template)
@@ -1035,9 +1049,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/uci/uci-logo-125-years.png", app_source)
         self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf-logo.png", event_template)
         self.assertIn("https://www.splitsp.lat/logos/cycling/vae/vae-logo.png", event_template)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png", event_template)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo-pink.png", app_source)
         self.assertIn("container-fluid event-league-shell", event_template)
         self.assertIn("Stages, classifications, teams, rider info, times and more.", event_template)
-        self.assertEqual(event_template.count("Detailed Race View"), 2)
+        self.assertEqual(event_template.count("Detailed Race View"), 3)
         self.assertIn("function isoDateOffset(isoDate, dayOffset)", event_template)
         self.assertIn("function renderCyclingDaySection(dateText, games)", event_template)
         self.assertIn("No stages scheduled", event_template)
@@ -1046,14 +1062,18 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("tdf-feature-link", event_template)
         self.assertIn("tour_de_france_page", event_template)
         self.assertIn("vuelta_page", event_template)
+        self.assertIn("giro_page", event_template)
         self.assertIn("tour_de_france_page", app_source)
         self.assertIn("vuelta_page", app_source)
+        self.assertIn("giro_page", app_source)
         self.assertIn("api/proxy/cycling/tour-de-france", app_source)
         self.assertIn("api/proxy/cycling/tour-de-france/<int:year>/stages/<int:stage_number>", app_source)
         self.assertIn("api/proxy/cycling/vuelta", app_source)
         self.assertIn("api/proxy/cycling/vuelta/<int:year>/stages/<int:stage_number>", app_source)
+        self.assertIn("api/proxy/cycling/giro", app_source)
         self.assertIn("cycling-anniversary-banner", css)
         self.assertIn(".tdf-feature-link", css)
+        self.assertIn(".tdf-feature-link--giro", css)
         self.assertIn(".tdf-stage-grid", css)
         self.assertIn("wc-bracket-column", css)
         self.assertIn("wc-bracket-connectors", css)
@@ -1081,6 +1101,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("function mergeStageDetail(bundleDetail, fetchedDetail)", tdf_template)
         self.assertIn("return 'Upcoming Stage';", tdf_template)
         self.assertIn("Unable to load ${escapeHtml(TOUR_RACE_TITLE)}", tdf_template)
+        self.assertIn("cycling-floating-logos", tdf_template)
+        self.assertIn("cycling-floating-logo--{{ index + 1 }}", tdf_template)
+        self.assertIn("giro-bounce", css)
 
     def test_shared_header_dropdown_stays_above_page_content(self):
         css = (PROJECT_ROOT / "static/css/main.css").read_text()

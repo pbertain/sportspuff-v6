@@ -10,12 +10,21 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
-<body style="--event-accent: #F5E814;" data-sport-theme="cycling">
+<body style="--event-accent: #F5E814;" data-sport-theme="cycling" data-race-slug="{{ race_api_slug or 'tour-de-france' }}">
     {% include 'shared_header.html' %}
 
     <div class="container-fluid event-league-shell my-4 px-3 px-md-4">
         <div class="event-league-hero mb-4">
-            <div class="d-flex flex-wrap align-items-center gap-3">
+            {% if race_floating_logo_urls %}
+            <div class="cycling-floating-logos" aria-hidden="true">
+                {% for index in range(8) %}
+                <span class="cycling-floating-logo cycling-floating-logo--{{ index + 1 }}">
+                    <img src="{{ race_floating_logo_urls[index % (race_floating_logo_urls|length)] }}" alt="" loading="lazy" onerror="this.style.display='none';">
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="d-flex flex-wrap align-items-center gap-3 position-relative" style="z-index: 1;">
                 <img class="event-league-logo" src="{{ race_logo_url or 'https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png' }}" alt="{{ race_title or 'Tour de France' }} logo" onerror="this.style.display='none';">
                 <img class="tdf-hero-mark" src="{{ race_mark_url or url_for('static', filename='images/events/cycling/tour-de-france-mark.svg') }}" alt="{{ race_title or 'Tour de France' }} mark">
                 <div class="flex-grow-1">

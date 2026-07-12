@@ -75,6 +75,15 @@
             </div>
             <i class="fas fa-arrow-right ms-auto"></i>
         </a>
+        <a class="tdf-feature-link tdf-feature-link--giro mb-4" href="{{ url_for('giro_page') }}">
+            <img class="tdf-feature-link-mark" src="https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png" alt="Giro d'Italia mark">
+            <div>
+                <div class="tdf-feature-link-kicker">Detailed Race View</div>
+                <div class="tdf-feature-link-title fw-bold">Giro d'Italia</div>
+                <div class="event-league-meta">Stages, classifications, teams, rider info, times and more.</div>
+            </div>
+            <i class="fas fa-arrow-right ms-auto"></i>
+        </a>
         {% endif %}
 
         <div id="event-season-panel" class="event-league-card mb-3" style="display: none;"></div>
@@ -82,6 +91,7 @@
         <div id="wc-marquee" class="team-marquee mb-3" style="display: none;" aria-hidden="true">
             <div class="team-marquee-track"></div>
         </div>
+        <div id="wc-floating-logos" class="wc-floating-logos" style="display: none;" aria-hidden="true"></div>
         {% endif %}
         <div id="event-league-results" class="event-league-card">
             <div class="text-center py-4">
@@ -1175,6 +1185,7 @@
             const isActive = ['in_progress', 'live', 'active'].includes(status);
             const isFinalish = ['final', 'completed', 'finished', 'off'].includes(status);
             if (!isActive && !isFinalish) return '';
+            if (!worldCupFinalDayVisible(finalMatch)) return '';
             const heroText = isFinalish && championLabel ? championLabel : 'Final In Progress';
             return `
                 <div class="wc-bracket-winner-banner">
@@ -1185,6 +1196,66 @@
                     </div>
                 </div>
             `;
+        }
+
+        function worldCupGameDateOnly(match) {
+            const raw = String(firstValue(match?.game_date, match?.date, '') || '').trim();
+            if (!raw) return '';
+            const parts = raw.split('T')[0].split(' ')[0];
+            return /^\d{4}-\d{2}-\d{2}$/.test(parts) ? parts : '';
+        }
+
+        function worldCupTodayDisplayDate() {
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Los_Angeles',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(new Date());
+        }
+
+        function worldCupFinalDayVisible(finalMatch) {
+            const finalDate = worldCupGameDateOnly(finalMatch);
+            if (!finalDate) return false;
+            return finalDate === worldCupTodayDisplayDate();
+        }
+
+        function renderWorldCupFloatingLogos(data, bracket) {
+            const target = document.getElementById('wc-floating-logos');
+            if (!target) return;
+
+            const groups = worldCupGroupsFromStandings(data);
+            const seen = new Set();
+            const logos = [];
+            groups.forEach(group => {
+                (group.teams || []).forEach(team => {
+                    const abbrev = String(team.abbreviation || '').trim();
+                    if (!abbrev) return;
+                    const key = abbrev.toLowerCase();
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    logos.push({
+                        src: `https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(key)}_ball_logo.png`,
+                        alt: team.team_name || abbrev,
+                        className: `wc-floating-logo wc-floating-logo--team wc-floating-logo--${(logos.length % 10) + 1}`
+                    });
+                });
+            });
+
+            const championSrc = 'https://www.splitsp.lat/logos/wc/wc-trophy.png';
+            logos.unshift({
+                src: championSrc,
+                alt: 'World Cup trophy',
+                className: 'wc-floating-logo wc-floating-logo--trophy'
+            });
+
+            const chosen = logos.slice(0, 14);
+            target.innerHTML = chosen.map((logo, index) => `
+                <span class="${escapeHtml(logo.className)}" style="animation-delay: -${(index * 0.8).toFixed(1)}s; animation-duration: ${10 + (index % 4)}s;">
+                    <img src="${escapeHtml(logo.src)}" alt="${escapeHtml(logo.alt)}" loading="lazy" onerror="this.style.display='none';">
+                </span>
+            `).join('');
+            target.style.display = chosen.length ? '' : 'none';
         }
 
         function wireWorldCupBracketConnectors(root) {
@@ -1248,6 +1319,54 @@
 
             connectSide('.wc-bracket-side--left');
             connectSide('.wc-bracket-side--right');
+
+            const connectCenter = () => {
+                const leftRoot = bracket.querySelector('.wc-bracket-side--left');
+                const rightRoot = bracket.querySelector('.wc-bracket-side--right');
+                const centerRoot = bracket.querySelector('.wc-bracket-center-stack');
+                if (!leftRoot || !rightRoot || !centerRoot) return;
+
+                const leftColumns = Array.from(leftRoot.querySelectorAll('.wc-bracket-column'))
+                    .sort((a, b) => Number(a.dataset.roundOrder || 0) - Number(b.dataset.roundOrder || 0));
+                const rightColumns = Array.from(rightRoot.querySelectorAll('.wc-bracket-column'))
+                    .sort((a, b) => Number(a.dataset.roundOrder || 0) - Number(b.dataset.roundOrder || 0));
+                const centerColumns = Array.from(centerRoot.querySelectorAll('.wc-bracket-column'));
+                const finalColumn = centerColumns.find(column => /final/i.test(String(column.dataset.roundLabel || '')));
+                const thirdColumn = centerColumns.find(column => /third/i.test(String(column.dataset.roundLabel || '')));
+                const leftSource = leftColumns[leftColumns.length - 1];
+                const rightSource = rightColumns[rightColumns.length - 1];
+                if (!leftSource || !rightSource || !finalColumn || !thirdColumn) return;
+
+                const sourcePairs = [
+                    { column: leftSource, side: 'left' },
+                    { column: rightSource, side: 'right' }
+                ];
+                const targetPairs = [finalColumn, thirdColumn];
+
+                sourcePairs.forEach(({column, side}) => {
+                    const sourceCards = Array.from(column.querySelectorAll('.wc-bracket-match'));
+                    const sourceCard = sourceCards[sourceCards.length - 1];
+                    if (!sourceCard) return;
+                    const sourceRect = sourceCard.getBoundingClientRect();
+                    const x1 = side === 'right'
+                        ? sourceRect.left - rect.left - 4
+                        : sourceRect.right - rect.left + 4;
+                    const y1 = sourceRect.top - rect.top + (sourceRect.height / 2);
+
+                    targetPairs.forEach(targetColumn => {
+                        const targetCard = targetColumn.querySelector('.wc-bracket-match');
+                        if (!targetCard) return;
+                        const targetRect = targetCard.getBoundingClientRect();
+                        const x2 = side === 'right'
+                            ? targetRect.right - rect.left + 4
+                            : targetRect.left - rect.left - 4;
+                        const y2 = targetRect.top - rect.top + (targetRect.height / 2);
+                        addPath(x1, y1, x2, y2);
+                    });
+                });
+            };
+
+            connectCenter();
 
             bracket.appendChild(svg);
         }
@@ -1706,14 +1825,13 @@
             const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
             const finalRound = centerRounds.find(round => round.order >= 60) || null;
             const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
-            const bracketHeight = worldCupBracketSharedHeight([...splitRounds.left, ...splitRounds.right, ...(finalRound ? [finalRound] : []), ...(thirdPlaceRound ? [thirdPlaceRound] : [])]);
             const centerCards = [
-                finalRound ? worldCupBracketColumnView(finalRound.label, finalRound.matches, gameMap, 'wc-bracket-column--final wc-bracket-column--hero', bracketHeight)
-                    : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder wc-bracket-column--hero', bracketHeight),
-                thirdPlaceRound ? worldCupBracketColumnView(thirdPlaceRound.label, thirdPlaceRound.matches, gameMap, 'wc-bracket-column--final', bracketHeight) : ''
+                finalRound ? worldCupBracketColumnView(finalRound.label, finalRound.matches, gameMap, 'wc-bracket-column--final wc-bracket-column--hero')
+                    : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder wc-bracket-column--hero'),
+                thirdPlaceRound ? worldCupBracketColumnView(thirdPlaceRound.label, thirdPlaceRound.matches, gameMap, 'wc-bracket-column--final') : ''
             ].filter(Boolean).join('');
-            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap, bracketHeight);
-            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap, bracketHeight);
+            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap);
+            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap);
 
             return `
                 <div class="wc-knockout-panel mb-3">
@@ -1729,7 +1847,9 @@
                         <div class="wc-bracket-layout">
                             <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
                             <div class="wc-bracket-center">
+                                <div class="wc-bracket-center-stack">
                                 ${centerCards}
+                                </div>
                             </div>
                             <div class="wc-bracket-side wc-bracket-side--right">${rightColumns}</div>
                         </div>
@@ -1958,6 +2078,7 @@
                     : null;
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
+                renderWorldCupFloatingLogos(standingsRes, knockoutSource);
                 renderWorldCupStandings(standingsRes);
                 renderCyclingStandings(standingsRes);
                 renderFreshnessLine([

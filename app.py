@@ -491,6 +491,19 @@ def _fetch_api_json(path, timeout=15, api_base_url=None):
     raise requests.exceptions.RequestException(str(last_error or "API request failed"))
 
 
+def _fetch_api_json_from_candidates(paths, timeout=15, api_base_url=None):
+    """Fetch JSON from the first API path that succeeds."""
+    last_error = None
+    for path in paths:
+        try:
+            return _fetch_api_json(path, timeout=timeout, api_base_url=api_base_url)
+        except Exception as exc:
+            last_error = exc
+    if isinstance(last_error, requests.exceptions.RequestException):
+        raise last_error
+    raise requests.exceptions.RequestException(str(last_error or "API request failed"))
+
+
 def _empty_all_scores_response():
     leagues = ['mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'atp', 'wta', 'cycling']
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
@@ -1395,6 +1408,29 @@ def vuelta_page(year=None):
         race_api_slug='vuelta',
         race_logo_url='https://www.splitsp.lat/logos/cycling/vae/vae-logo.png',
         race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
+        back_url=url_for('league_page', league_name='CYCLING'),
+        API_BASE_URL=API_BASE_URL,
+    )
+
+
+@app.route('/league/cycling/giro')
+@app.route('/league/cycling/giro-ditalia')
+@app.route('/league/cycling/giro/<int:year>')
+@app.route('/league/cycling/giro-ditalia/<int:year>')
+def giro_page(year=None):
+    """Detailed Giro d'Italia page backed by sportspuff-api."""
+    return render_template(
+        'tour_de_france_page.html',
+        year=int(year or datetime.now().year),
+        race_title="Giro d'Italia",
+        race_subtitle='Detailed stage coverage, classifications, teams, rider info, times and more.',
+        race_api_slug='giro',
+        race_logo_url='https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png',
+        race_mark_url='https://www.splitsp.lat/logos/cycling/gdi/gdi-logo-pink.png',
+        race_floating_logo_urls=[
+            'https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png',
+            'https://www.splitsp.lat/logos/cycling/gdi/gdi-logo-pink.png',
+        ],
         back_url=url_for('league_page', league_name='CYCLING'),
         API_BASE_URL=API_BASE_URL,
     )
@@ -2837,6 +2873,101 @@ def proxy_cycling_vuelta_stage(year, stage_number):
 
     return jsonify({
         'race': 'La Vuelta a España',
+        'year': int(year),
+        'stage_number': int(stage_number),
+        'stage_results': [],
+        'classifications': [],
+        'classification_rows': [],
+        'meta': {},
+        'available': False,
+    }), 200
+
+
+@app.route('/api/proxy/cycling/giro')
+@app.route('/api/proxy/cycling/giro-ditalia')
+@app.route('/api/proxy/cycling/giro/<int:year>')
+@app.route('/api/proxy/cycling/giro-ditalia/<int:year>')
+def proxy_cycling_giro(year=None):
+    """Proxy the Giro d'Italia detail bundle."""
+    suffix = str(int(year)) if year else 'current'
+    cache_key = f'cycling_giro:{suffix}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path_candidates = [
+        f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
+        f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
+        f'/api/v1/cycling/gdi/{int(year)}' if year else '/api/v1/cycling/gdi',
+    ]
+    try:
+        data = _fetch_api_json_from_candidates(path_candidates, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Giro API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Giro bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Giro bundle due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Giro bundle: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Giro bundle due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': "Giro d'Italia",
+        'year': int(year or datetime.now().year),
+        'stages': [],
+        'latest_classifications': {},
+        'teams': [],
+        'riders': [],
+        'available': False,
+        'meta': {},
+    }), 200
+
+
+@app.route('/api/proxy/cycling/giro/<int:year>/stages/<int:stage_number>')
+@app.route('/api/proxy/cycling/giro-ditalia/<int:year>/stages/<int:stage_number>')
+def proxy_cycling_giro_stage(year, stage_number):
+    """Proxy a single Giro d'Italia stage."""
+    cache_key = f'cycling_giro:{int(year)}:stage:{int(stage_number)}'
+    cached_response = get_cached_response(cache_key, 'schedule')
+    if cached_response:
+        return jsonify(cached_response)
+
+    path_candidates = [
+        f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
+        f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
+        f'/api/v1/cycling/gdi/{int(year)}/stages/{int(stage_number)}',
+    ]
+    try:
+        data = _fetch_api_json_from_candidates(path_candidates, timeout=20)
+        if isinstance(data, dict) and 'error' in data:
+            logger.error(f"Giro stage API returned error: {data['error']}")
+            return jsonify(data), 500
+        set_cached_response(cache_key, data)
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error proxying Giro stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Giro stage due to request exception")
+            return jsonify(expired_cache)
+    except Exception as e:
+        logger.error(f"Unexpected error proxying Giro stage: {e}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
+        if expired_cache:
+            logger.warning("Returning expired cached Giro stage due to unexpected error")
+            return jsonify(expired_cache)
+
+    return jsonify({
+        'race': "Giro d'Italia",
         'year': int(year),
         'stage_number': int(stage_number),
         'stage_results': [],
