@@ -1756,7 +1756,35 @@
             }, 0);
         }
 
+        function worldCupBracketFreshnessTimestamp(bracket) {
+            const normalized = normalizeWorldCupBracket(bracket) || {};
+            const meta = normalized.meta || {};
+            const candidates = [
+                meta.source_updated_at,
+                meta.as_of,
+                meta.fetched_at,
+                normalized.source_updated_at,
+                normalized.updated_at,
+                normalized.fetched_at
+            ].filter(Boolean);
+            for (const value of candidates) {
+                const parsed = new Date(value);
+                if (!Number.isNaN(parsed.getTime())) {
+                    return parsed.getTime();
+                }
+            }
+            return 0;
+        }
+
         function chooseWorldCupBracketSource(primary, fallback) {
+            const primaryFreshness = worldCupBracketFreshnessTimestamp(primary);
+            const fallbackFreshness = worldCupBracketFreshnessTimestamp(fallback);
+            if (primaryFreshness || fallbackFreshness) {
+                if (primaryFreshness !== fallbackFreshness) {
+                    return primaryFreshness > fallbackFreshness ? primary : fallback;
+                }
+            }
+
             const primaryScore = worldCupBracketContentScore(primary);
             const fallbackScore = worldCupBracketContentScore(fallback);
             return primaryScore >= fallbackScore ? primary : fallback;
