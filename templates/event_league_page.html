@@ -880,7 +880,8 @@
             const roundMatches = worldCupBracketMatchesFromRounds(normalized?.rounds || []).flatMap(round => round.matches || []);
             const sideFallbackLabel = String(normalized?.rounds?.[0]?.name || 'Round of 32').trim();
             const sideMatches = worldCupBracketMatchesFromSides(normalized?.sides || {}, sideFallbackLabel);
-            const roundGroups = worldCupBracketRoundGroups(worldCupBracketUniqueMatches([...roundMatches, ...sideMatches]));
+            const sourceMatches = roundMatches.length > 0 ? roundMatches : sideMatches;
+            const roundGroups = worldCupBracketRoundGroups(worldCupBracketUniqueMatches(sourceMatches));
             const groupMap = new Map(roundGroups.map(group => [group.label.toLowerCase(), group]));
             return worldCupBracketRoundBlueprint().map(def => {
                 const existing = groupMap.get(def.label.toLowerCase());
@@ -892,8 +893,9 @@
             const normalized = normalizeWorldCupBracket(bracket);
             const openingRound = (Array.isArray(roundGroups) ? roundGroups : []).find(round => Number(round?.order) === 10) || null;
             const openingLabel = String(openingRound?.label || 'Round of 32').trim();
-            const leftOpeningMatches = worldCupBracketMatchesFromSide(normalized?.sides?.left, openingLabel);
-            const rightOpeningMatches = worldCupBracketMatchesFromSide(normalized?.sides?.right, openingLabel);
+            const openingMatches = Array.isArray(openingRound?.matches) && openingRound.matches.length > 0
+                ? openingRound.matches
+                : worldCupBracketMatchesFromSide(normalized?.sides?.left, openingLabel).concat(worldCupBracketMatchesFromSide(normalized?.sides?.right, openingLabel));
 
             return (Array.isArray(roundGroups) ? roundGroups : []).reduce((split, round) => {
                 if (!round) return split;
@@ -902,7 +904,9 @@
                     return split;
                 }
 
-                if (round.order === 10 && (leftOpeningMatches.length > 0 || rightOpeningMatches.length > 0)) {
+                if (round.order === 10 && openingMatches.length > 0) {
+                    const leftOpeningMatches = openingMatches.slice(0, 8);
+                    const rightOpeningMatches = openingMatches.slice(8, 16);
                     const expectedSideCount = Math.max(Math.ceil((Number(round?.matches?.length) || 0) / 2), 1);
                     split.left.push({
                         label: round.label,
@@ -927,27 +931,8 @@
 
                 const sourceMatches = worldCupBracketUniqueMatches(Array.isArray(round.matches) ? round.matches : []);
                 const expectedSideCount = Math.max(Math.ceil((Number(round?.matches?.length) || 0) / 2), 1);
-                const previousLeft = split.left[split.left.length - 1] || null;
-                const previousRight = split.right[split.right.length - 1] || null;
                 let leftSource = sourceMatches.slice(0, expectedSideCount);
                 let rightSource = sourceMatches.slice(expectedSideCount);
-
-                if (previousLeft || previousRight) {
-                    const leftOrdered = previousLeft
-                        ? worldCupBracketOrderSideMatchesFromPrevious(previousLeft.matches, sourceMatches, expectedSideCount)
-                        : leftSource;
-                    const leftIds = new Set(leftOrdered.map(match => worldCupBracketMatchGameId(match)));
-                    const rightCandidates = sourceMatches.filter(match => !leftIds.has(worldCupBracketMatchGameId(match)));
-                    const rightOrdered = previousRight
-                        ? worldCupBracketOrderSideMatchesFromPrevious(previousRight.matches, rightCandidates.length > 0 ? rightCandidates : sourceMatches, expectedSideCount)
-                        : rightCandidates.slice(0, expectedSideCount);
-                    if (leftOrdered.length > 0) {
-                        leftSource = leftOrdered;
-                    }
-                    if (rightOrdered.length > 0) {
-                        rightSource = rightOrdered;
-                    }
-                }
 
                 split.left.push({
                     label: round.label,
@@ -2136,7 +2121,7 @@
                         : Promise.resolve({})
                 ]);
                 const knockoutSource = EVENT_MODE === 'world-cup'
-                    ? (worldCupBracketContentScore(bracketRes) > 0 ? bracketRes : seasonRes?.knockout_bracket)
+                    ? (bracketRes?.knockout_bracket || bracketRes || seasonRes?.knockout_bracket)
                     : null;
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
