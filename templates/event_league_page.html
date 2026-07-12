@@ -136,20 +136,40 @@
             return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
         }
 
+        const COUNTRY_FLAG_CODE_BY_ALPHA3 = {
+            AFG: 'af', ALB: 'al', ALG: 'dz', AND: 'ad', ARG: 'ar', ARM: 'am', AUS: 'au', AUT: 'at',
+            AZE: 'az', BEL: 'be', BEN: 'bj', BIH: 'ba', BLR: 'by', BOL: 'bo', BRA: 'br', BRB: 'bb',
+            BUL: 'bg', CAN: 'ca', CHE: 'ch', CHI: 'cl', CHL: 'cl', CHN: 'cn', COL: 'co', CPV: 'cv',
+            CRC: 'cr', CUB: 'cu', CZE: 'cz', DEN: 'dk', DEU: 'de', DOM: 'do', ECU: 'ec', EGY: 'eg',
+            ENG: 'gb', ESP: 'es', EST: 'ee', ETH: 'et', FIN: 'fi', FRA: 'fr', GBR: 'gb', GHA: 'gh',
+            GRE: 'gr', HAI: 'ht', HKG: 'hk', HUN: 'hu', IRL: 'ie', IRN: 'ir', IRQ: 'iq', ISL: 'is',
+            ISR: 'il', ITA: 'it', JAM: 'jm', JPN: 'jp', KAZ: 'kz', KEN: 'ke', KOR: 'kr', LAT: 'lv',
+            LUX: 'lu', MAR: 'ma', MDA: 'md', MEX: 'mx', MGL: 'mn', MNE: 'me', MOR: 'ma', NED: 'nl',
+            NOR: 'no', NZL: 'nz', OMA: 'om', PAN: 'pa', PAR: 'py', PER: 'pe', PHI: 'ph', POL: 'pl',
+            POR: 'pt', PUR: 'pr', QAT: 'qa', ROU: 'ro', RSA: 'za', RUS: 'ru', SCO: 'gb', SEN: 'sn',
+            SGP: 'sg', SLO: 'si', SRB: 'rs', SUI: 'ch', SWE: 'se', THA: 'th', TUN: 'tn', TUR: 'tr',
+            UAE: 'ae', UGA: 'ug', URU: 'uy', USA: 'us', UZB: 'uz', VEN: 've', VIE: 'vn', WAL: 'gb',
+            ZAF: 'za', ZIM: 'zw'
+        };
+
         function normalizeCountryCode(value) {
             const code = String(value || '').trim().toUpperCase();
             return /^[A-Z0-9-]{2,4}$/.test(code) ? code : '';
         }
 
+        function flagCountryCode(code) {
+            const normalized = normalizeCountryCode(code);
+            if (!normalized) return '';
+            if (normalized.length === 2) return normalized.toLowerCase();
+            return COUNTRY_FLAG_CODE_BY_ALPHA3[normalized] || '';
+        }
+
         function countryFlagUrl(code, explicitUrl = '') {
             const url = String(explicitUrl || '').trim();
             if (url) return url;
-            const normalized = normalizeCountryCode(code);
-            if (!normalized) return '';
-            if (normalized.length === 2) {
-                return `https://flagcdn.com/w40/${normalized.toLowerCase()}.png`;
-            }
-            return '';
+            const flagCode = flagCountryCode(code);
+            if (!flagCode) return '';
+            return `https://flagcdn.com/w40/${flagCode}.png`;
         }
 
         function renderCountryBadge(options = {}) {

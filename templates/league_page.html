@@ -148,7 +148,7 @@
         </div>
         <script>
             (function() {
-                const today = new Date().toISOString().slice(0, 10);
+                const today = todayStringForTimeZone('pt');
                 if (today >= '2026-05-25' && today <= '2026-07-15') {
                     document.getElementById('mls-wc-break-banner').style.display = '';
                 }
@@ -700,6 +700,29 @@
                 return new Date(value + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             }
 
+            function timezoneValueToIana(value) {
+                const normalized = String(value || '').trim();
+                if (normalized === 'pt') return 'America/Los_Angeles';
+                if (normalized === 'mt') return 'America/Denver';
+                if (normalized === 'ct') return 'America/Chicago';
+                if (normalized === 'et') return 'America/New_York';
+                return normalized || 'America/Los_Angeles';
+            }
+
+            function todayStringForTimeZone(timeZone) {
+                const tz = timezoneValueToIana(timeZone);
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: tz,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                }).formatToParts(new Date());
+                const values = Object.fromEntries(
+                    parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+                );
+                return `${values.year}-${values.month}-${values.day}`;
+            }
+
             function gameKey(game) {
                 return game.game_id || [game.home_team, game.visitor_team, game.game_time].filter(Boolean).join('|');
             }
@@ -948,7 +971,7 @@
                 const results = document.getElementById('league-schedule-results');
                 const datePicker = document.getElementById('league-date-picker');
                 const timezone = document.getElementById('league-timezone-select').value;
-                const today = new Date().toISOString().slice(0, 10);
+                const today = todayStringForTimeZone(timezone);
                 const picked = datePicker.value || today;
                 const apiDate = picked === today ? 'today' : picked;
 
