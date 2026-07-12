@@ -1879,11 +1879,12 @@
             const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
             const finalRound = centerRounds.find(round => round.order >= 60) || null;
             const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
-            const leftSharedHeight = worldCupBracketSharedHeight(splitRounds.left);
-            const rightSharedHeight = worldCupBracketSharedHeight(splitRounds.right);
+            const sideSharedHeight = Math.max(
+                worldCupBracketSharedHeight(splitRounds.left),
+                worldCupBracketSharedHeight(splitRounds.right)
+            );
             const centerSharedHeight = Math.max(
-                leftSharedHeight,
-                rightSharedHeight,
+                sideSharedHeight,
                 worldCupBracketSharedHeight(centerRounds)
             );
             const centerCards = [
@@ -1891,8 +1892,8 @@
                     : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder wc-bracket-column--hero'),
                 thirdPlaceRound ? worldCupBracketColumnView(thirdPlaceRound.label, thirdPlaceRound.matches, gameMap, 'wc-bracket-column--final') : ''
             ].filter(Boolean).join('');
-            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap, leftSharedHeight);
-            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap, rightSharedHeight);
+            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap, sideSharedHeight);
+            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap, sideSharedHeight);
 
             return `
                 <div class="wc-knockout-panel mb-3">
@@ -2135,7 +2136,7 @@
                         : Promise.resolve({})
                 ]);
                 const knockoutSource = EVENT_MODE === 'world-cup'
-                    ? chooseWorldCupBracketSource(seasonRes?.knockout_bracket, bracketRes)
+                    ? (worldCupBracketContentScore(bracketRes) > 0 ? bracketRes : seasonRes?.knockout_bracket)
                     : null;
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
@@ -2152,7 +2153,7 @@
                 const selectedDayPayload = dayPayloads.find(payload => payload.dateText === picked) || dayPayloads[0] || {scheduleRes: {games: []}, scoresRes: {scores: []}};
                 const games = mergeScheduleAndScores(selectedDayPayload.scheduleRes.games || [], selectedDayPayload.scoresRes.scores || []);
 
-                if (games.length === 0 && EVENT_MODE !== 'cycling') {
+                if (games.length === 0 && EVENT_MODE !== 'cycling' && EVENT_MODE !== 'world-cup') {
                     const phase = seasonRes.current_phase || '';
                     const noun = EVENT_MODE === 'cycling' ? 'stages' : 'matches';
                     const prefix = phase && !['Off Season', 'Off Tour', 'Regular Season'].includes(phase) ? `${phase} — ` : '';
@@ -2172,6 +2173,11 @@
                 const groupGames = EVENT_MODE === 'world-cup'
                     ? games.filter(game => !knockoutIds.has(String(game.game_id || '')) && !isWorldCupKnockout(game))
                     : games;
+                const noMatchNotice = EVENT_MODE === 'world-cup' && games.length === 0 ? `<div class="text-center py-4 mb-3">
+                        <div class="event-soccer-ball" aria-hidden="true"><i class="fas fa-futbol"></i></div>
+                        <h2 class="fs-4 mb-1">No matches on ${escapeHtml(prettyDate(picked))}</h2>
+                        <div class="event-league-meta">The bracket is still shown below.</div>
+                    </div>` : '';
                 const renderedEvents = EVENT_MODE === 'cycling'
                     ? dayPayloads.map(payload => renderCyclingDaySection(
                         payload.dateText,
@@ -2179,7 +2185,7 @@
                     )).join('')
                     : EVENT_MODE === 'tennis'
                     ? renderTennisGroups(games)
-                    : `${knockoutBlock}${groupGames.map(renderGame).join('')}`;
+                    : `${noMatchNotice}${knockoutBlock}${groupGames.map(renderGame).join('')}`;
                 results.innerHTML = EVENT_MODE === 'cycling'
                     ? renderedEvents
                     : `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
