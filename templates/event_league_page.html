@@ -882,21 +882,10 @@
             const sideMatches = worldCupBracketMatchesFromSides(normalized?.sides || {}, sideFallbackLabel);
             const roundGroups = worldCupBracketRoundGroups(worldCupBracketUniqueMatches([...roundMatches, ...sideMatches]));
             const groupMap = new Map(roundGroups.map(group => [group.label.toLowerCase(), group]));
-            const filledRounds = worldCupBracketRoundBlueprint().map(def => {
+            return worldCupBracketRoundBlueprint().map(def => {
                 const existing = groupMap.get(def.label.toLowerCase());
                 return worldCupBracketFillRoundGroup(existing || def, def.matches);
             });
-            const enrichedRounds = [];
-            filledRounds.forEach((round, index) => {
-                const previous = enrichedRounds[index - 1];
-                if (index > 0 && previous && previous.matches.length > 0 && !worldCupBracketRoundHasRealTeams(round)) {
-                    const derived = worldCupBracketDeriveRoundFromPrevious(previous, round.label, round.matches.length || 0);
-                    enrichedRounds.push(chooseWorldCupBracketSource(round, derived));
-                    return;
-                }
-                enrichedRounds.push(round);
-            });
-            return enrichedRounds;
         }
 
         function worldCupBracketSplitRoundGroups(roundGroups, bracket) {
@@ -937,24 +926,29 @@
                 }
 
                 const sourceMatches = Array.isArray(round.matches) ? round.matches : [];
-                const previousLeftMatches = split.left.length > 0 ? split.left[split.left.length - 1].matches : [];
-                const previousRightMatches = split.right.length > 0 ? split.right[split.right.length - 1].matches : [];
-                const leftExpected = Math.max(Math.ceil(previousLeftMatches.length / 2), Math.ceil(sourceMatches.length / 2), 1);
-                const rightExpected = Math.max(Math.ceil(previousRightMatches.length / 2), Math.max(sourceMatches.length - leftExpected, 0), 1);
-                const leftDerived = worldCupBracketDeriveRoundFromPrevious({matches: previousLeftMatches}, round.label, leftExpected).matches;
-                const rightDerived = worldCupBracketDeriveRoundFromPrevious({matches: previousRightMatches}, round.label, rightExpected).matches;
-                const assignedLeft = worldCupBracketAssignMatchesToSlots(leftDerived, sourceMatches);
-                const assignedRight = worldCupBracketAssignMatchesToSlots(rightDerived, assignedLeft.unassigned);
+                const splitIndex = Math.max(Math.ceil(sourceMatches.length / 2), 1);
+                const leftSource = sourceMatches.slice(0, splitIndex);
+                const rightSource = sourceMatches.slice(splitIndex);
+                const leftExpected = Math.max(leftSource.length, 1);
+                const rightExpected = Math.max(rightSource.length, 1);
 
                 split.left.push({
                     label: round.label,
                     order: round.order,
-                    matches: assignedLeft.matches.length ? assignedLeft.matches : worldCupBracketPlaceholderMatches(round.label, leftExpected)
+                    matches: worldCupBracketFillRoundGroup({
+                        label: round.label,
+                        order: round.order,
+                        matches: leftSource
+                    }, leftExpected).matches
                 });
                 split.right.push({
                     label: round.label,
                     order: round.order,
-                    matches: assignedRight.matches.length ? assignedRight.matches : worldCupBracketPlaceholderMatches(round.label, rightExpected)
+                    matches: worldCupBracketFillRoundGroup({
+                        label: round.label,
+                        order: round.order,
+                        matches: rightSource
+                    }, rightExpected).matches
                 });
                 return split;
             }, {left: [], right: [], center: []});
@@ -1064,13 +1058,7 @@
             return Array.from(groups.values()).sort((a, b) =>
                 (a.order - b.order) ||
                 a.label.localeCompare(b.label)
-            ).map(group => ({
-                ...group,
-                matches: group.matches.sort((a, b) =>
-                    (worldCupBracketMatchSortValue(a) - worldCupBracketMatchSortValue(b)) ||
-                    worldCupBracketMatchGameId(a).localeCompare(worldCupBracketMatchGameId(b))
-                )
-            }));
+            );
         }
 
         function worldCupBracketFinalMatch(bracket, gameMap) {
