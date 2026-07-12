@@ -1391,6 +1391,10 @@ def tour_de_france_page(year=None):
         race_api_slug='tour-de-france',
         race_logo_url='https://www.splitsp.lat/logos/cycling/tdf/tdf_logo.png',
         race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
+        race_floating_logo_urls=[
+            'https://www.splitsp.lat/logos/cycling/tdf/tdf-logo-box.png',
+            'https://www.splitsp.lat/logos/cycling/tdf/tdf-logo.png',
+        ],
         back_url=url_for('league_page', league_name='CYCLING'),
         API_BASE_URL=API_BASE_URL,
     )
@@ -1408,6 +1412,9 @@ def vuelta_page(year=None):
         race_api_slug='vuelta',
         race_logo_url='https://www.splitsp.lat/logos/cycling/vae/vae-logo.png',
         race_mark_url=url_for('static', filename='images/events/cycling/tour-de-france-mark.svg'),
+        race_floating_logo_urls=[
+            'https://www.splitsp.lat/logos/cycling/vae/vae-logo.png',
+        ],
         back_url=url_for('league_page', league_name='CYCLING'),
         API_BASE_URL=API_BASE_URL,
     )

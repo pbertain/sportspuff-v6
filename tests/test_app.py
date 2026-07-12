@@ -104,6 +104,8 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"Tour de France", response.data)
         self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
         self.assertIn(b"const TOUR_API_SLUG = \"tour-de-france\";", response.data)
+        self.assertIn(b"tdf-logo-box.png", response.data)
+        self.assertIn(b"tdf-logo.png", response.data)
         self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
         db.assert_not_called()
 
@@ -115,6 +117,7 @@ class TestPageSmoke(unittest.TestCase):
         self.assertIn(b"La Vuelta a Espa\xc3\xb1a", response.data)
         self.assertIn(b"id=\"tdf-summary-panel\"", response.data)
         self.assertIn(b"const TOUR_API_SLUG = \"vuelta\";", response.data)
+        self.assertIn(b"vae-logo.png", response.data)
         self.assertIn(b"/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/", response.data)
         db.assert_not_called()
 
@@ -1123,6 +1126,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/vae/vae-logo.png", event_template)
         self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png", event_template)
         self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo-pink.png", app_source)
+        self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf-logo-box.png", app_source)
         self.assertIn("container-fluid event-league-shell", event_template)
         self.assertIn("Stages, classifications, teams, rider info, times and more.", event_template)
         self.assertEqual(event_template.count("Detailed Race View"), 3)
