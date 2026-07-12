@@ -456,6 +456,16 @@
             return COUNTRY_FLAG_CODE_BY_ALPHA3[normalized] || '';
         }
 
+        function flagEmojiForCountryCode(code) {
+            const flagCode = flagCountryCode(code);
+            if (!flagCode || flagCode.length !== 2) return '';
+            return flagCode
+                .toUpperCase()
+                .split('')
+                .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
+                .join('');
+        }
+
         function countryFlagUrl(code, explicitUrl = '') {
             const url = String(explicitUrl || '').trim();
             if (url) return url;
@@ -467,10 +477,12 @@
         function renderCountryBadge(options = {}) {
             const code = normalizeCountryCode(firstValue(options.countryCode, options.code, options.rider_country_code, options.winner_country_code, ''));
             const flagUrl = countryFlagUrl(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
+            const flagEmoji = flagEmojiForCountryCode(code);
             if (!code && !flagUrl) return '';
-            const flagImg = flagUrl ? `<img class="tdf-country-flag" src="${escapeHtml(flagUrl)}" alt="" loading="lazy" onerror="this.remove();">` : '';
+            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji"${flagUrl ? ' style="display:none;"' : ''}>${escapeHtml(flagEmoji)}</span>` : '';
+            const flagImg = flagUrl ? `<img class="tdf-country-flag" src="${escapeHtml(flagUrl)}" alt="" loading="lazy" onerror="this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block';">` : '';
             const codeLabel = code ? `<span class="tdf-country-code">${escapeHtml(code)}</span>` : '';
-            return `<span class="tdf-country-badge">${flagImg}${codeLabel}</span>`;
+            return `<span class="tdf-country-badge">${flagEmojiMarkup}${flagImg}${codeLabel}</span>`;
         }
 
         function riderIdentityMarkup(name, options = {}) {

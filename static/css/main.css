@@ -1864,6 +1864,15 @@ body[data-race-slug="giro-ditalia"] .tdf-stage-winner {
   flex: 0 0 auto;
 }
 
+.tdf-country-flag-emoji {
+  display: inline-block;
+  width: 0.95rem;
+  text-align: center;
+  font-size: 0.86rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
 .tdf-country-code {
   font-variant-numeric: tabular-nums;
 }
