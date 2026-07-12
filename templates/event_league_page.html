@@ -276,6 +276,21 @@
             return timezoneValueToIana(select ? select.value : 'pt');
         }
 
+        function isoDateForTimeZone(timeZone) {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = Object.fromEntries(
+                formatter.formatToParts(new Date())
+                    .filter(part => part.type !== 'literal')
+                    .map(part => [part.type, part.value])
+            );
+            return `${parts.year}-${parts.month}-${parts.day}`;
+        }
+
         function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris') {
             const dateText = String(dateValue || '').trim();
             const timeText = String(timeValue || '').trim();
@@ -595,11 +610,18 @@
             return `<img class="wc-bracket-team-logo" src="https://www.splitsp.lat/logos/wc/teamballs/${encodeURIComponent(lower)}_ball_logo.png" alt="" loading="lazy" onerror="this.style.display='none';">`;
         }
 
+        function worldCupBracketTeamUrl(match, side) {
+            const code = String(worldCupBracketTeamCode(match, side) || '').trim();
+            if (!code || /^w\d+|^l\d+|^tbd$/i.test(code)) return '';
+            return `/team/wc/${encodeURIComponent(code.toLowerCase())}`;
+        }
+
         function worldCupBracketTeamDisplay(match, side) {
             const isHome = side === 'home';
             const label = worldCupBracketTeamLabel(match, side);
             const code = worldCupBracketTeamCode(match, side);
             const record = worldCupBracketTeamRecordText(match, side);
+            const teamUrl = worldCupBracketTeamUrl(match, side);
             const actualText = String(firstValue(
                 isHome ? match?.home_team : firstValue(match?.away_team, match?.visitor_team, ''),
                 isHome ? match?.homeTeam : firstValue(match?.awayTeam, match?.visitorTeam, ''),
@@ -615,6 +637,7 @@
                 nameText: nameText || 'TBD',
                 logo: isPlaceholder ? '' : worldCupBracketTeamLogo(match, side),
                 record,
+                url: isPlaceholder ? '' : teamUrl,
                 placeholder: isPlaceholder && !/^w\d+|^l\d+/i.test(slot)
             };
         }
@@ -1223,7 +1246,7 @@
                     <div class="wc-bracket-team-main">
                         ${awayDisplay.logo}
                         <div class="wc-bracket-team-copy">
-                            <div class="wc-bracket-team-name">${escapeHtml(awayDisplay.nameText)}</div>
+                            <div class="wc-bracket-team-name">${awayDisplay.url ? `<a class="wc-team-link" href="${escapeHtml(awayDisplay.url)}">${escapeHtml(awayDisplay.nameText)}</a>` : escapeHtml(awayDisplay.nameText)}</div>
                             ${awayDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(awayDisplay.record)}</div>` : ''}
                         </div>
                     </div>
@@ -1233,7 +1256,7 @@
                     <div class="wc-bracket-team-main">
                         ${homeDisplay.logo}
                         <div class="wc-bracket-team-copy">
-                            <div class="wc-bracket-team-name">${escapeHtml(homeDisplay.nameText)}</div>
+                            <div class="wc-bracket-team-name">${homeDisplay.url ? `<a class="wc-team-link" href="${escapeHtml(homeDisplay.url)}">${escapeHtml(homeDisplay.nameText)}</a>` : escapeHtml(homeDisplay.nameText)}</div>
                             ${homeDisplay.record ? `<div class="wc-bracket-team-record">${escapeHtml(homeDisplay.record)}</div>` : ''}
                         </div>
                     </div>
@@ -2212,7 +2235,7 @@
             const results = document.getElementById('event-league-results');
             const datePicker = document.getElementById('event-date-picker');
             const tz = document.getElementById('event-timezone-select').value;
-            const today = new Date().toISOString().slice(0, 10);
+            const today = isoDateForTimeZone(cyclingDisplayTimeZone());
             const picked = datePicker.value || today;
             const league = EVENT_LEAGUE.toLowerCase();
 
