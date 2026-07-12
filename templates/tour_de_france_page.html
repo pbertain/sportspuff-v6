@@ -688,7 +688,7 @@
                         <div class="tdf-kicker">${escapeHtml(selectedStageKicker(currentStage, effectiveStage))}</div>
                         <h2 class="event-league-title mb-1">${escapeHtml(stageNumber ? `Stage ${stageNumber}: ${title}` : title)}</h2>
                         <div class="event-league-meta">${escapeHtml(meta)}</div>
-                        ${winnerName ? `<div class="event-league-meta mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
+                        ${winnerName ? `<div class="event-league-meta tdf-stage-winner mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
                         ${schedule.recommended_poll_minutes ? `<div class="event-league-meta mt-1">Recommended refresh: every ${escapeHtml(schedule.recommended_poll_minutes)} minutes</div>` : ''}
                     </div>
                     <div class="d-flex gap-2 flex-wrap">${links}</div>
@@ -722,7 +722,7 @@
                             <div class="tdf-kicker">${escapeHtml(stageNumber ? `Stage ${stageNumber}` : 'Stage')}</div>
                             <h3 class="event-league-title fs-5 mb-1">${escapeHtml(title)}</h3>
                             <div class="event-league-meta">${escapeHtml(meta)}</div>
-                            ${winnerName ? `<div class="event-league-meta mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
+                            ${winnerName ? `<div class="event-league-meta tdf-stage-winner mt-2">Winner: ${renderRiderName(winnerName, { url: stage.winner_url })}</div>` : ''}
                         </div>
                         ${hasResults ? '<span class="event-league-pill">Results</span>' : ''}
                     </div>

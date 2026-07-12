@@ -927,7 +927,7 @@ def _should_skip_live_api_fetch(league, api_date='today'):
 def season_info(league):
     """Return season date info for any league"""
     league_upper = league.upper()
-    if league_upper in ('IPL', 'MLC', 'WNBA'):
+    if league_upper in ('IPL', 'MLC', 'WNBA', 'WC'):
         try:
             cache_key = f'season_info:{league_upper}'
             cached = get_cached_response(cache_key, 'schedule')
@@ -2898,6 +2898,7 @@ def proxy_cycling_giro(year=None):
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
         f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
+        f'/api/v1/cycling/giro-d-italia/{int(year)}' if year else '/api/v1/cycling/giro-d-italia',
         f'/api/v1/cycling/gdi/{int(year)}' if year else '/api/v1/cycling/gdi',
     ]
     try:
@@ -2944,6 +2945,7 @@ def proxy_cycling_giro_stage(year, stage_number):
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
+        f'/api/v1/cycling/giro-d-italia/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/gdi/{int(year)}/stages/{int(stage_number)}',
     ]
     try:

@@ -862,6 +862,41 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_cache.assert_called_once_with("world_cup_bracket", "schedule")
         self.assertEqual(mock_set_cache.call_args.args[0], "world_cup_bracket")
 
+    @patch("app.requests.get")
+    def test_proxy_wc_season_info_uses_backend_payload(self, mock_get):
+        response = MagicMock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "year": 2026,
+            "current_phase": "Tournament",
+            "season_types": [
+                {
+                    "name": "FIFA World Cup",
+                    "start_date": "2026-06-11",
+                    "end_date": "2026-07-14",
+                }
+            ],
+            "knockout_bracket": {
+                "format": "round_of_32",
+                "rounds": [],
+            },
+        }
+        mock_get.return_value = response
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            client_response = app.test_client().get("/api/season-info/wc")
+
+        self.assertEqual(client_response.status_code, 200)
+        data = client_response.get_json()
+        self.assertEqual(data["year"], 2026)
+        self.assertEqual(data["current_phase"], "Tournament")
+        self.assertEqual(data["season_types"][0]["name"], "FIFA World Cup")
+        self.assertIn("display", data["season_types"][0])
+        self.assertEqual(data["knockout_bracket"]["format"], "round_of_32")
+        mock_get.assert_called_once_with(f"{os.environ['SPORTSPUFF_API_BASE_URL']}/api/v1/season-info/wc", timeout=10)
+        mock_cache.assert_called_once_with("season_info:WC", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "season_info:WC")
+
     @patch("app._fetch_api_json")
     def test_proxy_tour_de_france_exposes_bundle(self, mock_fetch):
         mock_fetch.return_value = {
@@ -908,6 +943,37 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_fetch.assert_called_once_with("/api/v1/cycling/la-vuelta/2026", timeout=20)
         mock_cache.assert_called_once_with("cycling_vuelta:2026", "schedule")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_vuelta:2026")
+
+    @patch("app._fetch_api_json_from_candidates")
+    def test_proxy_giro_uses_giro_d_italia_backend_route(self, mock_fetch):
+        mock_fetch.return_value = {
+            "race": "Giro d'Italia",
+            "year": 2026,
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
+        }
+
+        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/giro/2026")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["race"], "Giro d'Italia")
+        self.assertEqual(data["year"], 2026)
+        self.assertEqual(
+            mock_fetch.call_args.args[0],
+            [
+                "/api/v1/cycling/giro/2026",
+                "/api/v1/cycling/giro-ditalia/2026",
+                "/api/v1/cycling/giro-d-italia/2026",
+                "/api/v1/cycling/gdi/2026",
+            ],
+        )
+        mock_cache.assert_called_once_with("cycling_giro:2026", "schedule")
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
 
     @patch("app._fetch_api_json")
     def test_proxy_tour_de_france_exposes_stage_results(self, mock_fetch):
@@ -959,6 +1025,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function zonedStageDateTime(dateValue, timeValue, sourceTimeZone = 'Europe/Paris')",
             "function tourDisplayTimeZone()",
             "const TOUR_RACE_TITLE =",
+            "tdf-stage-winner",
             "Loading {{ race_title or 'Tour de France' }}...",
         ]:
             self.assertIn(snippet, template)
@@ -974,8 +1041,13 @@ class TestTournamentThemeAssets(unittest.TestCase):
             ".tdf-board-meta",
             ".tdf-rider-link",
             ".tdf-stage-card.is-selected",
+            ".tdf-stage-winner",
         ]:
             self.assertIn(snippet, css)
+
+        self.assertIn('body[data-race-slug="tour-de-france"] .tdf-stage-winner', css)
+        self.assertIn('body[data-race-slug="vuelta"] .tdf-stage-winner', css)
+        self.assertIn('body[data-race-slug="giro"] .tdf-stage-winner', css)
 
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()

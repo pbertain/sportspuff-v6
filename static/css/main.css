@@ -1808,6 +1808,26 @@ main, .main-content {
   box-shadow: 0 0 0 1px rgba(245, 232, 20, 0.3);
 }
 
+.tdf-stage-winner {
+  font-weight: 800;
+}
+
+body[data-race-slug="tour-de-france"] .tdf-stage-winner {
+  color: #2477ff;
+}
+
+body[data-race-slug="vuelta"] .tdf-stage-winner {
+  color: #ff3b30;
+}
+
+body[data-race-slug="giro"] .tdf-stage-winner {
+  color: #ff4fb3;
+}
+
+body[data-race-slug="giro-ditalia"] .tdf-stage-winner {
+  color: #ff4fb3;
+}
+
 .tdf-board-name {
   font-weight: 700;
 }
