@@ -1097,6 +1097,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "function worldCupBracketScoreValue",
             "function worldCupBracketTeamLabel",
             "function worldCupTeamMatchesLabel",
+            "chooseWorldCupBracketSource(bracketRes?.knockout_bracket || bracketRes || null, seasonRes?.knockout_bracket || null)",
             "wc-bracket-team-score",
             "wc-bracket-team-logo",
             "match?.visitor_team",

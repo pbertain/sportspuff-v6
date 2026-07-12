@@ -1246,12 +1246,12 @@
             const finalGroup = [...roundGroups].reverse().find(group => group.order >= 60) || roundGroups.find(group => group.order >= 60);
             const candidate = finalGroup?.matches?.[0] || null;
             if (!candidate) return null;
-            return {...candidate, ...(gameMap.get(worldCupBracketMatchGameId(candidate)) || {})};
+            return {...(gameMap.get(worldCupBracketMatchGameId(candidate)) || {}), ...candidate};
         }
 
         function worldCupBracketMatchView(match, gameMap, roundName, matchIndex, matchClass = '') {
             const game = gameMap.get(worldCupBracketMatchGameId(match)) || {};
-            const merged = {...match, ...game};
+            const merged = {...game, ...match};
             const winnerSide = worldCupBracketWinnerSide(merged);
             const homeDisplay = worldCupBracketTeamDisplay(merged, 'home');
             const awayDisplay = worldCupBracketTeamDisplay(merged, 'away');
@@ -2297,7 +2297,7 @@
                         : Promise.resolve({})
                 ]);
                 const knockoutSource = EVENT_MODE === 'world-cup'
-                    ? (bracketRes?.knockout_bracket || bracketRes || seasonRes?.knockout_bracket)
+                    ? chooseWorldCupBracketSource(bracketRes?.knockout_bracket || bracketRes || null, seasonRes?.knockout_bracket || null)
                     : null;
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
