@@ -1017,7 +1017,7 @@ main, .main-content {
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) minmax(284px, 320px) minmax(0, 1fr);
-  align-items: center;
+  align-items: stretch;
 }
 
 .wc-bracket-side {
@@ -1041,7 +1041,7 @@ main, .main-content {
 .wc-bracket-center {
   display: flex;
   align-self: stretch;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   min-height: 100%;
   min-width: 0;
@@ -1050,6 +1050,7 @@ main, .main-content {
 .wc-bracket-center-stack {
   display: grid;
   gap: 12px;
+  align-content: center;
   width: 100%;
 }
 

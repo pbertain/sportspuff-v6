@@ -925,12 +925,29 @@
                     return split;
                 }
 
-                const sourceMatches = Array.isArray(round.matches) ? round.matches : [];
-                const splitIndex = Math.max(Math.ceil(sourceMatches.length / 2), 1);
-                const leftSource = sourceMatches.slice(0, splitIndex);
-                const rightSource = sourceMatches.slice(splitIndex);
-                const leftExpected = Math.max(leftSource.length, 1);
-                const rightExpected = Math.max(rightSource.length, 1);
+                const sourceMatches = worldCupBracketUniqueMatches(Array.isArray(round.matches) ? round.matches : []);
+                const expectedSideCount = Math.max(Math.ceil((Number(round?.matches?.length) || 0) / 2), 1);
+                const previousLeft = split.left[split.left.length - 1] || null;
+                const previousRight = split.right[split.right.length - 1] || null;
+                let leftSource = sourceMatches.slice(0, expectedSideCount);
+                let rightSource = sourceMatches.slice(expectedSideCount);
+
+                if (previousLeft || previousRight) {
+                    const leftOrdered = previousLeft
+                        ? worldCupBracketOrderSideMatchesFromPrevious(previousLeft.matches, sourceMatches, expectedSideCount)
+                        : leftSource;
+                    const leftIds = new Set(leftOrdered.map(match => worldCupBracketMatchGameId(match)));
+                    const rightCandidates = sourceMatches.filter(match => !leftIds.has(worldCupBracketMatchGameId(match)));
+                    const rightOrdered = previousRight
+                        ? worldCupBracketOrderSideMatchesFromPrevious(previousRight.matches, rightCandidates.length > 0 ? rightCandidates : sourceMatches, expectedSideCount)
+                        : rightCandidates.slice(0, expectedSideCount);
+                    if (leftOrdered.length > 0) {
+                        leftSource = leftOrdered;
+                    }
+                    if (rightOrdered.length > 0) {
+                        rightSource = rightOrdered;
+                    }
+                }
 
                 split.left.push({
                     label: round.label,
@@ -939,7 +956,7 @@
                         label: round.label,
                         order: round.order,
                         matches: leftSource
-                    }, leftExpected).matches
+                    }, expectedSideCount).matches
                 });
                 split.right.push({
                     label: round.label,
@@ -948,7 +965,7 @@
                         label: round.label,
                         order: round.order,
                         matches: rightSource
-                    }, rightExpected).matches
+                    }, expectedSideCount).matches
                 });
                 return split;
             }, {left: [], right: [], center: []});
@@ -1862,13 +1879,20 @@
             const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
             const finalRound = centerRounds.find(round => round.order >= 60) || null;
             const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
+            const leftSharedHeight = worldCupBracketSharedHeight(splitRounds.left);
+            const rightSharedHeight = worldCupBracketSharedHeight(splitRounds.right);
+            const centerSharedHeight = Math.max(
+                leftSharedHeight,
+                rightSharedHeight,
+                worldCupBracketSharedHeight(centerRounds)
+            );
             const centerCards = [
                 finalRound ? worldCupBracketColumnView(finalRound.label, finalRound.matches, gameMap, 'wc-bracket-column--final wc-bracket-column--hero')
                     : worldCupBracketColumnView('Final', worldCupBracketPlaceholderMatches('Final', 1), gameMap, 'wc-bracket-column--final wc-bracket-column--placeholder wc-bracket-column--hero'),
                 thirdPlaceRound ? worldCupBracketColumnView(thirdPlaceRound.label, thirdPlaceRound.matches, gameMap, 'wc-bracket-column--final') : ''
             ].filter(Boolean).join('');
-            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap);
-            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap);
+            const leftColumns = worldCupBracketRenderSideColumns(splitRounds.left, 'left', gameMap, leftSharedHeight);
+            const rightColumns = worldCupBracketRenderSideColumns(splitRounds.right, 'right', gameMap, rightSharedHeight);
 
             return `
                 <div class="wc-knockout-panel mb-3">
@@ -1884,7 +1908,7 @@
                         <div class="wc-bracket-layout">
                             <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
                             <div class="wc-bracket-center">
-                                <div class="wc-bracket-center-stack">
+                                <div class="wc-bracket-center-stack" style="min-height: ${centerSharedHeight}px;">
                                 ${centerCards}
                                 </div>
                             </div>
