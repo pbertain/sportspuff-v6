@@ -568,6 +568,27 @@
             return String(match?.game_id || match?.match_id || match?.match_number || '').trim();
         }
 
+        function worldCupBracketMatchSortValue(match) {
+            const candidates = [
+                match?.match_number,
+                match?.round_match,
+                match?.game_id,
+                match?.match_id
+            ];
+            for (const candidate of candidates) {
+                const text = String(candidate ?? '').trim();
+                if (!text) continue;
+                const numeric = Number(text);
+                if (Number.isFinite(numeric)) return numeric;
+                const digits = text.match(/\d+/);
+                if (digits) {
+                    const parsed = Number(digits[0]);
+                    if (Number.isFinite(parsed)) return parsed;
+                }
+            }
+            return Number.MAX_SAFE_INTEGER;
+        }
+
         function worldCupBracketRoundLayoutMetrics(label, matchCount) {
             const order = Math.max(Number(worldCupBracketRoundOrderFromLabel(label)) || 0, 0);
             const level = Math.max(Math.floor(order / 10) - 1, 0);
@@ -1046,7 +1067,7 @@
             ).map(group => ({
                 ...group,
                 matches: group.matches.sort((a, b) =>
-                    (Number(a.match_number ?? a.round_match ?? 999) - Number(b.match_number ?? b.round_match ?? 999)) ||
+                    (worldCupBracketMatchSortValue(a) - worldCupBracketMatchSortValue(b)) ||
                     worldCupBracketMatchGameId(a).localeCompare(worldCupBracketMatchGameId(b))
                 )
             }));
@@ -1059,12 +1080,12 @@
             const finalGroup = [...roundGroups].reverse().find(group => group.order >= 60) || roundGroups.find(group => group.order >= 60);
             const candidate = finalGroup?.matches?.[0] || null;
             if (!candidate) return null;
-            return {...(gameMap.get(worldCupBracketMatchGameId(candidate)) || {}), ...candidate};
+            return {...candidate, ...(gameMap.get(worldCupBracketMatchGameId(candidate)) || {})};
         }
 
         function worldCupBracketMatchView(match, gameMap, roundName, matchIndex, matchClass = '') {
             const game = gameMap.get(worldCupBracketMatchGameId(match)) || {};
-            const merged = {...game, ...match};
+            const merged = {...match, ...game};
             const winnerSide = worldCupBracketWinnerSide(merged);
             const homeDisplay = worldCupBracketTeamDisplay(merged, 'home');
             const awayDisplay = worldCupBracketTeamDisplay(merged, 'away');

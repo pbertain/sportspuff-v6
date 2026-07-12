@@ -1092,6 +1092,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "wc-team-badge",
             "function worldCupBracketContentScore",
             "function worldCupBracketFreshnessTimestamp",
+            "function worldCupBracketMatchSortValue",
             "function chooseWorldCupBracketSource",
             "function worldCupBracketScoreValue",
             "function worldCupBracketTeamLabel",
