@@ -1814,23 +1814,58 @@ main, .main-content {
 }
 
 body[data-race-slug="tour-de-france"] .tdf-stage-winner {
-  color: #2477ff;
+  color: var(--tdf-stage-winner-color, #8acbff);
 }
 
 body[data-race-slug="vuelta"] .tdf-stage-winner {
-  color: #ff3b30;
+  color: var(--tdf-stage-winner-color, #ffe066);
 }
 
 body[data-race-slug="giro"] .tdf-stage-winner {
-  color: #ff4fb3;
+  color: var(--tdf-stage-winner-color, #ff9adc);
 }
 
 body[data-race-slug="giro-ditalia"] .tdf-stage-winner {
-  color: #ff4fb3;
+  color: var(--tdf-stage-winner-color, #ff9adc);
 }
 
 .tdf-board-name {
   font-weight: 700;
+}
+
+.tdf-rider-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tdf-country-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.38rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tdf-country-flag {
+  width: 0.95rem;
+  height: 0.7rem;
+  object-fit: cover;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  flex: 0 0 auto;
+}
+
+.tdf-country-code {
+  font-variant-numeric: tabular-nums;
 }
 
 .tdf-board-meta {

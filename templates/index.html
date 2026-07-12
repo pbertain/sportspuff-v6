@@ -1346,6 +1346,127 @@
                         return values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
                     }
 
+                    function normalizeCountryCode(value) {
+                        const code = String(value || '').trim().toUpperCase();
+                        return /^[A-Z0-9-]{2,4}$/.test(code) ? code : '';
+                    }
+
+                    function countryFlagUrl(code, explicitUrl = '') {
+                        const url = String(explicitUrl || '').trim();
+                        if (url) return url;
+                        const normalized = normalizeCountryCode(code);
+                        if (!normalized) return '';
+                        if (normalized.length === 2) {
+                            return `https://flagcdn.com/w40/${normalized.toLowerCase()}.png`;
+                        }
+                        return '';
+                    }
+
+                    function renderCountryBadge(options = {}) {
+                        const code = normalizeCountryCode(firstValue(options.countryCode, options.code, options.rider_country_code, options.winner_country_code, ''));
+                        const flagUrl = countryFlagUrl(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
+                        if (!code && !flagUrl) return '';
+                        const flagImg = flagUrl ? `<img class="tdf-country-flag" src="${escapeHtml(flagUrl)}" alt="" loading="lazy" onerror="this.remove();">` : '';
+                        const codeLabel = code ? `<span class="tdf-country-code">${escapeHtml(code)}</span>` : '';
+                        return `<span class="tdf-country-badge">${flagImg}${codeLabel}</span>`;
+                    }
+
+                    function renderCyclingIdentity(name, options = {}) {
+                        const label = String(name || 'TBD').trim() || 'TBD';
+                        const badge = renderCountryBadge(options);
+                        const body = options.url
+                            ? `<a class="tdf-rider-link" href="${escapeHtml(String(options.url).trim())}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+                            : escapeHtml(label);
+                        return `<span class="tdf-rider-identity">${badge}${body}</span>`;
+                    }
+
+                    function parseCssRgba(value) {
+                        const text = String(value || '').trim();
+                        if (!text) return null;
+                        if (text.startsWith('#')) {
+                            const hex = text.slice(1);
+                            const expanded = hex.length === 3 ? hex.split('').map(ch => ch + ch).join('') : hex;
+                            if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+                            return {
+                                r: parseInt(expanded.slice(0, 2), 16),
+                                g: parseInt(expanded.slice(2, 4), 16),
+                                b: parseInt(expanded.slice(4, 6), 16),
+                                a: 1,
+                            };
+                        }
+                        const rgba = text.match(/rgba?\(([^)]+)\)/i);
+                        if (!rgba) return null;
+                        const parts = rgba[1].split(',').map(piece => piece.trim());
+                        if (parts.length < 3) return null;
+                        return {
+                            r: Number(parts[0]),
+                            g: Number(parts[1]),
+                            b: Number(parts[2]),
+                            a: parts[3] === undefined ? 1 : Number(parts[3]),
+                        };
+                    }
+
+                    function compositeOverBackground(foreground, background) {
+                        if (!foreground) return background;
+                        const alpha = Number.isFinite(foreground.a) ? foreground.a : 1;
+                        if (alpha >= 1 || !background) return foreground;
+                        const blend = channel => Math.round((foreground[channel] * alpha) + (background[channel] * (1 - alpha)));
+                        return { r: blend('r'), g: blend('g'), b: blend('b'), a: 1 };
+                    }
+
+                    function relativeLuminance(rgb) {
+                        const transform = channel => {
+                            const value = channel / 255;
+                            return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+                        };
+                        return (0.2126 * transform(rgb.r)) + (0.7152 * transform(rgb.g)) + (0.0722 * transform(rgb.b));
+                    }
+
+                    function contrastRatio(foreground, background) {
+                        const fg = relativeLuminance(foreground);
+                        const bg = relativeLuminance(background);
+                        const lighter = Math.max(fg, bg);
+                        const darker = Math.min(fg, bg);
+                        return (lighter + 0.05) / (darker + 0.05);
+                    }
+
+                    function colorToRgb(color) {
+                        const parsed = parseCssRgba(color);
+                        return parsed ? parsed : { r: 0, g: 0, b: 0, a: 1 };
+                    }
+
+                    function cyclingWinnerColor(game = {}) {
+                        const race = String(firstValue(game.cycling_race, game.cycling_event_label, '') || '').toLowerCase();
+                        const style = getComputedStyle(document.body);
+                        const bg = compositeOverBackground(
+                            parseCssRgba(style.getPropertyValue('--card-bg')),
+                            colorToRgb(style.getPropertyValue('--container-bg') || '#111111')
+                        );
+                        const candidates = {
+                            'tour de france': ['#f9dc38', '#8acbff', '#ffffff'],
+                            'tour-de-france': ['#f9dc38', '#8acbff', '#ffffff'],
+                            'la vuelta': ['#ffe066', '#ff9f1c', '#ffffff'],
+                            'vuelta': ['#ffe066', '#ff9f1c', '#ffffff'],
+                            "giro d'italia": ['#ff9adc', '#ff6fb6', '#ffffff'],
+                            'giro': ['#ff9adc', '#ff6fb6', '#ffffff'],
+                        }[race] || ['#f9dc38', '#8acbff', '#ffffff'];
+                        let best = candidates[0];
+                        let bestScore = -Infinity;
+                        candidates.forEach(candidate => {
+                            const score = contrastRatio(colorToRgb(candidate), bg);
+                            if (score > bestScore) {
+                                best = candidate;
+                                bestScore = score;
+                            }
+                        });
+                        if (bestScore < 4.5) {
+                            const black = contrastRatio(colorToRgb('#000000'), bg);
+                            const white = contrastRatio(colorToRgb('#ffffff'), bg);
+                            return black > white ? '#000000' : '#ffffff';
+                        }
+                        return best;
+                    }
+
                     function cricketSideValue(game, side, suffix) {
                         const prefixes = side === 'away'
                             ? ['cricket_away', 'visitor', 'away']
@@ -1590,7 +1711,8 @@
                         const eventLabel = race || game.cycling_event_label || 'Cycling event';
                         const statusText = cyclingStatusText(game);
                         const logo = game.league_badge || LEAGUE_LOGOS.CYCLING;
-                        const metaParts = [stageNumber, raceType, stage, distance, winner ? `Winner: ${winner}` : '', rank ? `GC ${rank}` : ''].filter(Boolean);
+                        const metaParts = [stageNumber, raceType, stage, distance, rank ? `GC ${rank}` : ''].filter(Boolean);
+                        const winnerMarkup = winner ? `<div class="event-league-meta mt-1 tdf-stage-winner" style="color: ${cyclingWinnerColor(game)};">Winner: ${renderCyclingIdentity(winner, { url: game.winner_url, countryCode: game.winner_country_code, countryFlag: game.winner_country_flag })}</div>` : '';
                         return `
                             <tr>
                                 <td colspan="4" style="padding: 10px 14px; background-color: rgba(255, 107, 53, 0.18); border-radius: 4px;">
@@ -1600,7 +1722,7 @@
                                             <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${eventLabel}</div>
                                             ${country ? `<div style="font-size: 0.8rem; opacity: 0.75;">${country}</div>` : ''}
                                             ${metaParts.length ? `<div style="font-size: 0.78rem; opacity: 0.85; margin-top: 2px;">${metaParts.map(escapeHtml).join(' · ')}</div>` : ''}
-                                            ${winner ? `<div style="font-size: 0.78rem; opacity: 0.9; margin-top: 2px;">Winner: ${escapeHtml(winner)}</div>` : ''}
+                                            ${winnerMarkup}
                                         </div>
                                         ${statusText ? `<div style="font-size: 0.85rem; opacity: 0.85; white-space: nowrap;">${statusText}</div>` : ''}
                                     </div>
