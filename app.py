@@ -442,6 +442,78 @@ def set_cached_response(cache_key, data):
             del _api_cache[oldest_key]
 
 
+def get_cached_response_entry(cache_key):
+    """Return the raw cached response entry, including its timestamp."""
+    with _api_cache_lock:
+        return _api_cache.get(cache_key)
+
+
+def _response_freshness_key(payload):
+    """Return a freshness token for cached API payloads."""
+    if not isinstance(payload, dict):
+        return ''
+    meta = payload.get('meta') if isinstance(payload.get('meta'), dict) else {}
+    for value in (
+        meta.get('generated_at'),
+        payload.get('generated_at'),
+        meta.get('source_updated_at'),
+        payload.get('source_updated_at'),
+        meta.get('fetched_at'),
+        payload.get('fetched_at'),
+    ):
+        if value:
+            return str(value).strip()
+    return ''
+
+
+def _proxy_fresh_payload(path, cache_key, cache_type, timeout=20, stale_after_seconds=60, fallback_payload=None):
+    """Fetch upstream data when the cached copy is old enough to need validation."""
+    cache_entry = get_cached_response_entry(cache_key)
+    cached_response = cache_entry[0] if cache_entry else None
+    cached_at = cache_entry[1] if cache_entry else None
+    if cached_at:
+        cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
+        if cached_response is not None and cache_age < stale_after_seconds:
+            return cached_response, 200
+
+    try:
+        data = _fetch_api_json(path, timeout=timeout)
+    except requests.exceptions.RequestException as exc:
+        logger.error(f"Error proxying {path}: {exc}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, cache_type, allow_expired=True)
+        if expired_cache is not None:
+            logger.warning(f"Returning cached {cache_key} due to request exception")
+            return expired_cache, 200
+        if fallback_payload is not None:
+            return fallback_payload, 200
+        raise
+    except Exception as exc:
+        logger.error(f"Unexpected error proxying {path}: {exc}", exc_info=True)
+        expired_cache = get_cached_response(cache_key, cache_type, allow_expired=True)
+        if expired_cache is not None:
+            logger.warning(f"Returning cached {cache_key} due to unexpected error")
+            return expired_cache, 200
+        if fallback_payload is not None:
+            return fallback_payload, 200
+        raise
+
+    if isinstance(data, dict) and 'error' in data:
+        logger.error(f"API returned error for {path}: {data['error']}")
+        if cached_response is not None:
+            return cached_response, 200
+        return data, 500
+
+    if cached_response is not None:
+        cached_freshness = _response_freshness_key(cached_response)
+        fresh_freshness = _response_freshness_key(data)
+        if cached_freshness and fresh_freshness and cached_freshness == fresh_freshness:
+            set_cached_response(cache_key, data)
+            return cached_response, 200
+
+    set_cached_response(cache_key, data)
+    return data, 200
+
+
 def _normalize_timezone(tz):
     """Keep cache keys stable across old and new timezone aliases."""
     aliases = {
@@ -2728,82 +2800,50 @@ def proxy_cycling_tour_de_france(year=None):
     """Proxy the Tour de France detail bundle."""
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_tour_de_france:{suffix}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path = f'/api/v1/cycling/tour-de-france/{int(year)}' if year else '/api/v1/cycling/tour-de-france'
-    try:
-        data = _fetch_api_json(path, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Tour de France API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error proxying Tour de France bundle: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Tour de France bundle due to request exception")
-            return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Tour de France bundle: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Tour de France bundle due to unexpected error")
-            return jsonify(expired_cache)
-
-    return jsonify({
-        'race': 'Tour de France',
-        'year': int(year or datetime.now().year),
-        'stages': [],
-        'latest_classifications': {},
-        'teams': [],
-        'riders': [],
-        'available': False,
-        'meta': {},
-    }), 200
+    data, status = _proxy_fresh_payload(
+        path,
+        cache_key,
+        'schedule',
+        timeout=20,
+        stale_after_seconds=60,
+        fallback_payload={
+            'race': 'Tour de France',
+            'year': int(year or datetime.now().year),
+            'stages': [],
+            'latest_classifications': {},
+            'teams': [],
+            'riders': [],
+            'available': False,
+            'meta': {},
+        },
+    )
+    return jsonify(data), status
 
 
 @app.route('/api/proxy/cycling/tour-de-france/<int:year>/stages/<int:stage_number>')
 def proxy_cycling_tour_de_france_stage(year, stage_number):
     """Proxy a single Tour de France stage."""
     cache_key = f'cycling_tour_de_france:{int(year)}:stage:{int(stage_number)}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path = f'/api/v1/cycling/tour-de-france/{int(year)}/stages/{int(stage_number)}'
-    try:
-        data = _fetch_api_json(path, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Tour de France stage API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error proxying Tour de France stage: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Tour de France stage due to request exception")
-            return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Tour de France stage: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Tour de France stage due to unexpected error")
-            return jsonify(expired_cache)
-
-    return jsonify({
-        'race': 'Tour de France',
-        'year': int(year),
-        'stage_number': int(stage_number),
-        'stage_results': [],
-        'classifications': [],
-        'classification_rows': [],
-        'meta': {},
-        'available': False,
-    }), 200
+    data, status = _proxy_fresh_payload(
+        path,
+        cache_key,
+        'schedule',
+        timeout=20,
+        stale_after_seconds=60,
+        fallback_payload={
+            'race': 'Tour de France',
+            'year': int(year),
+            'stage_number': int(stage_number),
+            'stage_results': [],
+            'classifications': [],
+            'classification_rows': [],
+            'meta': {},
+            'available': False,
+        },
+    )
+    return jsonify(data), status
 
 
 @app.route('/api/proxy/cycling/vuelta')
@@ -2812,82 +2852,50 @@ def proxy_cycling_vuelta(year=None):
     """Proxy the Vuelta detail bundle."""
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_vuelta:{suffix}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path = f'/api/v1/cycling/la-vuelta/{int(year)}' if year else '/api/v1/cycling/la-vuelta'
-    try:
-        data = _fetch_api_json(path, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Vuelta API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error proxying Vuelta bundle: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Vuelta bundle due to request exception")
-            return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Vuelta bundle: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Vuelta bundle due to unexpected error")
-            return jsonify(expired_cache)
-
-    return jsonify({
-        'race': 'La Vuelta a España',
-        'year': int(year or datetime.now().year),
-        'stages': [],
-        'latest_classifications': {},
-        'teams': [],
-        'riders': [],
-        'available': False,
-        'meta': {},
-    }), 200
+    data, status = _proxy_fresh_payload(
+        path,
+        cache_key,
+        'schedule',
+        timeout=20,
+        stale_after_seconds=60,
+        fallback_payload={
+            'race': 'La Vuelta a España',
+            'year': int(year or datetime.now().year),
+            'stages': [],
+            'latest_classifications': {},
+            'teams': [],
+            'riders': [],
+            'available': False,
+            'meta': {},
+        },
+    )
+    return jsonify(data), status
 
 
 @app.route('/api/proxy/cycling/vuelta/<int:year>/stages/<int:stage_number>')
 def proxy_cycling_vuelta_stage(year, stage_number):
     """Proxy a single Vuelta stage."""
     cache_key = f'cycling_vuelta:{int(year)}:stage:{int(stage_number)}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path = f'/api/v1/cycling/la-vuelta/{int(year)}/stages/{int(stage_number)}'
-    try:
-        data = _fetch_api_json(path, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Vuelta stage API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error proxying Vuelta stage: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Vuelta stage due to request exception")
-            return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Vuelta stage: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Vuelta stage due to unexpected error")
-            return jsonify(expired_cache)
-
-    return jsonify({
-        'race': 'La Vuelta a España',
-        'year': int(year),
-        'stage_number': int(stage_number),
-        'stage_results': [],
-        'classifications': [],
-        'classification_rows': [],
-        'meta': {},
-        'available': False,
-    }), 200
+    data, status = _proxy_fresh_payload(
+        path,
+        cache_key,
+        'schedule',
+        timeout=20,
+        stale_after_seconds=60,
+        fallback_payload={
+            'race': 'La Vuelta a España',
+            'year': int(year),
+            'stage_number': int(stage_number),
+            'stage_results': [],
+            'classifications': [],
+            'classification_rows': [],
+            'meta': {},
+            'available': False,
+        },
+    )
+    return jsonify(data), status
 
 
 @app.route('/api/proxy/cycling/giro')
@@ -2898,46 +2906,54 @@ def proxy_cycling_giro(year=None):
     """Proxy the Giro d'Italia detail bundle."""
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_giro:{suffix}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
         f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
         f'/api/v1/cycling/giro-d-italia/{int(year)}' if year else '/api/v1/cycling/giro-d-italia',
         f'/api/v1/cycling/gdi/{int(year)}' if year else '/api/v1/cycling/gdi',
     ]
+    cache_entry = get_cached_response_entry(cache_key)
+    cached_response = cache_entry[0] if cache_entry else None
+    cached_at = cache_entry[1] if cache_entry else None
+    if cached_at:
+        cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
+        if cached_response is not None and cache_age < 60:
+            return jsonify(cached_response)
+
     try:
         data = _fetch_api_json_from_candidates(path_candidates, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Giro API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying Giro bundle: {e}", exc_info=True)
         expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
         if expired_cache:
             logger.warning("Returning expired cached Giro bundle due to request exception")
             return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Giro bundle: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Giro bundle due to unexpected error")
-            return jsonify(expired_cache)
+        return jsonify({
+            'race': "Giro d'Italia",
+            'year': int(year or datetime.now().year),
+            'stages': [],
+            'latest_classifications': {},
+            'teams': [],
+            'riders': [],
+            'available': False,
+            'meta': {},
+        }), 200
 
-    return jsonify({
-        'race': "Giro d'Italia",
-        'year': int(year or datetime.now().year),
-        'stages': [],
-        'latest_classifications': {},
-        'teams': [],
-        'riders': [],
-        'available': False,
-        'meta': {},
-    }), 200
+    if isinstance(data, dict) and 'error' in data:
+        logger.error(f"Giro API returned error: {data['error']}")
+        if cached_response is not None:
+            return jsonify(cached_response)
+        return jsonify(data), 500
+
+    if cached_response is not None:
+        cached_freshness = _response_freshness_key(cached_response)
+        fresh_freshness = _response_freshness_key(data)
+        if cached_freshness and fresh_freshness and cached_freshness == fresh_freshness:
+            set_cached_response(cache_key, data)
+            return jsonify(cached_response)
+
+    set_cached_response(cache_key, data)
+    return jsonify(data)
 
 
 @app.route('/api/proxy/cycling/giro/<int:year>/stages/<int:stage_number>')
@@ -2945,46 +2961,54 @@ def proxy_cycling_giro(year=None):
 def proxy_cycling_giro_stage(year, stage_number):
     """Proxy a single Giro d'Italia stage."""
     cache_key = f'cycling_giro:{int(year)}:stage:{int(stage_number)}'
-    cached_response = get_cached_response(cache_key, 'schedule')
-    if cached_response:
-        return jsonify(cached_response)
-
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/giro-d-italia/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/gdi/{int(year)}/stages/{int(stage_number)}',
     ]
+    cache_entry = get_cached_response_entry(cache_key)
+    cached_response = cache_entry[0] if cache_entry else None
+    cached_at = cache_entry[1] if cache_entry else None
+    if cached_at:
+        cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
+        if cached_response is not None and cache_age < 60:
+            return jsonify(cached_response)
+
     try:
         data = _fetch_api_json_from_candidates(path_candidates, timeout=20)
-        if isinstance(data, dict) and 'error' in data:
-            logger.error(f"Giro stage API returned error: {data['error']}")
-            return jsonify(data), 500
-        set_cached_response(cache_key, data)
-        return jsonify(data)
     except requests.exceptions.RequestException as e:
         logger.error(f"Error proxying Giro stage: {e}", exc_info=True)
         expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
         if expired_cache:
             logger.warning("Returning expired cached Giro stage due to request exception")
             return jsonify(expired_cache)
-    except Exception as e:
-        logger.error(f"Unexpected error proxying Giro stage: {e}", exc_info=True)
-        expired_cache = get_cached_response(cache_key, 'schedule', allow_expired=True)
-        if expired_cache:
-            logger.warning("Returning expired cached Giro stage due to unexpected error")
-            return jsonify(expired_cache)
+        return jsonify({
+            'race': "Giro d'Italia",
+            'year': int(year),
+            'stage_number': int(stage_number),
+            'stage_results': [],
+            'classifications': [],
+            'classification_rows': [],
+            'meta': {},
+            'available': False,
+        }), 200
 
-    return jsonify({
-        'race': "Giro d'Italia",
-        'year': int(year),
-        'stage_number': int(stage_number),
-        'stage_results': [],
-        'classifications': [],
-        'classification_rows': [],
-        'meta': {},
-        'available': False,
-    }), 200
+    if isinstance(data, dict) and 'error' in data:
+        logger.error(f"Giro stage API returned error: {data['error']}")
+        if cached_response is not None:
+            return jsonify(cached_response)
+        return jsonify(data), 500
+
+    if cached_response is not None:
+        cached_freshness = _response_freshness_key(cached_response)
+        fresh_freshness = _response_freshness_key(data)
+        if cached_freshness and fresh_freshness and cached_freshness == fresh_freshness:
+            set_cached_response(cache_key, data)
+            return jsonify(cached_response)
+
+    set_cached_response(cache_key, data)
+    return jsonify(data)
 
 
 @app.route('/api/proxy/world-cup/bracket')

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
 import psycopg2
@@ -913,7 +914,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
         }
 
-        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+        with patch("app.get_cached_response_entry", return_value=None) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
             response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026")
 
         self.assertEqual(response.status_code, 200)
@@ -921,8 +922,44 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["race"], "Tour de France")
         self.assertEqual(data["year"], 2026)
         mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026", timeout=20)
-        mock_cache.assert_called_once_with("cycling_tour_de_france:2026", "schedule")
+        mock_entry.assert_called_once_with("cycling_tour_de_france:2026")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
+
+    @patch("app._fetch_api_json")
+    def test_proxy_tour_de_france_refreshes_when_generated_at_changes(self, mock_fetch):
+        cached_payload = {
+            "race": "Tour de France",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 9, "stage_name": "Cached Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:00:00Z"},
+        }
+        fresh_payload = {
+            "race": "Tour de France",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 10, "stage_name": "Fresh Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:10:00Z"},
+        }
+        mock_fetch.return_value = fresh_payload
+
+        old_timestamp = datetime.now(timezone.utc) - timedelta(seconds=120)
+        with patch("app.get_cached_response_entry", return_value=(cached_payload, old_timestamp)) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["current_stage"]["stage"]["stage_number"], 10)
+        mock_entry.assert_called_once_with("cycling_tour_de_france:2026")
+        mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026", timeout=20)
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
+        self.assertEqual(mock_set_cache.call_args.args[1], fresh_payload)
 
     @patch("app._fetch_api_json")
     def test_proxy_vuelta_exposes_bundle_from_la_vuelta_feed(self, mock_fetch):
@@ -936,7 +973,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
         }
 
-        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+        with patch("app.get_cached_response_entry", return_value=None) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
             response = app.test_client().get("/api/proxy/cycling/vuelta/2026")
 
         self.assertEqual(response.status_code, 200)
@@ -944,7 +981,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["race"], "La Vuelta a España")
         self.assertEqual(data["year"], 2026)
         mock_fetch.assert_called_once_with("/api/v1/cycling/la-vuelta/2026", timeout=20)
-        mock_cache.assert_called_once_with("cycling_vuelta:2026", "schedule")
+        mock_entry.assert_called_once_with("cycling_vuelta:2026")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_vuelta:2026")
 
     @patch("app._fetch_api_json_from_candidates")
@@ -959,7 +996,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
         }
 
-        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+        with patch("app.get_cached_response_entry", return_value=None) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
             response = app.test_client().get("/api/proxy/cycling/giro/2026")
 
         self.assertEqual(response.status_code, 200)
@@ -975,7 +1012,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
                 "/api/v1/cycling/gdi/2026",
             ],
         )
-        mock_cache.assert_called_once_with("cycling_giro:2026", "schedule")
+        mock_entry.assert_called_once_with("cycling_giro:2026")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
 
     @patch("app._fetch_api_json")
@@ -989,7 +1026,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "meta": {"source_updated_at": "2026-07-07T18:00:00Z"},
         }
 
-        with patch("app.get_cached_response", return_value=None) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+        with patch("app.get_cached_response_entry", return_value=None) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
             response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026/stages/4")
 
         self.assertEqual(response.status_code, 200)
@@ -997,7 +1034,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["stage_number"], 4)
         self.assertEqual(data["stage_results"][0]["rider_name"], "Mads Pedersen")
         mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026/stages/4", timeout=20)
-        mock_cache.assert_called_once_with("cycling_tour_de_france:2026:stage:4", "schedule")
+        mock_entry.assert_called_once_with("cycling_tour_de_france:2026:stage:4")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026:stage:4")
 
     def test_tour_de_france_template_formats_rider_names_and_three_column_boards(self):
