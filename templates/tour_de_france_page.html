@@ -249,9 +249,21 @@
             const meta = payload?.meta || {};
             const bits = [
                 meta.source_updated_at ? `Source ${prettyDateTime(meta.source_updated_at)}` : '',
+                meta.generated_at ? `Bundle ${prettyDateTime(meta.generated_at)}` : '',
                 payload?.generated_at ? `Bundle ${prettyDateTime(payload.generated_at)}` : '',
             ].filter(Boolean);
             return bits.join(' • ');
+        }
+
+        function freshnessKey(payload) {
+            const meta = payload?.meta || {};
+            return firstValue(
+                meta.generated_at,
+                payload?.generated_at,
+                meta.source_updated_at,
+                payload?.source_updated_at,
+                ''
+            );
         }
 
         function normalizedGap(value) {
@@ -682,6 +694,24 @@
             return merged;
         }
 
+        function stageFreshnessKey(stageDetail) {
+            const meta = stageDetail?.meta || {};
+            return firstValue(
+                meta.generated_at,
+                stageDetail?.generated_at,
+                meta.source_updated_at,
+                stageDetail?.source_updated_at,
+                ''
+            );
+        }
+
+        function stageDetailNeedsRefresh(currentDetail, nextDetail) {
+            const currentKey = stageFreshnessKey(currentDetail);
+            const nextKey = stageFreshnessKey(nextDetail);
+            if (!currentKey || !nextKey) return true;
+            return currentKey !== nextKey;
+        }
+
         function stageNumberValue(stageDetail) {
             const stage = stageDetail?.stage || {};
             const schedule = stageDetail?.schedule || {};
@@ -733,16 +763,49 @@
             return nestedSchedule ? String(nestedSchedule).trim() : '';
         }
 
-        async function fetchStageDetail(stageNumber) {
+        async function fetchStageDetail(stageNumber, { force = false } = {}) {
             const key = String(stageNumber || '').trim();
             if (!key) return null;
-            if (TOUR_STAGE_DETAIL_CACHE.has(key)) return TOUR_STAGE_DETAIL_CACHE.get(key);
+            if (!force && TOUR_STAGE_DETAIL_CACHE.has(key)) return TOUR_STAGE_DETAIL_CACHE.get(key);
 
-            const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}/stages/${encodeURIComponent(key)}`);
+            const response = await fetch(
+                `/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}/stages/${encodeURIComponent(key)}`,
+                { cache: 'no-store' }
+            );
             if (!response.ok) return null;
             const data = await response.json();
             if (data) TOUR_STAGE_DETAIL_CACHE.set(key, data);
             return data;
+        }
+
+        async function revalidateSelectedStageDetail() {
+            const selectedStage = selectedStageDetail();
+            const selectedStageNumber = stageNumberForDetail(selectedStage);
+            if (!selectedStageNumber) return;
+            const currentDetail = TOUR_STAGE_DETAIL_CACHE.get(String(selectedStageNumber)) || selectedStage || null;
+            const freshDetail = await fetchStageDetail(selectedStageNumber, { force: true });
+            if (freshDetail && stageDetailNeedsRefresh(currentDetail, freshDetail)) {
+                TOUR_STAGE_DETAIL_CACHE.set(String(selectedStageNumber), freshDetail);
+                renderTourView();
+            }
+        }
+
+        async function revalidateTourBundle() {
+            const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`, { cache: 'no-store' });
+            if (!response.ok) return;
+            const freshData = await response.json();
+            if (!freshData) return;
+            if (freshnessKey(freshData) !== freshnessKey(TOUR_PAYLOAD)) {
+                TOUR_PAYLOAD = freshData;
+                buildRiderLookup(freshData);
+                const selected = selectedStageDetail();
+                if (!TOUR_SELECTED_STAGE_KEY && selected) {
+                    TOUR_SELECTED_STAGE_KEY = stageKey(selected);
+                }
+                setWinnerColorVariable();
+                renderTourView();
+            }
+            await revalidateSelectedStageDetail();
         }
 
         function renderStageResults(stageDetail) {
@@ -913,7 +976,7 @@
             const freshness = document.getElementById('tdf-freshness');
 
             try {
-                const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`);
+                const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`, { cache: 'no-store' });
                 const data = response.ok ? await response.json() : {};
                 TOUR_PAYLOAD = data;
                 buildRiderLookup(data);
@@ -937,6 +1000,7 @@
                 }
                 setWinnerColorVariable();
                 renderTourView();
+                revalidateTourBundle().catch(() => {});
             } catch (error) {
                 summary.innerHTML = `<div class="alert alert-warning mb-0">Unable to load ${escapeHtml(TOUR_RACE_TITLE)}: ${escapeHtml(error.message || error)}</div>`;
                 document.getElementById('tdf-boards-panel').innerHTML = '';
@@ -966,10 +1030,11 @@
                     renderTourView();
                     return;
                 }
-                fetchStageDetail(nextStageNumber)
+                fetchStageDetail(nextStageNumber, { force: true })
                     .then(stageDetail => {
                         if (stageDetail) TOUR_STAGE_DETAIL_CACHE.set(String(nextStageNumber), stageDetail);
                         renderTourView();
+                        revalidateSelectedStageDetail().catch(() => {});
                     })
                     .catch(() => renderTourView());
             });
