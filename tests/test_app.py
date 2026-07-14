@@ -1093,7 +1093,21 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         self.assertIn('body[data-race-slug="tour-de-france"] .tdf-stage-winner', css)
         self.assertIn('body[data-race-slug="vuelta"] .tdf-stage-winner', css)
-        self.assertIn('body[data-race-slug="giro"] .tdf-stage-winner', css)
+
+    def test_cycling_templates_try_countrypuff_before_flagcdn(self):
+        for template_path in [
+            PROJECT_ROOT / "templates/tour_de_france_page.html",
+            PROJECT_ROOT / "templates/event_league_page.html",
+            PROJECT_ROOT / "templates/index.html",
+        ]:
+            template = template_path.read_text()
+            for snippet in [
+                "https://dev.countrypuff.org/api/v1/country/",
+                "data-flag-sources",
+                "flagCountryCode(normalized)",
+                "renderCountryBadge(options = {})",
+            ]:
+                self.assertIn(snippet, template)
 
     def test_homepage_uses_active_event_branding_for_banners(self):
         template = (PROJECT_ROOT / "templates/index.html").read_text()

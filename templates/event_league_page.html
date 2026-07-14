@@ -174,21 +174,32 @@
                 .join('');
         }
 
-        function countryFlagUrl(code, explicitUrl = '') {
+        function countryFlagSources(code, explicitUrl = '') {
             const url = String(explicitUrl || '').trim();
-            if (url) return url;
-            const flagCode = flagCountryCode(code);
-            if (!flagCode) return '';
-            return `https://flagcdn.com/w40/${flagCode}.png`;
+            const normalized = normalizeCountryCode(code);
+            const sources = [];
+            if (url) sources.push(url);
+            if (normalized) {
+                sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(normalized)}/flag`);
+                const flagCode = flagCountryCode(normalized);
+                if (flagCode && flagCode !== normalized.toLowerCase()) {
+                    sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(flagCode.toUpperCase())}/flag`);
+                }
+                if (flagCode) {
+                    sources.push(`https://flagcdn.com/w40/${flagCode}.png`);
+                }
+            }
+            return [...new Set(sources)];
         }
 
         function renderCountryBadge(options = {}) {
             const code = normalizeCountryCode(firstValue(options.countryCode, options.code, options.rider_country_code, options.winner_country_code, ''));
-            const flagUrl = countryFlagUrl(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
+            const flagSources = countryFlagSources(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
             const flagEmoji = flagEmojiForCountryCode(code);
-            if (!code && !flagUrl) return '';
-            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji"${flagUrl ? ' style="display:none;"' : ''}>${escapeHtml(flagEmoji)}</span>` : '';
-            const flagImg = flagUrl ? `<img class="tdf-country-flag" src="${escapeHtml(flagUrl)}" alt="" loading="lazy" onerror="this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block';">` : '';
+            if (!code && !flagSources.length) return '';
+            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji"${flagSources.length ? ' style="display:none;"' : ''}>${escapeHtml(flagEmoji)}</span>` : '';
+            const flagJson = escapeHtml(JSON.stringify(flagSources));
+            const flagImg = flagSources.length ? `<img class="tdf-country-flag" src="${escapeHtml(flagSources[0])}" alt="" loading="lazy" data-flag-sources="${flagJson}" onerror="(() => { const sources = JSON.parse(this.dataset.flagSources || '[]'); const next = sources.indexOf(this.src) + 1; if (next < sources.length) { this.src = sources[next]; return; } this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block'; })();">` : '';
             const codeLabel = code ? `<span class="tdf-country-code">${escapeHtml(code)}</span>` : '';
             return `<span class="tdf-country-badge">${flagEmojiMarkup}${flagImg}${codeLabel}</span>`;
         }
