@@ -1102,10 +1102,11 @@ class TestTournamentThemeAssets(unittest.TestCase):
         ]:
             template = template_path.read_text()
             for snippet in [
-                "https://dev.countrypuff.org/api/v1/country/",
                 "data-flag-sources",
                 "flagCountryCode(normalized)",
                 "renderCountryBadge(options = {})",
+                "https://flagcdn.com/w40/",
+                "https://dev.countrypuff.org/api/v1/country/",
             ]:
                 self.assertIn(snippet, template)
 

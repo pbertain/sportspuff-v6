@@ -180,13 +180,13 @@
             const sources = [];
             if (url) sources.push(url);
             if (normalized) {
-                sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(normalized)}/flag`);
                 const flagCode = flagCountryCode(normalized);
-                if (flagCode && flagCode !== normalized.toLowerCase()) {
-                    sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(flagCode.toUpperCase())}/flag`);
-                }
                 if (flagCode) {
                     sources.push(`https://flagcdn.com/w40/${flagCode}.png`);
+                }
+                sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(normalized)}/flag`);
+                if (flagCode && flagCode !== normalized.toLowerCase()) {
+                    sources.push(`https://dev.countrypuff.org/api/v1/country/${encodeURIComponent(flagCode.toUpperCase())}/flag`);
                 }
             }
             return [...new Set(sources)];
