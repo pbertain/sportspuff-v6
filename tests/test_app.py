@@ -1136,6 +1136,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo.png", event_template)
         self.assertIn("https://www.splitsp.lat/logos/cycling/gdi/gdi-logo-pink.png", app_source)
         self.assertIn("https://www.splitsp.lat/logos/cycling/tdf/tdf-logo-box.png", app_source)
+        self.assertIn("GER: 'de'", event_template)
         self.assertIn("container-fluid event-league-shell", event_template)
         self.assertIn("Stages, classifications, teams, rider info, times and more.", event_template)
         self.assertEqual(event_template.count("Detailed Race View"), 3)
