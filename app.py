@@ -466,14 +466,44 @@ def _response_freshness_key(payload):
     return ''
 
 
-def _proxy_fresh_payload(path, cache_key, cache_type, timeout=20, stale_after_seconds=60, fallback_payload=None):
+def _cycling_bundle_is_suspect_empty(payload):
+    """Return True when a cycling bundle looks empty enough to distrust."""
+    if not isinstance(payload, dict):
+        return False
+
+    meta = payload.get('meta') if isinstance(payload.get('meta'), dict) else {}
+    empty_state = str(
+        meta.get('empty_state')
+        or payload.get('empty_state')
+        or ''
+    ).strip().lower()
+    if empty_state in {'suspect_empty', 'real_empty'}:
+        return True
+
+    return False
+
+
+def _proxy_fresh_payload(
+    path,
+    cache_key,
+    cache_type,
+    timeout=20,
+    stale_after_seconds=60,
+    fallback_payload=None,
+    distrust_empty_payload=False,
+):
     """Fetch upstream data when the cached copy is old enough to need validation."""
     cache_entry = get_cached_response_entry(cache_key)
     cached_response = cache_entry[0] if cache_entry else None
     cached_at = cache_entry[1] if cache_entry else None
     if cached_at:
         cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
-        if cached_response is not None and cache_age < stale_after_seconds:
+        if distrust_empty_payload and _cycling_bundle_is_suspect_empty(cached_response):
+            with _api_cache_lock:
+                _api_cache.pop(cache_key, None)
+            cached_response = None
+            cached_at = None
+        elif cached_response is not None and cache_age < stale_after_seconds:
             return cached_response, 200
 
     try:
@@ -502,6 +532,13 @@ def _proxy_fresh_payload(path, cache_key, cache_type, timeout=20, stale_after_se
         if cached_response is not None:
             return cached_response, 200
         return data, 500
+
+    if distrust_empty_payload and _cycling_bundle_is_suspect_empty(data):
+        if cached_response is not None and not _cycling_bundle_is_suspect_empty(cached_response):
+            logger.warning(f"Upstream cycling bundle for {path} looked empty; keeping cached non-empty payload")
+            return cached_response, 200
+        if fallback_payload is not None:
+            return fallback_payload, 200
 
     if cached_response is not None:
         cached_freshness = _response_freshness_key(cached_response)
@@ -2807,6 +2844,7 @@ def proxy_cycling_tour_de_france(year=None):
         'schedule',
         timeout=20,
         stale_after_seconds=60,
+        distrust_empty_payload=True,
         fallback_payload={
             'race': 'Tour de France',
             'year': int(year or datetime.now().year),
@@ -2859,6 +2897,7 @@ def proxy_cycling_vuelta(year=None):
         'schedule',
         timeout=20,
         stale_after_seconds=60,
+        distrust_empty_payload=True,
         fallback_payload={
             'race': 'La Vuelta a España',
             'year': int(year or datetime.now().year),
@@ -2917,7 +2956,12 @@ def proxy_cycling_giro(year=None):
     cached_at = cache_entry[1] if cache_entry else None
     if cached_at:
         cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
-        if cached_response is not None and cache_age < 60:
+        if _cycling_bundle_is_suspect_empty(cached_response):
+            with _api_cache_lock:
+                _api_cache.pop(cache_key, None)
+            cached_response = None
+            cached_at = None
+        elif cached_response is not None and cache_age < 60:
             return jsonify(cached_response)
 
     try:
@@ -2944,6 +2988,12 @@ def proxy_cycling_giro(year=None):
         if cached_response is not None:
             return jsonify(cached_response)
         return jsonify(data), 500
+
+    if _cycling_bundle_is_suspect_empty(data):
+        if cached_response is not None and not _cycling_bundle_is_suspect_empty(cached_response):
+            logger.warning("Upstream Giro bundle looked empty; keeping cached non-empty payload")
+            return jsonify(cached_response)
+        return jsonify(data)
 
     if cached_response is not None:
         cached_freshness = _response_freshness_key(cached_response)

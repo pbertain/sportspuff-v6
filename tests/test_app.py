@@ -1015,6 +1015,40 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_entry.assert_called_once_with("cycling_giro:2026")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
 
+    @patch("app._fetch_api_json_from_candidates")
+    def test_proxy_giro_refetches_after_cached_empty_bundle(self, mock_fetch):
+        mock_fetch.return_value = {
+            "race": "Giro d'Italia",
+            "year": 2026,
+            "stages": [{"stage_number": 1}],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"source_updated_at": "2026-07-15T06:22:37Z"},
+        }
+        cached_empty = (
+            {
+                "race": "Giro d'Italia",
+                "year": 2026,
+                "stages": [],
+                "latest_classifications": {},
+                "teams": [],
+                "riders": [],
+                "meta": {"empty_state": "suspect_empty", "source_updated_at": "2026-07-15T06:00:00Z"},
+            },
+            datetime.now(timezone.utc),
+        )
+
+        with patch("app.get_cached_response_entry", return_value=cached_empty) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/giro/2026")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["stages"][0]["stage_number"], 1)
+        mock_fetch.assert_called_once()
+        mock_entry.assert_called_once_with("cycling_giro:2026")
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
+
     @patch("app._fetch_api_json")
     def test_proxy_tour_de_france_exposes_stage_results(self, mock_fetch):
         mock_fetch.return_value = {
