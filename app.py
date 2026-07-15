@@ -480,6 +480,20 @@ def _cycling_bundle_is_suspect_empty(payload):
     if empty_state in {'suspect_empty', 'real_empty'}:
         return True
 
+    stages = payload.get('stages')
+    current_stage = payload.get('current_stage')
+    latest_classifications = payload.get('latest_classifications')
+    teams = payload.get('teams')
+    riders = payload.get('riders')
+    if (
+        (stages is None or (isinstance(stages, list) and len(stages) == 0))
+        and not current_stage
+        and not latest_classifications
+        and not teams
+        and not riders
+    ):
+        return True
+
     return False
 
 
