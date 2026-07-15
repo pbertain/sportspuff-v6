@@ -807,7 +807,7 @@
             if (!force && TOUR_STAGE_DETAIL_CACHE.has(key)) return TOUR_STAGE_DETAIL_CACHE.get(key);
 
             const response = await fetch(
-                `/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}/stages/${encodeURIComponent(key)}`,
+                `/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}/stages/${encodeURIComponent(key)}${force ? '?fresh=1' : ''}`,
                 { cache: 'no-store' }
             );
             if (!response.ok) return null;
@@ -829,7 +829,7 @@
         }
 
         async function revalidateTourBundle() {
-            const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`, { cache: 'no-store' });
+            const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}?fresh=1`, { cache: 'no-store' });
             if (!response.ok) return;
             const freshData = await response.json();
             if (!freshData) return;
@@ -1014,7 +1014,7 @@
             const freshness = document.getElementById('tdf-freshness');
 
             try {
-                const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}`, { cache: 'no-store' });
+                const response = await fetch(`/api/proxy/cycling/${encodeURIComponent(TOUR_API_SLUG)}/${encodeURIComponent(TOUR_YEAR)}?fresh=1`, { cache: 'no-store' });
                 const data = response.ok ? await response.json() : {};
                 TOUR_PAYLOAD = data;
                 buildRiderLookup(data);
@@ -1026,7 +1026,7 @@
                 const selectedStageNumber = stageNumberForDetail(selectedStage);
                 if (selectedStageNumber) {
                     TOUR_SELECTED_STAGE_NUMBER = selectedStageNumber;
-                    const stageDetail = await fetchStageDetail(selectedStageNumber);
+                    const stageDetail = await fetchStageDetail(selectedStageNumber, { force: true });
                     if (stageDetail) {
                         TOUR_STAGE_DETAIL_CACHE.set(String(selectedStageNumber), stageDetail);
                     }

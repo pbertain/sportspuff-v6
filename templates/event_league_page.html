@@ -1724,16 +1724,36 @@
             return base.toISOString().slice(0, 10);
         }
 
+        function cyclingGameIdentity(game) {
+            return [
+                String(firstValue(game.cycling_race, game.cycling_event_label, game.race_type, game.home_team, '') || '').trim().toLowerCase(),
+                String(firstValue(game.cycling_stage_number, game.stage_number, '') || '').trim().toLowerCase(),
+                String(firstValue(game.game_date, game.stage_date, game.date, '') || '').trim(),
+                String(firstValue(game.stage_start_local, game.cycling_stage_start_local, game.game_time, '') || '').trim(),
+                String(firstValue(game.cycling_stage_label, game.visitor_team, '') || '').trim().toLowerCase(),
+            ].join('|');
+        }
+
         function mergeScheduleAndScores(scheduleGames, scoreGames) {
             const byId = {};
             (Array.isArray(scheduleGames) ? scheduleGames : []).forEach(game => {
-                byId[game.game_id || `${game.home_team}-${game.visitor_team}-${game.game_time}`] = game;
+                const key = EVENT_MODE === 'cycling'
+                    ? cyclingGameIdentity(game)
+                    : (game.game_id || `${game.home_team}-${game.visitor_team}-${game.game_time}`);
+                byId[key] = game;
             });
             (Array.isArray(scoreGames) ? scoreGames : []).forEach(score => {
-                const key = score.game_id || `${score.home_team}-${score.visitor_team}-${score.game_time}`;
+                const key = EVENT_MODE === 'cycling'
+                    ? cyclingGameIdentity(score)
+                    : (score.game_id || `${score.home_team}-${score.visitor_team}-${score.game_time}`);
                 byId[key] = {...(byId[key] || {}), ...score};
             });
             return Object.values(byId).sort((a, b) => {
+                if (EVENT_MODE === 'cycling') {
+                    const aStage = Number(firstValue(a.cycling_stage_number, a.stage_number, 999));
+                    const bStage = Number(firstValue(b.cycling_stage_number, b.stage_number, 999));
+                    if (Number.isFinite(aStage) && Number.isFinite(bStage) && aStage !== bStage) return aStage - bStage;
+                }
                 if (a.game_time && b.game_time) return new Date(a.game_time) - new Date(b.game_time);
                 if (a.game_time) return -1;
                 if (b.game_time) return 1;
@@ -2341,14 +2361,14 @@
                     fetch(`/api/season-info/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     Promise.all(dayWindow.map(async dateText => {
                         const apiDate = apiDateFor(dateText);
-                        const [scheduleRes, scoresRes] = await Promise.all([
-                            fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { games: [] }),
-                            fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] }),
+                const [scheduleRes, scoresRes] = await Promise.all([
+                            fetch(`/api/proxy/schedule/${league}/${apiDate}?tz=${encodeURIComponent(tz)}${EVENT_MODE === 'cycling' ? '&fresh=1' : ''}`).then(r => r.ok ? r.json() : { games: [] }),
+                            fetch(`/api/proxy/scores/${league}/${apiDate}?tz=${encodeURIComponent(tz)}${EVENT_MODE === 'cycling' ? '&fresh=1' : ''}`).then(r => r.ok ? r.json() : { scores: [] }),
                         ]);
                         return {dateText, scheduleRes, scoresRes};
                     })),
                     EVENT_MODE === 'world-cup' || EVENT_MODE === 'cycling'
-                        ? fetch(`/api/proxy/standings/${league}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+                        ? fetch(`/api/proxy/standings/${league}${EVENT_MODE === 'cycling' ? '?fresh=1' : ''}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
                         : Promise.resolve({}),
                     EVENT_MODE === 'world-cup'
                         ? fetch('/api/proxy/world-cup/bracket').then(r => r.ok ? r.json() : {}).catch(() => ({}))

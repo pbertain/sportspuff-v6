@@ -505,12 +505,18 @@ def _proxy_fresh_payload(
     stale_after_seconds=60,
     fallback_payload=None,
     distrust_empty_payload=False,
+    force_fresh=False,
 ):
     """Fetch upstream data when the cached copy is old enough to need validation."""
     cache_entry = get_cached_response_entry(cache_key)
     cached_response = cache_entry[0] if cache_entry else None
     cached_at = cache_entry[1] if cache_entry else None
-    if cached_at:
+    if force_fresh and cached_response is not None and _cycling_bundle_is_suspect_empty(cached_response):
+        with _api_cache_lock:
+            _api_cache.pop(cache_key, None)
+        cached_response = None
+        cached_at = None
+    if cached_at and not force_fresh:
         cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
         if distrust_empty_payload and _cycling_bundle_is_suspect_empty(cached_response):
             with _api_cache_lock:
@@ -2717,6 +2723,7 @@ def proxy_schedule(league, date):
     try:
         # Get timezone from query parameter, default to 'pt'
         tz = _normalize_timezone(request.args.get('tz', 'pt'))
+        force_fresh = request.args.get('fresh') == '1'
 
         if date.lower() == 'today':
             cache_key = f'schedule:{league}:today:{tz}'
@@ -2728,7 +2735,7 @@ def proxy_schedule(league, date):
         if _should_skip_live_api_fetch(league, api_date):
             return jsonify({'date': _iso_today(), 'games': []}), 200
 
-        cached_response = get_cached_response(cache_key, 'schedule')
+        cached_response = None if force_fresh else get_cached_response(cache_key, 'schedule')
         if cached_response:
             return jsonify(cached_response)
         
@@ -2810,11 +2817,12 @@ def proxy_standings(league):
     league_lower = league.lower()
     if league_lower not in ('mlb', 'nba', 'nfl', 'nhl', 'mls', 'wnba', 'ipl', 'mlc', 'wc', 'cycling'):
         return jsonify({'teams': [], 'standings': [], 'available': False}), 400
+    force_fresh = request.args.get('fresh') == '1'
 
     # World Cup standings changed shape to include full group data; version the key
     # so deployments do not keep serving older truncated group payloads.
     cache_key = f'standings:{league_lower}:groups-v3' if league_lower == 'wc' else f'standings:{league_lower}'
-    cached_response = get_cached_response(cache_key, 'schedule')
+    cached_response = None if force_fresh else get_cached_response(cache_key, 'schedule')
     if cached_response:
         return jsonify(cached_response)
 
@@ -2852,6 +2860,7 @@ def proxy_cycling_tour_de_france(year=None):
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_tour_de_france:{suffix}'
     path = f'/api/v1/cycling/tour-de-france/{int(year)}' if year else '/api/v1/cycling/tour-de-france'
+    force_fresh = request.args.get('fresh') == '1'
     data, status = _proxy_fresh_payload(
         path,
         cache_key,
@@ -2859,6 +2868,7 @@ def proxy_cycling_tour_de_france(year=None):
         timeout=20,
         stale_after_seconds=60,
         distrust_empty_payload=True,
+        force_fresh=force_fresh,
         fallback_payload={
             'race': 'Tour de France',
             'year': int(year or datetime.now().year),
@@ -2878,12 +2888,14 @@ def proxy_cycling_tour_de_france_stage(year, stage_number):
     """Proxy a single Tour de France stage."""
     cache_key = f'cycling_tour_de_france:{int(year)}:stage:{int(stage_number)}'
     path = f'/api/v1/cycling/tour-de-france/{int(year)}/stages/{int(stage_number)}'
+    force_fresh = request.args.get('fresh') == '1'
     data, status = _proxy_fresh_payload(
         path,
         cache_key,
         'schedule',
         timeout=20,
         stale_after_seconds=60,
+        force_fresh=force_fresh,
         fallback_payload={
             'race': 'Tour de France',
             'year': int(year),
@@ -2905,6 +2917,7 @@ def proxy_cycling_vuelta(year=None):
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_vuelta:{suffix}'
     path = f'/api/v1/cycling/la-vuelta/{int(year)}' if year else '/api/v1/cycling/la-vuelta'
+    force_fresh = request.args.get('fresh') == '1'
     data, status = _proxy_fresh_payload(
         path,
         cache_key,
@@ -2912,6 +2925,7 @@ def proxy_cycling_vuelta(year=None):
         timeout=20,
         stale_after_seconds=60,
         distrust_empty_payload=True,
+        force_fresh=force_fresh,
         fallback_payload={
             'race': 'La Vuelta a España',
             'year': int(year or datetime.now().year),
@@ -2931,12 +2945,14 @@ def proxy_cycling_vuelta_stage(year, stage_number):
     """Proxy a single Vuelta stage."""
     cache_key = f'cycling_vuelta:{int(year)}:stage:{int(stage_number)}'
     path = f'/api/v1/cycling/la-vuelta/{int(year)}/stages/{int(stage_number)}'
+    force_fresh = request.args.get('fresh') == '1'
     data, status = _proxy_fresh_payload(
         path,
         cache_key,
         'schedule',
         timeout=20,
         stale_after_seconds=60,
+        force_fresh=force_fresh,
         fallback_payload={
             'race': 'La Vuelta a España',
             'year': int(year),
@@ -2959,6 +2975,7 @@ def proxy_cycling_giro(year=None):
     """Proxy the Giro d'Italia detail bundle."""
     suffix = str(int(year)) if year else 'current'
     cache_key = f'cycling_giro:{suffix}'
+    force_fresh = request.args.get('fresh') == '1'
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
         f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
@@ -2968,7 +2985,12 @@ def proxy_cycling_giro(year=None):
     cache_entry = get_cached_response_entry(cache_key)
     cached_response = cache_entry[0] if cache_entry else None
     cached_at = cache_entry[1] if cache_entry else None
-    if cached_at:
+    if force_fresh and cached_response is not None and _cycling_bundle_is_suspect_empty(cached_response):
+        with _api_cache_lock:
+            _api_cache.pop(cache_key, None)
+        cached_response = None
+        cached_at = None
+    if cached_at and not force_fresh:
         cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
         if _cycling_bundle_is_suspect_empty(cached_response):
             with _api_cache_lock:
@@ -3025,6 +3047,7 @@ def proxy_cycling_giro(year=None):
 def proxy_cycling_giro_stage(year, stage_number):
     """Proxy a single Giro d'Italia stage."""
     cache_key = f'cycling_giro:{int(year)}:stage:{int(stage_number)}'
+    force_fresh = request.args.get('fresh') == '1'
     path_candidates = [
         f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
@@ -3034,7 +3057,7 @@ def proxy_cycling_giro_stage(year, stage_number):
     cache_entry = get_cached_response_entry(cache_key)
     cached_response = cache_entry[0] if cache_entry else None
     cached_at = cache_entry[1] if cache_entry else None
-    if cached_at:
+    if cached_at and not force_fresh:
         cache_age = (datetime.now(timezone.utc) - cached_at).total_seconds()
         if cached_response is not None and cache_age < 60:
             return jsonify(cached_response)

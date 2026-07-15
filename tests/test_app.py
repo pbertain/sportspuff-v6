@@ -1054,6 +1054,27 @@ class TestTournamentThemeAssets(unittest.TestCase):
         mock_entry.assert_called_once_with("cycling_vuelta:2026")
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_vuelta:2026")
 
+    @patch("app._fetch_api_json")
+    def test_proxy_schedule_fresh_bypasses_cached_response(self, mock_fetch):
+        mock_fetch.return_value = {
+            "date": "2026-07-15",
+            "games": [{"game_id": "stage-11"}],
+        }
+        cached_response = {
+            "date": "2026-07-15",
+            "games": [{"game_id": "old-stage"}],
+        }
+
+        with patch("app.get_cached_response", return_value=cached_response) as mock_cache, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/schedule/cycling/2026-07-15?tz=pt&fresh=1")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["games"][0]["game_id"], "stage-11")
+        mock_cache.assert_not_called()
+        mock_fetch.assert_called_once_with("/api/v1/schedule/cycling/2026-07-15?tz=pt", timeout=20)
+        self.assertEqual(mock_set_cache.call_args.args[0], "schedule:cycling:2026-07-15:pt")
+
     @patch("app._fetch_api_json_from_candidates")
     def test_proxy_giro_uses_giro_d_italia_backend_route(self, mock_fetch):
         mock_fetch.return_value = {
@@ -1164,6 +1185,7 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "async function revalidateSelectedStageDetail()",
             "async function revalidateTourBundle()",
             "{ cache: 'no-store' }",
+            "?fresh=1",
             "meta.generated_at",
             "document.getElementById('tdf-stages-panel').addEventListener('click'",
             "King of the Mountains (KOM)",
@@ -1241,7 +1263,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
 
         for snippet in [
             "function renderCyclingStandings(data)",
+            "function cyclingGameIdentity(game)",
             "EVENT_MODE === 'world-cup' || EVENT_MODE === 'cycling'",
+            "EVENT_MODE === 'cycling' ? '&fresh=1' : ''",
             "const rank = game.cycling_rank;",
             "GC ${rank}",
             "const worldCupWinner = isWorldCupKnockout ? worldCupWinnerLabel(game) : '';",
