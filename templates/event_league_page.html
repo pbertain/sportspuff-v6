@@ -197,9 +197,9 @@
             const flagSources = countryFlagSources(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
             const flagEmoji = flagEmojiForCountryCode(code);
             if (!code && !flagSources.length) return '';
-            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji"${flagSources.length ? ' style="display:none;"' : ''}>${escapeHtml(flagEmoji)}</span>` : '';
+            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji">${escapeHtml(flagEmoji)}</span>` : '';
             const flagJson = escapeHtml(JSON.stringify(flagSources));
-            const flagImg = flagSources.length ? `<img class="tdf-country-flag" src="${escapeHtml(flagSources[0])}" alt="" loading="lazy" data-flag-sources="${flagJson}" onerror="(() => { const sources = JSON.parse(this.dataset.flagSources || '[]'); const next = sources.indexOf(this.src) + 1; if (next < sources.length) { this.src = sources[next]; return; } this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block'; })();">` : '';
+            const flagImg = flagSources.length ? `<img class="tdf-country-flag" src="${escapeHtml(flagSources[0])}" alt="" loading="lazy" data-flag-sources="${flagJson}" style="display:none;" onload="(() => { const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='none'; this.style.display='inline-block'; })();" onerror="(() => { const sources = JSON.parse(this.dataset.flagSources || '[]'); const next = sources.indexOf(this.src) + 1; if (next < sources.length) { this.src = sources[next]; return; } this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block'; })();">` : '';
             const codeLabel = code ? `<span class="tdf-country-code">${escapeHtml(code)}</span>` : '';
             return `<span class="tdf-country-badge">${flagEmojiMarkup}${flagImg}${codeLabel}</span>`;
         }
@@ -211,6 +211,53 @@
                 ? `<a class="tdf-rider-link" href="${escapeHtml(String(options.url).trim())}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
                 : escapeHtml(label);
             return `<span class="tdf-rider-identity">${badge}${body}</span>`;
+        }
+
+        function cyclingWinnerIdentity(game) {
+            const status = String(firstValue(game.status, game.game_status, '') || '').trim().toLowerCase();
+            if (['scheduled', 'pre', 'pre_stage', 'upcoming'].includes(status)) return null;
+            const rows = [
+                ...(Array.isArray(game?.classifications) ? game.classifications : []),
+                ...(Array.isArray(game?.classification_rows) ? game.classification_rows : []),
+                ...(Array.isArray(game?.results) ? game.results : []),
+                ...(Array.isArray(game?.stage_results) ? game.stage_results : []),
+                ...(Array.isArray(game?.riders) ? game.riders : []),
+                ...(Array.isArray(game?.entries) ? game.entries : []),
+            ].filter(row => String(firstValue(row?.classification_type, row?.type, row?.result_type, row?.category, '') || '').toLowerCase() !== 'placeholder');
+            const winningRow = rows.find((row, index) => {
+                const rank = String(firstValue(row?.rank, row?.position, row?.place, '')).trim().toLowerCase();
+                return rank === '1' || rank === '1st' || rank === '01' || index === 0;
+            });
+            if (winningRow) {
+                const winnerName = String(firstValue(
+                    winningRow.rider_full_name,
+                    winningRow.full_name,
+                    winningRow.rider_name,
+                    winningRow.name,
+                    winningRow.participant_name,
+                    winningRow.competitor_name,
+                    winningRow.display_name,
+                    winningRow.short_name,
+                    winningRow.team_name,
+                    ''
+                ) || '').trim();
+                if (winnerName) {
+                    return {
+                        name: winnerName,
+                        url: winningRow.rider_url,
+                        countryCode: winningRow.rider_country_code,
+                        countryFlag: winningRow.rider_country_flag,
+                    };
+                }
+            }
+            const explicit = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
+            if (!explicit) return null;
+            return {
+                name: explicit,
+                url: game.winner_url,
+                countryCode: game.winner_country_code,
+                countryFlag: game.winner_country_flag,
+            };
         }
 
         function parseCssRgba(value) {
@@ -1786,7 +1833,7 @@
             if (EVENT_MODE === 'cycling') {
                 const race = game.cycling_race || game.home_team || 'Cycling event';
                 const stage = cyclingStageNameText(game);
-                const winner = String(firstValue(game.cycling_winner, game.winner, '') || '').trim();
+                const winnerIdentity = cyclingWinnerIdentity(game);
                 const rank = game.cycling_rank;
                 const title = race || game.cycling_event_label || 'Cycling event';
                 const stageDate = cyclingStageDateText(game);
@@ -1798,7 +1845,7 @@
                     cyclingRaceTypeText(game),
                     stage,
                     cyclingDistanceText(game),
-                    winner ? `Winner: ${winner}` : '',
+                    winnerIdentity ? `Winner: ${winnerIdentity.name}` : '',
                     rank !== undefined && rank !== null && String(rank).trim() !== '' ? `GC ${rank}` : ''
                 ].filter(Boolean);
                 const details = detailParts.length ? detailParts.join(' · ') : detailLine(game);
@@ -1808,7 +1855,7 @@
                         <div>
                             <h3 class="event-league-title fs-5">${escapeHtml(title)}</h3>
                             <div class="event-league-meta">${escapeHtml(details)}</div>
-                            ${winner ? `<div class="event-league-meta mt-1 tdf-stage-winner" style="color: ${cyclingWinnerColor(game)};">Winner: ${renderCyclingIdentity(winner, { url: game.winner_url, countryCode: game.winner_country_code, countryFlag: game.winner_country_flag })}</div>` : ''}
+                            ${winnerIdentity ? `<div class="event-league-meta mt-1 tdf-stage-winner" style="color: ${cyclingWinnerColor(game)};">Winner: ${renderCyclingIdentity(winnerIdentity.name, winnerIdentity)}</div>` : ''}
                         </div>
                         <div class="event-league-score">${escapeHtml(status)}</div>
                     </div>

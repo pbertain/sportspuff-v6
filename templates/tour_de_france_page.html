@@ -501,11 +501,38 @@
             const flagSources = countryFlagSources(code, firstValue(options.countryFlag, options.flagUrl, options.flag, options.rider_country_flag, options.winner_country_flag, ''));
             const flagEmoji = flagEmojiForCountryCode(code);
             if (!code && !flagSources.length) return '';
-            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji"${flagSources.length ? ' style="display:none;"' : ''}>${escapeHtml(flagEmoji)}</span>` : '';
+            const flagEmojiMarkup = flagEmoji ? `<span class="tdf-country-flag-emoji">${escapeHtml(flagEmoji)}</span>` : '';
             const flagJson = escapeHtml(JSON.stringify(flagSources));
-            const flagImg = flagSources.length ? `<img class="tdf-country-flag" src="${escapeHtml(flagSources[0])}" alt="" loading="lazy" data-flag-sources="${flagJson}" onerror="(() => { const sources = JSON.parse(this.dataset.flagSources || '[]'); const next = sources.indexOf(this.src) + 1; if (next < sources.length) { this.src = sources[next]; return; } this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block'; })();">` : '';
+            const flagImg = flagSources.length ? `<img class="tdf-country-flag" src="${escapeHtml(flagSources[0])}" alt="" loading="lazy" data-flag-sources="${flagJson}" style="display:none;" onload="(() => { const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='none'; this.style.display='inline-block'; })();" onerror="(() => { const sources = JSON.parse(this.dataset.flagSources || '[]'); const next = sources.indexOf(this.src) + 1; if (next < sources.length) { this.src = sources[next]; return; } this.style.display='none'; const emoji = this.parentElement && this.parentElement.querySelector('.tdf-country-flag-emoji'); if (emoji) emoji.style.display='inline-block'; })();">` : '';
             const codeLabel = code ? `<span class="tdf-country-code">${escapeHtml(code)}</span>` : '';
             return `<span class="tdf-country-badge">${flagEmojiMarkup}${flagImg}${codeLabel}</span>`;
+        }
+
+        function stageWinnerIdentity(stageDetail) {
+            if (stageIsFuturePreview(stageDetail)) return null;
+            const stage = stageDetail?.stage || {};
+            const rows = stageResultRows(stageDetail);
+            const winningRow = rows.find((row, index) => {
+                const rank = String(firstValue(row?.rank, row?.position, row?.place, '')).trim().toLowerCase();
+                return rank === '1' || rank === '1st' || rank === '01' || index === 0;
+            });
+            if (winningRow) {
+                const winnerName = classificationName(winningRow);
+                return {
+                    name: winnerName,
+                    url: winningRow.rider_url,
+                    countryCode: winningRow.rider_country_code,
+                    countryFlag: winningRow.rider_country_flag,
+                };
+            }
+            const explicitWinner = riderDisplayName(stage.winner, '', stage.winner_url);
+            if (!explicitWinner) return null;
+            return {
+                name: explicitWinner,
+                url: stage.winner_url,
+                countryCode: stage.winner_country_code,
+                countryFlag: stage.winner_country_flag,
+            };
         }
 
         function riderIdentityMarkup(name, options = {}) {
@@ -907,14 +934,14 @@
                 stage.cycling_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.cycling_url}" target="_blank" rel="noopener noreferrer">Stage Page</a>` : '',
                 stage.rankings_url ? `<a class="btn btn-sm btn-outline-light" href="${stage.rankings_url}" target="_blank" rel="noopener noreferrer">Rankings</a>` : '',
             ].filter(Boolean).join('');
-            const winnerName = stageIsFuturePreview(effectiveStage) ? '' : riderDisplayName(stage.winner, '', stage.winner_url);
+            const winnerIdentity = stageWinnerIdentity(effectiveStage);
             return `
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                     <div>
                         <div class="tdf-kicker">${escapeHtml(selectedStageKicker(currentStage, effectiveStage))}</div>
                         <h2 class="event-league-title mb-1">${escapeHtml(stageNumber ? `Stage ${stageNumber}: ${title}` : title)}</h2>
                         <div class="event-league-meta">${escapeHtml(meta)}</div>
-                        ${winnerName ? `<div class="event-league-meta tdf-stage-winner mt-2" style="color: var(--tdf-stage-winner-color, ${escapeHtml(accessibleWinnerColor())});">Winner: ${renderRiderName(winnerName, { url: stage.winner_url, countryCode: stage.winner_country_code, countryFlag: stage.winner_country_flag })}</div>` : ''}
+                        ${winnerIdentity ? `<div class="event-league-meta tdf-stage-winner mt-2" style="color: var(--tdf-stage-winner-color, ${escapeHtml(accessibleWinnerColor())});">Winner: ${renderRiderName(winnerIdentity.name, winnerIdentity)}</div>` : ''}
                         ${schedule.recommended_poll_minutes ? `<div class="event-league-meta mt-1">Recommended refresh: every ${escapeHtml(schedule.recommended_poll_minutes)} minutes</div>` : ''}
                     </div>
                     <div class="d-flex gap-2 flex-wrap">${links}</div>
@@ -940,7 +967,7 @@
                 stage.distance_km ? `${stage.distance_km} km` : '',
                 stageStatusText(stage, schedule),
             ].filter(Boolean).join(' • ');
-            const winnerName = stageIsFuturePreview(stageDetail) ? '' : riderDisplayName(stage.winner, '', stage.winner_url);
+            const winnerIdentity = stageWinnerIdentity(stageDetail);
             return `
                 <article class="event-league-card tdf-stage-card${isSelected ? ' is-selected' : ''}" data-stage-key="${escapeHtml(key)}">
                     <div class="d-flex justify-content-between align-items-start gap-2">
@@ -948,7 +975,7 @@
                             <div class="tdf-kicker">${escapeHtml(stageNumber ? `Stage ${stageNumber}` : 'Stage')}</div>
                             <h3 class="event-league-title fs-5 mb-1">${escapeHtml(title)}</h3>
                             <div class="event-league-meta">${escapeHtml(meta)}</div>
-                            ${winnerName ? `<div class="event-league-meta tdf-stage-winner mt-2" style="color: var(--tdf-stage-winner-color, ${escapeHtml(accessibleWinnerColor())});">Winner: ${renderRiderName(winnerName, { url: stage.winner_url, countryCode: stage.winner_country_code, countryFlag: stage.winner_country_flag })}</div>` : ''}
+                            ${winnerIdentity ? `<div class="event-league-meta tdf-stage-winner mt-2" style="color: var(--tdf-stage-winner-color, ${escapeHtml(accessibleWinnerColor())});">Winner: ${renderRiderName(winnerIdentity.name, winnerIdentity)}</div>` : ''}
                         </div>
                         ${hasResults ? '<span class="event-league-pill">Results</span>' : ''}
                     </div>
