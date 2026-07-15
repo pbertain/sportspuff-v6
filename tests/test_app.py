@@ -962,6 +962,83 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(mock_set_cache.call_args.args[1], fresh_payload)
 
     @patch("app._fetch_api_json")
+    def test_proxy_tour_de_france_force_fresh_prefers_upstream_even_when_freshness_matches(self, mock_fetch):
+        cached_payload = {
+            "race": "Tour de France",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 9, "stage_name": "Cached Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:00:00Z"},
+        }
+        fresh_payload = {
+            "race": "Tour de France",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 10, "stage_name": "Fresh Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:00:00Z"},
+        }
+        mock_fetch.return_value = fresh_payload
+
+        old_timestamp = datetime.now(timezone.utc) - timedelta(seconds=120)
+        with patch("app.get_cached_response_entry", return_value=(cached_payload, old_timestamp)) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/tour-de-france/2026?fresh=1")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["current_stage"]["stage"]["stage_number"], 10)
+        mock_entry.assert_called_once_with("cycling_tour_de_france:2026")
+        mock_fetch.assert_called_once_with("/api/v1/cycling/tour-de-france/2026", timeout=20)
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_tour_de_france:2026")
+        self.assertEqual(mock_set_cache.call_args.args[1], fresh_payload)
+
+    @patch("app._fetch_api_json_from_candidates")
+    def test_proxy_giro_force_fresh_prefers_upstream_even_when_freshness_matches(self, mock_fetch):
+        cached_payload = {
+            "race": "Giro d'Italia",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 9, "stage_name": "Cached Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:00:00Z"},
+        }
+        fresh_payload = {
+            "race": "Giro d'Italia",
+            "year": 2026,
+            "current_stage": {"stage": {"stage_number": 10, "stage_name": "Fresh Stage"}},
+            "stages": [],
+            "latest_classifications": {"gc": []},
+            "teams": [],
+            "riders": [],
+            "meta": {"generated_at": "2026-07-10T12:00:00Z"},
+        }
+        mock_fetch.return_value = fresh_payload
+
+        old_timestamp = datetime.now(timezone.utc) - timedelta(seconds=120)
+        with patch("app.get_cached_response_entry", return_value=(cached_payload, old_timestamp)) as mock_entry, patch("app.set_cached_response") as mock_set_cache:
+            response = app.test_client().get("/api/proxy/cycling/giro/2026?fresh=1")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["current_stage"]["stage"]["stage_number"], 10)
+        mock_entry.assert_called_once_with("cycling_giro:2026")
+        self.assertEqual(mock_fetch.call_args.args[0], [
+            "/api/v1/cycling/giro/2026",
+            "/api/v1/cycling/giro-ditalia/2026",
+            "/api/v1/cycling/giro-d-italia/2026",
+            "/api/v1/cycling/gdi/2026",
+        ])
+        self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
+        self.assertEqual(mock_set_cache.call_args.args[1], fresh_payload)
+
+    @patch("app._fetch_api_json")
     def test_proxy_tour_de_france_refetches_after_cached_empty_bundle(self, mock_fetch):
         mock_fetch.return_value = {
             "race": "Tour de France",

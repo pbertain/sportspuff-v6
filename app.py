@@ -560,7 +560,7 @@ def _proxy_fresh_payload(
         if fallback_payload is not None:
             return fallback_payload, 200
 
-    if cached_response is not None:
+    if cached_response is not None and not force_fresh:
         cached_freshness = _response_freshness_key(cached_response)
         fresh_freshness = _response_freshness_key(data)
         if cached_freshness and fresh_freshness and cached_freshness == fresh_freshness:
@@ -3031,7 +3031,7 @@ def proxy_cycling_giro(year=None):
             return jsonify(cached_response)
         return jsonify(data)
 
-    if cached_response is not None:
+    if cached_response is not None and not force_fresh:
         cached_freshness = _response_freshness_key(cached_response)
         fresh_freshness = _response_freshness_key(data)
         if cached_freshness and fresh_freshness and cached_freshness == fresh_freshness:
