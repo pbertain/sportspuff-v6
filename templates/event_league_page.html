@@ -901,6 +901,64 @@
             };
         }
 
+        function worldCupBracketLosingTeam(match) {
+            const side = worldCupBracketWinnerSide(match);
+            if (!side) return null;
+            const loserSide = side === 'home' ? 'away' : 'home';
+            const display = worldCupBracketTeamDisplay(match, loserSide);
+            const teamName = String(display.nameText || '').trim();
+            if (!teamName || worldCupBracketIsPlaceholderLabel(teamName)) return null;
+            const teamCode = String(worldCupBracketTeamCode(match, loserSide) || teamName).trim();
+            return {
+                team_name: teamName,
+                team_abbrev: teamCode,
+                team_record: String(display.record || '').trim()
+            };
+        }
+
+        function worldCupBracketLoserReferenceMatchNumber(slotText) {
+            const text = String(slotText || '').trim();
+            const match = text.match(/^loser\s*match\s*(\d+)$/i) || text.match(/^L(\d+)$/i);
+            return match ? match[1] : '';
+        }
+
+        // The API resolves winner slots (W1, W2, ...) once a match completes, but it
+        // doesn't resolve "Loser Match N" slots for the third-place game. Fill those
+        // in here from the referenced match's loser.
+        function worldCupBracketResolveLoserSlots(round, allMatches) {
+            if (!round || !Array.isArray(round.matches)) return round;
+            const byNumber = new Map();
+            allMatches.forEach(match => {
+                const num = String(firstValue(match?.match_number, match?.game_id, '')).trim();
+                if (num) byNumber.set(num, match);
+            });
+            round.matches.forEach(match => {
+                ['home', 'away'].forEach(side => {
+                    const rawSlot = String(worldCupBracketTeamLabel(match, side) || '').trim();
+                    const refNumber = worldCupBracketLoserReferenceMatchNumber(rawSlot);
+                    if (!refNumber) return;
+                    const sourceMatch = byNumber.get(refNumber);
+                    if (!sourceMatch) return;
+                    const loser = worldCupBracketLosingTeam(sourceMatch);
+                    if (!loser) return;
+                    if (side === 'home') {
+                        match.home_team = loser.team_name;
+                        match.home_team_abbrev = loser.team_abbrev;
+                        match.home_name = loser.team_name;
+                        match.home_record = loser.team_record;
+                        match.home_slot = loser.team_abbrev || loser.team_name;
+                    } else {
+                        match.away_team = loser.team_name;
+                        match.away_team_abbrev = loser.team_abbrev;
+                        match.away_name = loser.team_name;
+                        match.away_record = loser.team_record;
+                        match.away_slot = loser.team_abbrev || loser.team_name;
+                    }
+                });
+            });
+            return round;
+        }
+
         function worldCupBracketMatchReferenceTokens(match) {
             const tokens = new Set();
             const addToken = value => {
@@ -1503,6 +1561,38 @@
             target.style.display = chosen.length ? '' : 'none';
         }
 
+        // Shrinks the whole bracket layout to fit the available width instead of
+        // letting the fixed-width round columns overflow and overlap each other.
+        function applyWorldCupBracketResponsiveScale(root) {
+            const wrapper = root?.querySelector?.('.wc-bracket-scale-wrapper');
+            const layout = wrapper?.querySelector?.('.wc-bracket-layout');
+            if (!wrapper || !layout) return;
+
+            layout.style.width = 'max-content';
+            layout.style.transform = 'none';
+            wrapper.style.width = 'auto';
+            wrapper.style.height = 'auto';
+
+            const naturalWidth = layout.scrollWidth;
+            const naturalHeight = layout.scrollHeight;
+            const availableWidth = wrapper.parentElement ? wrapper.parentElement.clientWidth : naturalWidth;
+            if (!naturalWidth || !availableWidth) return;
+
+            const scale = Math.min(availableWidth / naturalWidth, 1);
+            if (scale >= 1) {
+                layout.style.width = '';
+                layout.style.transform = '';
+                wrapper.style.width = '';
+                wrapper.style.height = '';
+                return;
+            }
+
+            layout.style.transformOrigin = 'top left';
+            layout.style.transform = `scale(${scale})`;
+            wrapper.style.width = `${Math.ceil(naturalWidth * scale)}px`;
+            wrapper.style.height = `${Math.ceil(naturalHeight * scale)}px`;
+        }
+
         function wireWorldCupBracketConnectors(root) {
             const bracket = root?.querySelector?.('.wc-bracket');
             if (!bracket) return;
@@ -1619,11 +1709,17 @@
         function scheduleWorldCupBracketConnectors(root) {
             if (EVENT_MODE !== 'world-cup') return;
             if (!root) return;
-            window.requestAnimationFrame(() => wireWorldCupBracketConnectors(root));
+            window.requestAnimationFrame(() => {
+                applyWorldCupBracketResponsiveScale(root);
+                wireWorldCupBracketConnectors(root);
+            });
             if (!worldCupBracketResizeHandler) {
                 worldCupBracketResizeHandler = () => {
                     const panel = document.getElementById('event-league-results');
-                    if (panel) wireWorldCupBracketConnectors(panel);
+                    if (panel) {
+                        applyWorldCupBracketResponsiveScale(panel);
+                        wireWorldCupBracketConnectors(panel);
+                    }
                 };
                 window.addEventListener('resize', worldCupBracketResizeHandler);
             }
@@ -2118,6 +2214,7 @@
             const centerRounds = splitRounds.center.length > 0 ? splitRounds.center : roundGroups.filter(round => round.order >= 50);
             const finalRound = centerRounds.find(round => round.order >= 60) || null;
             const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
+            worldCupBracketResolveLoserSlots(thirdPlaceRound, roundGroups.flatMap(round => Array.isArray(round.matches) ? round.matches : []));
             const sideSharedHeight = Math.max(
                 worldCupBracketSharedHeight(splitRounds.left),
                 worldCupBracketSharedHeight(splitRounds.right)
@@ -2145,14 +2242,16 @@
                     </div>
                     <div class="wc-bracket" data-world-cup-bracket="true">
                         ${worldCupBracketFinalHero(finalMatch, champion)}
-                        <div class="wc-bracket-layout">
-                            <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
-                            <div class="wc-bracket-center">
-                                <div class="wc-bracket-center-stack" style="min-height: ${centerSharedHeight}px;">
-                                ${centerCards}
+                        <div class="wc-bracket-scale-wrapper">
+                            <div class="wc-bracket-layout">
+                                <div class="wc-bracket-side wc-bracket-side--left">${leftColumns}</div>
+                                <div class="wc-bracket-center">
+                                    <div class="wc-bracket-center-stack" style="min-height: ${centerSharedHeight}px;">
+                                    ${centerCards}
+                                    </div>
                                 </div>
+                                <div class="wc-bracket-side wc-bracket-side--right">${rightColumns}</div>
                             </div>
-                            <div class="wc-bracket-side wc-bracket-side--right">${rightColumns}</div>
                         </div>
                     </div>
                 </div>

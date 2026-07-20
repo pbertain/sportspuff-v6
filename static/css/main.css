@@ -1013,6 +1013,11 @@ main, .main-content {
   padding: 10px 14px;
 }
 
+.wc-bracket-scale-wrapper {
+  overflow: hidden;
+  margin: 0 auto;
+}
+
 .wc-bracket-layout {
   display: grid;
   gap: 8px;

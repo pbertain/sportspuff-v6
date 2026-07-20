@@ -808,6 +808,29 @@
             </div>`;
         }
 
+        function timezoneValueToIana(value) {
+            const normalized = String(value || '').trim();
+            if (normalized === 'pt') return 'America/Los_Angeles';
+            if (normalized === 'mt') return 'America/Denver';
+            if (normalized === 'ct') return 'America/Chicago';
+            if (normalized === 'et') return 'America/New_York';
+            return normalized || 'America/Los_Angeles';
+        }
+
+        function todayStringForTimeZone(timeZone) {
+            const tz = timezoneValueToIana(timeZone);
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: tz,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            }).formatToParts(new Date());
+            const values = Object.fromEntries(
+                parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+            );
+            return `${values.year}-${values.month}-${values.day}`;
+        }
+
         // Fetch and display scores and schedules
         async function loadScoresAndSchedules(opts) {
             opts = opts || {};
@@ -1637,29 +1660,6 @@
                     function cyclingStageNumberText(game) {
                         const raw = firstValue(game.cycling_stage_number, game.stage_number, '');
                         return String(raw ?? '').trim() ? `Stage ${String(raw).trim()}` : '';
-                    }
-
-                    function timezoneValueToIana(value) {
-                        const normalized = String(value || '').trim();
-                        if (normalized === 'pt') return 'America/Los_Angeles';
-                        if (normalized === 'mt') return 'America/Denver';
-                        if (normalized === 'ct') return 'America/Chicago';
-                        if (normalized === 'et') return 'America/New_York';
-                        return normalized || 'America/Los_Angeles';
-                    }
-
-                    function todayStringForTimeZone(timeZone) {
-                        const tz = timezoneValueToIana(timeZone);
-                        const parts = new Intl.DateTimeFormat('en-CA', {
-                            timeZone: tz,
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                        }).formatToParts(new Date());
-                        const values = Object.fromEntries(
-                            parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
-                        );
-                        return `${values.year}-${values.month}-${values.day}`;
                     }
 
                     function cyclingDisplayTimeZone() {
