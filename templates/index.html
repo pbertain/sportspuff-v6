@@ -496,6 +496,25 @@
             };
             if (overrides[leagueLower]) return overrides[leagueLower];
 
+            // WC has no last_champion field from the API, but the knockout bracket
+            // (already embedded in season-info) has the Final's winner. Derive the
+            // offseason champion banner from that instead of a hardcoded override.
+            if (leagueLower === 'wc') {
+                const rounds = (info && info.knockout_bracket && info.knockout_bracket.rounds) || [];
+                const finalRound = rounds.find(r => /^final$/i.test(String((r && r.name) || '').trim()));
+                const finalMatch = finalRound && finalRound.matches && finalRound.matches[0];
+                const winner = finalMatch && String(finalMatch.wc_winner || finalMatch.winner || '').trim();
+                if (winner) {
+                    const yearMatch = String((finalMatch && finalMatch.game_date) || '').match(/^\d{4}/);
+                    const year = (yearMatch && yearMatch[0]) || (info && info.year) || '';
+                    return {
+                        teamLogo: getWorldCupTeamBallLogo(winner),
+                        teamName: winner,
+                        suffix: `won the ${year} World Cup`.trim()
+                    };
+                }
+            }
+
             const champion = info && info.last_champion;
             if (!champion || !champion.year) return null;
 
@@ -1634,18 +1653,23 @@
 
                     function tennisPlayerName(side) {
                         const name = side === 'home'
-                            ? firstValue(game.home_player, game.player1, game.player_1, game.player_one, game.home_competitor, game.home_team, game.strHomeTeam)
-                            : firstValue(game.visitor_player, game.away_player, game.player2, game.player_2, game.player_two, game.away_competitor, game.visitor_team, game.away_team, game.strAwayTeam);
+                            ? firstValue(game.home_player, game.player2, game.player_2, game.player_two, game.home_competitor, game.home_team, game.strHomeTeam)
+                            : firstValue(game.visitor_player, game.away_player, game.player1, game.player_1, game.player_one, game.away_competitor, game.visitor_team, game.away_team, game.strAwayTeam);
                         if (!name) return 'TBD';
                         const clean = String(name).replace(/\s+/g, ' ').trim();
                         const parts = clean.split(' ');
                         return parts.length > 1 ? parts[parts.length - 1] : clean;
                     }
 
+                    // API convention: player1 = visitor/away, player2 = home (see
+                    // sportspuff-api's api.py: player1_rank = visitor_seed, player2_rank
+                    // = home_seed). Getting this backwards means a null home_rank falls
+                    // through to the visitor's player1_rank, showing both players with
+                    // the same (wrong) seed.
                     function tennisPlayerRank(side) {
                         const raw = side === 'home'
-                            ? firstValue(game.home_rank, game.home_player_rank, game.player1_rank, game.player_1_rank, game.home_seed, game.player1_seed, game.player_1_seed)
-                            : firstValue(game.visitor_rank, game.away_rank, game.away_player_rank, game.player2_rank, game.player_2_rank, game.visitor_seed, game.away_seed, game.player2_seed, game.player_2_seed);
+                            ? firstValue(game.home_rank, game.home_player_rank, game.player2_rank, game.player_2_rank, game.home_seed, game.player2_seed, game.player_2_seed)
+                            : firstValue(game.visitor_rank, game.away_rank, game.away_player_rank, game.player1_rank, game.player_1_rank, game.visitor_seed, game.away_seed, game.player1_seed, game.player_1_seed);
                         const text = String(raw ?? '').trim();
                         if (!text) return '';
                         return text.startsWith('#') ? text : `#${text}`;
@@ -1866,12 +1890,12 @@
                         const metaLine = [tournament, roundText ? `R${roundText}` : ''].filter(Boolean).join(' &middot; ');
 
                         const setCells = (side, isWinner) => setScores.map(s => `
-                            <td style="text-align:center; padding: 2px 7px; font-size:0.85rem; font-weight:${isWinner ? 800 : 600}; ${isWinner ? 'color:#FFD700;' : ''}">${s[side] ?? ''}</td>
+                            <td style="width:26px; min-width:26px; max-width:26px; text-align:center; padding: 2px 2px; font-size:0.85rem; font-weight:${isWinner ? 800 : 600}; ${isWinner ? 'color:#FFD700;' : ''}">${s[side] ?? ''}</td>
                         `).join('');
 
                         const tennisPlayerLine = (side, isWinner) => `
                             <tr>
-                                <td style="padding: 3px 8px; font-weight: ${isWinner ? 700 : 500}; white-space: nowrap; text-align:left;">
+                                <td style="width:170px; max-width:170px; padding: 3px 8px; font-weight: ${isWinner ? 700 : 500}; white-space: nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left;">
                                     ${tennisPlayerRank(side) ? `<span style="font-size:0.7rem; opacity:0.8; margin-right:4px;">${escapeHtml(tennisPlayerRank(side))}</span>` : ''}${escapeHtml(tennisPlayerName(side))}${isWinner ? ` <img src="/static/images/winner-star.png" alt="Winner" style="width:12px; height:12px; vertical-align:middle;" />` : ''}
                                 </td>
                                 ${setCells(side, isWinner)}
@@ -1881,13 +1905,13 @@
                         return `
                             <tr>
                                 <td colspan="4" style="padding: 8px 10px;">
-                                    <table style="width:100%; border-collapse:collapse;">
+                                    <table style="border-collapse:collapse; table-layout:fixed;">
                                         <tbody>
                                             ${tennisPlayerLine('visitor', visitorWinsMatch)}
                                             ${tennisPlayerLine('home', homeWinsMatch)}
                                         </tbody>
                                     </table>
-                                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; opacity:0.75; margin-top:4px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; opacity:0.75; margin-top:4px; max-width:${170 + (setScores.length * 26)}px;">
                                         <span>${escapeHtml(metaLine)}</span>
                                         <span>${escapeHtml(tennisStatus)}</span>
                                     </div>
