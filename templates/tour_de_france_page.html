@@ -91,7 +91,15 @@
 
         function prettyDate(value) {
             if (!value) return '';
-            const parsed = new Date(value);
+            const text = String(value).trim();
+            const dateOnlyMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            // A bare "YYYY-MM-DD" string parses as UTC midnight; formatting that
+            // with toLocaleDateString in a timezone behind UTC (e.g. US Pacific)
+            // shows the previous day. Anchor at noon UTC instead, same as
+            // stageDateOnly/todayInDisplayZone below.
+            const parsed = dateOnlyMatch
+                ? new Date(Date.UTC(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]), 12, 0, 0))
+                : new Date(text);
             if (Number.isNaN(parsed.getTime())) return String(value);
             return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
