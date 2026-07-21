@@ -72,6 +72,8 @@
         let TOUR_STAGE_DETAIL_CACHE = new Map();
         let TOUR_SELECTED_STAGE_KEY = null;
         let TOUR_SELECTED_STAGE_NUMBER = null;
+        let TOUR_TODAY_REST_STAGE = null;
+        let TOUR_USER_SELECTED_STAGE = false;
 
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -986,13 +988,55 @@
             `;
         }
 
+        function renderRestDayBanner(restGame) {
+            const label = firstValue(restGame.cycling_stage_label, restGame.visitor_team, 'Rest Day');
+            const country = restGame.cycling_country || '';
+            const meta = [
+                restGame.game_date ? prettyDate(restGame.game_date) : '',
+                'Rest Day',
+                country,
+            ].filter(Boolean).join(' • ');
+            return `
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="tdf-kicker">Today</div>
+                        <h2 class="event-league-title mb-1">${escapeHtml(label)}</h2>
+                        <div class="event-league-meta">${escapeHtml(meta)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // The letour-scraper stage bundle behind this page has no rest-day rows —
+        // its current_stage picker just returns the next numbered stage, which is
+        // wrong on a rest day. Cross-check the schedule feed (which does know about
+        // rest days, same source the homepage uses) and prefer that when it says
+        // today is a rest day.
+        async function fetchTodayRestStage() {
+            try {
+                const tz = document.getElementById('tdf-timezone-select')?.value || 'pt';
+                const response = await fetch(`/api/proxy/schedule/cycling/today?tz=${encodeURIComponent(tz)}`);
+                if (!response.ok) return null;
+                const data = await response.json();
+                const games = Array.isArray(data.games) ? data.games : [];
+                return games.find(game =>
+                    String(game.game_type || '').toLowerCase() === 'rest_day'
+                    && String(game.cycling_race || '').toLowerCase() === String(TOUR_RACE_TITLE || '').toLowerCase()
+                ) || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
         function renderTourView() {
             const summary = document.getElementById('tdf-summary-panel');
             const boards = document.getElementById('tdf-boards-panel');
             const stages = document.getElementById('tdf-stages-panel');
             const selectedStage = selectedStageDetail();
 
-            summary.innerHTML = selectedStage
+            summary.innerHTML = (TOUR_TODAY_REST_STAGE && !TOUR_USER_SELECTED_STAGE)
+                ? renderRestDayBanner(TOUR_TODAY_REST_STAGE)
+                : selectedStage
                 ? renderCurrentStage(TOUR_PAYLOAD?.current_stage, selectedStage)
                 : `<div class="event-league-meta">No current ${escapeHtml(TOUR_RACE_TITLE)} stage is available for ${escapeHtml(TOUR_YEAR)}.</div>`;
 
@@ -1037,6 +1081,7 @@
                     freshness.style.display = '';
                 }
                 setWinnerColorVariable();
+                TOUR_TODAY_REST_STAGE = await fetchTodayRestStage();
                 renderTourView();
                 revalidateTourBundle().catch(() => {});
             } catch (error) {
@@ -1060,6 +1105,7 @@
                 if (!button) return;
                 const nextKey = String(button.dataset.stageKey || '').trim();
                 if (!nextKey) return;
+                TOUR_USER_SELECTED_STAGE = true;
                 TOUR_SELECTED_STAGE_KEY = nextKey;
                 const selected = Array.isArray(TOUR_PAYLOAD?.stages) ? TOUR_PAYLOAD.stages.find(stageDetail => stageKey(stageDetail) === nextKey) : null;
                 const nextStageNumber = stageNumberForDetail(selected);

@@ -1834,6 +1834,68 @@
                             </tr>`;
                     }
 
+                    // Tennis: traditional stacked listing (player on top of player), with
+                    // each completed set's score shown per player when the API provides it.
+                    if (isTennis) {
+                        let tennisStatus = '';
+                        if (isFinal) tennisStatus = 'Final';
+                        else if (isInProgress) tennisStatus = 'Live';
+                        else if (game.game_time) {
+                            try {
+                                const gameDate = new Date(game.game_time);
+                                if (!isNaN(gameDate.getTime())) {
+                                    tennisStatus = gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+                                }
+                            } catch (e) {}
+                        }
+                        if (!tennisStatus) tennisStatus = 'Scheduled';
+
+                        const setScores = Array.isArray(game.tennis_set_scores) ? game.tennis_set_scores : [];
+                        const winnerRaw = String(firstValue(game.tennis_winner, game.winner, '') || '').trim().toLowerCase();
+                        const homeSetsWon = Number(firstValue(game.home_sets_won, game.player2_sets_won));
+                        const visitorSetsWon = Number(firstValue(game.visitor_sets_won, game.player1_sets_won));
+                        let homeWinsMatch = winnerRaw === 'home' || winnerRaw === 'player2';
+                        let visitorWinsMatch = winnerRaw === 'visitor' || winnerRaw === 'away' || winnerRaw === 'player1';
+                        if (!homeWinsMatch && !visitorWinsMatch && Number.isFinite(homeSetsWon) && Number.isFinite(visitorSetsWon) && homeSetsWon !== visitorSetsWon) {
+                            homeWinsMatch = homeSetsWon > visitorSetsWon;
+                            visitorWinsMatch = visitorSetsWon > homeSetsWon;
+                        }
+
+                        const tournament = tennisTournamentName();
+                        const roundText = game.tennis_round || game.round;
+                        const metaLine = [tournament, roundText ? `R${roundText}` : ''].filter(Boolean).join(' &middot; ');
+
+                        const setCells = (side, isWinner) => setScores.map(s => `
+                            <td style="text-align:center; padding: 2px 7px; font-size:0.85rem; font-weight:${isWinner ? 800 : 600}; ${isWinner ? 'color:#FFD700;' : ''}">${s[side] ?? ''}</td>
+                        `).join('');
+
+                        const tennisPlayerLine = (side, isWinner) => `
+                            <tr>
+                                <td style="padding: 3px 8px; font-weight: ${isWinner ? 700 : 500}; white-space: nowrap; text-align:left;">
+                                    ${tennisPlayerRank(side) ? `<span style="font-size:0.7rem; opacity:0.8; margin-right:4px;">${escapeHtml(tennisPlayerRank(side))}</span>` : ''}${escapeHtml(tennisPlayerName(side))}${isWinner ? ` <img src="/static/images/winner-star.png" alt="Winner" style="width:12px; height:12px; vertical-align:middle;" />` : ''}
+                                </td>
+                                ${setCells(side, isWinner)}
+                            </tr>
+                        `;
+
+                        return `
+                            <tr>
+                                <td colspan="4" style="padding: 8px 10px;">
+                                    <table style="width:100%; border-collapse:collapse;">
+                                        <tbody>
+                                            ${tennisPlayerLine('visitor', visitorWinsMatch)}
+                                            ${tennisPlayerLine('home', homeWinsMatch)}
+                                        </tbody>
+                                    </table>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; opacity:0.75; margin-top:4px;">
+                                        <span>${escapeHtml(metaLine)}</span>
+                                        <span>${escapeHtml(tennisStatus)}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
                     // Debug: log MLB game status to identify final detection issues
 
 

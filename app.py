@@ -2977,9 +2977,9 @@ def proxy_cycling_giro(year=None):
     cache_key = f'cycling_giro:{suffix}'
     force_fresh = request.args.get('fresh') == '1'
     path_candidates = [
-        f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
-        f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
         f'/api/v1/cycling/giro-d-italia/{int(year)}' if year else '/api/v1/cycling/giro-d-italia',
+        f'/api/v1/cycling/giro-ditalia/{int(year)}' if year else '/api/v1/cycling/giro-ditalia',
+        f'/api/v1/cycling/giro/{int(year)}' if year else '/api/v1/cycling/giro',
         f'/api/v1/cycling/gdi/{int(year)}' if year else '/api/v1/cycling/gdi',
     ]
     cache_entry = get_cached_response_entry(cache_key)
@@ -3049,9 +3049,9 @@ def proxy_cycling_giro_stage(year, stage_number):
     cache_key = f'cycling_giro:{int(year)}:stage:{int(stage_number)}'
     force_fresh = request.args.get('fresh') == '1'
     path_candidates = [
-        f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
-        f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/giro-d-italia/{int(year)}/stages/{int(stage_number)}',
+        f'/api/v1/cycling/giro-ditalia/{int(year)}/stages/{int(stage_number)}',
+        f'/api/v1/cycling/giro/{int(year)}/stages/{int(stage_number)}',
         f'/api/v1/cycling/gdi/{int(year)}/stages/{int(stage_number)}',
     ]
     cache_entry = get_cached_response_entry(cache_key)

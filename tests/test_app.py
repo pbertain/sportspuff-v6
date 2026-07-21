@@ -1030,9 +1030,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(data["current_stage"]["stage"]["stage_number"], 10)
         mock_entry.assert_called_once_with("cycling_giro:2026")
         self.assertEqual(mock_fetch.call_args.args[0], [
-            "/api/v1/cycling/giro/2026",
-            "/api/v1/cycling/giro-ditalia/2026",
             "/api/v1/cycling/giro-d-italia/2026",
+            "/api/v1/cycling/giro-ditalia/2026",
+            "/api/v1/cycling/giro/2026",
             "/api/v1/cycling/gdi/2026",
         ])
         self.assertEqual(mock_set_cache.call_args.args[0], "cycling_giro:2026")
@@ -1174,9 +1174,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
         self.assertEqual(
             mock_fetch.call_args.args[0],
             [
-                "/api/v1/cycling/giro/2026",
-                "/api/v1/cycling/giro-ditalia/2026",
                 "/api/v1/cycling/giro-d-italia/2026",
+                "/api/v1/cycling/giro-ditalia/2026",
+                "/api/v1/cycling/giro/2026",
                 "/api/v1/cycling/gdi/2026",
             ],
         )
@@ -1369,8 +1369,9 @@ class TestTournamentThemeAssets(unittest.TestCase):
             "https://splitsp.lat/logos/wc/wc-trophy-bare.png",
             "wc-floating-logos",
             "wc-floating-logo--trophy",
-            "function worldCupFinalDayVisible(finalMatch)",
+            "function worldCupBracketFinalHero(finalMatch, championLabel)",
             "winner-star.png",
+            "wc-bracket-champion-trophy",
         ]:
             self.assertIn(snippet, event_template)
 

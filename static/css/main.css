@@ -1254,6 +1254,14 @@ main, .main-content {
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
 }
 
+.wc-bracket-champion-trophy {
+  position: static;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+}
+
 .wc-bracket-team-score {
   align-items: center;
   color: #FFF1A8;

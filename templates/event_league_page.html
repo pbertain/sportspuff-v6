@@ -959,6 +959,47 @@
             return round;
         }
 
+        function worldCupBracketFinalRoundRawMatch(bracket) {
+            const normalized = normalizeWorldCupBracket(bracket);
+            const rounds = Array.isArray(normalized?.rounds) ? normalized.rounds : [];
+            const finalRound = rounds.find(r => /^final$/i.test(String(r?.name || '').trim()));
+            return finalRound?.matches?.[0] || null;
+        }
+
+        function worldCupBracketFindThirdPlaceGame(games) {
+            return (Array.isArray(games) ? games : []).find(g => {
+                const label = String(firstValue(g?.wc_round_label, g?.game_type, '') || '').toLowerCase();
+                return label.includes('third') || label.includes('bronze');
+            }) || null;
+        }
+
+        // The bracket API never backfills a score for the third-place match (unlike
+        // every other round). Look it up in the schedule/scores feed for the day it
+        // was actually played (FIFA always plays it the day before the final) and
+        // copy the result across.
+        function worldCupBracketBackfillThirdPlaceScore(round, sourceGames) {
+            if (!round || !Array.isArray(round.matches) || !round.matches.length) return round;
+            const target = round.matches[0];
+            const hasScore = worldCupBracketScoreValue(target, 'home') !== '' || worldCupBracketScoreValue(target, 'visitor') !== '';
+            if (hasScore) return round;
+            const source = worldCupBracketFindThirdPlaceGame(sourceGames);
+            if (!source) return round;
+            const targetHomeName = String(worldCupBracketTeamLabel(target, 'home') || '').trim().toLowerCase();
+            const sourceHomeName = String(firstValue(source.home_team, source.home_name, '') || '').trim().toLowerCase();
+            const sourceAwayName = String(firstValue(source.away_team, source.visitor_team, '') || '').trim().toLowerCase();
+            const swap = Boolean(targetHomeName) && targetHomeName !== sourceHomeName && targetHomeName === sourceAwayName;
+            const sourceAwayScore = firstValue(source.visitor_score, source.away_score);
+            target.home_score = swap ? sourceAwayScore : source.home_score;
+            target.visitor_score = swap ? source.home_score : sourceAwayScore;
+            target.away_score = target.visitor_score;
+            target.game_status = source.game_status || source.status || target.game_status;
+            target.status = target.game_status;
+            target.game_date = source.game_date || target.game_date;
+            target.winner = source.winner || target.winner;
+            target.wc_winner = source.wc_winner || target.wc_winner;
+            return round;
+        }
+
         function worldCupBracketMatchReferenceTokens(match) {
             const tokens = new Set();
             const addToken = value => {
@@ -1374,9 +1415,11 @@
             const status = merged.game_status || merged.status || '';
             const finalish = ['final', 'completed', 'finished', 'off'].includes(String(status).toLowerCase());
             const details = [worldCupBracketStatusLine(merged)].filter(Boolean).join(' · ');
-            const finalClass = worldCupBracketRoundOrderFromLabel(roundName || worldCupBracketRoundLabel(merged)) >= 60 ? ' wc-bracket-match--final' : '';
-            const winnerStarHome = winnerSide === 'home' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
-            const winnerStarAway = winnerSide === 'away' ? '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />' : '';
+            const isFinalRound = worldCupBracketRoundOrderFromLabel(roundName || worldCupBracketRoundLabel(merged)) >= 60;
+            const finalClass = isFinalRound ? ' wc-bracket-match--final' : '';
+            const championTrophy = '<img src="https://splitsp.lat/logos/wc/wc-trophy-bare.png" alt="Champion" class="wc-bracket-champion-trophy" loading="lazy" />';
+            const winnerStarHome = winnerSide === 'home' ? (isFinalRound && finalish ? championTrophy : '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />') : '';
+            const winnerStarAway = winnerSide === 'away' ? (isFinalRound && finalish ? championTrophy : '<img src="/static/images/winner-star.png" alt="Winner" class="wc-bracket-star" />') : '';
             const statusTextValue = finalish ? '' : (status ? escapeHtml(status) : '');
             const bothTeamsUnknown = homeDisplay.placeholder && awayDisplay.placeholder
                 && worldCupBracketIsPlaceholderLabel(homeDisplay.nameText)
@@ -1488,7 +1531,6 @@
             const isActive = ['in_progress', 'live', 'active'].includes(status);
             const isFinalish = ['final', 'completed', 'finished', 'off'].includes(status);
             if (!isActive && !isFinalish) return '';
-            if (!worldCupFinalDayVisible(finalMatch)) return '';
             const heroText = isFinalish && championLabel ? championLabel : 'Final In Progress';
             return `
                 <div class="wc-bracket-winner-banner">
@@ -1499,28 +1541,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        function worldCupGameDateOnly(match) {
-            const raw = String(firstValue(match?.game_date, match?.date, '') || '').trim();
-            if (!raw) return '';
-            const parts = raw.split('T')[0].split(' ')[0];
-            return /^\d{4}-\d{2}-\d{2}$/.test(parts) ? parts : '';
-        }
-
-        function worldCupTodayDisplayDate() {
-            return new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'America/Los_Angeles',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }).format(new Date());
-        }
-
-        function worldCupFinalDayVisible(finalMatch) {
-            const finalDate = worldCupGameDateOnly(finalMatch);
-            if (!finalDate) return false;
-            return finalDate === worldCupTodayDisplayDate();
         }
 
         function renderWorldCupFloatingLogos(data, bracket) {
@@ -2199,7 +2219,7 @@
             });
         }
 
-        function renderWorldCupKnockout(bracket, legacyGames) {
+        function renderWorldCupKnockout(bracket, legacyGames, thirdPlaceDayGames) {
             if (EVENT_MODE !== 'world-cup') return '';
             const normalized = normalizeWorldCupBracket(bracket);
             const gameMap = worldCupBracketGameMap(legacyGames);
@@ -2215,6 +2235,7 @@
             const finalRound = centerRounds.find(round => round.order >= 60) || null;
             const thirdPlaceRound = centerRounds.find(round => round.order >= 50 && round.order < 60) || null;
             worldCupBracketResolveLoserSlots(thirdPlaceRound, roundGroups.flatMap(round => Array.isArray(round.matches) ? round.matches : []));
+            worldCupBracketBackfillThirdPlaceScore(thirdPlaceRound, thirdPlaceDayGames);
             const sideSharedHeight = Math.max(
                 worldCupBracketSharedHeight(splitRounds.left),
                 worldCupBracketSharedHeight(splitRounds.right)
@@ -2476,6 +2497,18 @@
                 const knockoutSource = EVENT_MODE === 'world-cup'
                     ? chooseWorldCupBracketSource(bracketRes?.knockout_bracket || bracketRes || null, seasonRes?.knockout_bracket || null)
                     : null;
+                let thirdPlaceDayGames = [];
+                if (EVENT_MODE === 'world-cup') {
+                    const finalRawMatch = worldCupBracketFinalRoundRawMatch(knockoutSource);
+                    const finalDateOnly = String(finalRawMatch?.game_date || '').trim().split('T')[0];
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(finalDateOnly)) {
+                        const thirdPlaceDate = isoDateOffset(finalDateOnly, -1);
+                        try {
+                            const tpScoresRes = await fetch(`/api/proxy/scores/wc/${thirdPlaceDate}?tz=${encodeURIComponent(tz)}`).then(r => r.ok ? r.json() : { scores: [] });
+                            thirdPlaceDayGames = tpScoresRes.scores || [];
+                        } catch (e) {}
+                    }
+                }
                 renderSeasonInfo(seasonRes);
                 renderWorldCupMarquee(standingsRes);
                 renderWorldCupFloatingLogos(standingsRes, knockoutSource);
@@ -2507,7 +2540,7 @@
                 }
 
                 const knockoutIds = EVENT_MODE === 'world-cup' ? worldCupBracketGameIds(knockoutSource) : new Set();
-                const knockoutBlock = EVENT_MODE === 'world-cup' ? renderWorldCupKnockout(knockoutSource, games) : '';
+                const knockoutBlock = EVENT_MODE === 'world-cup' ? renderWorldCupKnockout(knockoutSource, games, thirdPlaceDayGames) : '';
                 const groupGames = EVENT_MODE === 'world-cup'
                     ? games.filter(game => !knockoutIds.has(String(game.game_id || '')) && !isWorldCupKnockout(game))
                     : games;
