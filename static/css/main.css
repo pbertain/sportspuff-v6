@@ -1822,6 +1822,11 @@ main, .main-content {
   box-shadow: 0 0 0 1px rgba(245, 232, 20, 0.3);
 }
 
+.tdf-stage-card--rest {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
 .tdf-stage-winner {
   font-weight: 800;
 }
