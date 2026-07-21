@@ -218,6 +218,16 @@
                 .trim();
         }
 
+        // Rider slugs aren't consistently ordered across race sites: letour.fr uses
+        // firstname-first ("alex-aranburu-deva"), giroditalia.it uses surname-first
+        // ("milan-jonathan"). A short name like "A. ARANBURU" only gives an initial,
+        // so slugToFullName is the best source there; "Jonathan MILAN" is already
+        // the full name in the right order, so trust it over the slug guess.
+        function riderShortNameLooksAbbreviated(name) {
+            const first = String(name || '').trim().split(/\s+/)[0] || '';
+            return /^[A-Za-z]\.?$/.test(first);
+        }
+
         function riderSlugFromUrl(value) {
             const text = String(value ?? '').trim();
             if (!text) return '';
@@ -236,6 +246,7 @@
                 const fullName = firstValue(
                     rider.full_name,
                     rider.rider_full_name,
+                    !riderShortNameLooksAbbreviated(shortName) ? toProperCase(shortName) : '',
                     slugToFullName(slug),
                     toProperCase(shortName)
                 );
