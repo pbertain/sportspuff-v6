@@ -1851,6 +1851,15 @@ body[data-race-slug="giro-ditalia"] .tdf-stage-winner {
   font-weight: 700;
 }
 
+.tdf-jersey-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 .tdf-rider-identity {
   display: inline-flex;
   align-items: center;

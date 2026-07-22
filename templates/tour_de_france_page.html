@@ -73,6 +73,35 @@
         let TOUR_SELECTED_STAGE_KEY = null;
         let TOUR_SELECTED_STAGE_NUMBER = null;
 
+        // Leader jersey names/colors per race. Verified against current (2026)
+        // conventions: TDF yellow/green/red-polka-dot/white, Giro pink/cyclamen
+        // (purple)/blue/white, Vuelta red/green/blue-polka-dot/white.
+        const JERSEY_INFO = {
+            'tour-de-france': {
+                gc: { name: 'Maillot Jaune', color: '#F5E814' },
+                points: { name: 'Maillot Vert', color: '#3CB043' },
+                kom: { name: 'Maillot à Pois Rouges', color: '#FFFFFF', ring: '#E2231A' },
+                youth: { name: 'Maillot Blanc', color: '#FFFFFF' },
+            },
+            giro: {
+                gc: { name: 'Maglia Rosa', color: '#FF69B4' },
+                points: { name: 'Maglia Ciclamino', color: '#C724B1' },
+                kom: { name: 'Maglia Azzurra', color: '#1E90FF' },
+                youth: { name: 'Maglia Bianca', color: '#FFFFFF' },
+            },
+            vuelta: {
+                gc: { name: 'Maillot Rojo', color: '#E30613' },
+                points: { name: 'Maillot Verde', color: '#3CB043' },
+                kom: { name: 'Maillot de Lunares', color: '#FFFFFF', ring: '#1E90FF' },
+                youth: { name: 'Maillot Blanco', color: '#FFFFFF' },
+            },
+        };
+
+        function jerseyInfo(boardType) {
+            const raceInfo = JERSEY_INFO[TOUR_API_SLUG] || JERSEY_INFO['tour-de-france'];
+            return raceInfo[boardType] || null;
+        }
+
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
                 '&': '&amp;',
@@ -885,13 +914,55 @@
             await revalidateSelectedStageDetail();
         }
 
+        function riderIdentityKey(row) {
+            return String(firstValue(row?.rider_slug, row?.slug, riderSlugFromUrl(row?.rider_url), row?.bib, '')).trim().toLowerCase();
+        }
+
+        function stageClassificationsByType(stageDetail) {
+            if (stageIsFuturePreview(stageDetail)) return {};
+            const rows = [
+                ...(Array.isArray(stageDetail?.classification_rows) ? stageDetail.classification_rows : []),
+                ...(Array.isArray(stageDetail?.stage?.classification_rows) ? stageDetail.stage.classification_rows : []),
+            ];
+            const byType = {};
+            rows.forEach(row => {
+                const type = String(row?.classification_type || '').toLowerCase();
+                if (!type) return;
+                if (!byType[type]) byType[type] = new Map();
+                const key = riderIdentityKey(row);
+                if (key) byType[type].set(key, row);
+            });
+            return byType;
+        }
+
+        function gcDisplayValue(gcRow) {
+            if (!gcRow) return '';
+            if (Number(gcRow.rank) === 1) return firstValue(gcRow.time, gcRow.total_time, '');
+            return firstValue(normalizedGap(gcRow.gap), normalizedGap(gcRow.time_back), normalizedGap(gcRow.behind), '');
+        }
+
+        function pointsEarnedDisplayValue(row) {
+            const earned = Number(row?.points_earned);
+            return Number.isFinite(earned) && earned > 0 ? `+${earned}` : '';
+        }
+
         function renderStageResults(stageDetail) {
             const rows = stageResultRows(stageDetail).slice(0, 10);
             if (!rows.length) {
                 return `<div class="event-league-meta mt-3">Stage results are not available yet.</div>`;
             }
 
-            const tableRows = rows.map((row, index) => `
+            const byType = stageClassificationsByType(stageDetail);
+            const gcInfo = jerseyInfo('gc');
+            const pointsInfo = jerseyInfo('points');
+            const komInfo = jerseyInfo('kom');
+
+            const tableRows = rows.map((row, index) => {
+                const key = riderIdentityKey(row);
+                const gcRow = key ? byType.gc?.get(key) : null;
+                const pointsRow = key ? byType.points?.get(key) : null;
+                const komRow = key ? byType.kom?.get(key) : null;
+                return `
                 <tr>
                     <td>${escapeHtml(row.rank ?? index + 1)}</td>
                     <td>
@@ -900,14 +971,18 @@
                     </td>
                     <td>${escapeHtml(firstValue(row.time, row.total_time, row.elapsed_time, row.result_time, row.stage_time, row.finish_time, row.elapsed, ''))}</td>
                     <td>${escapeHtml(firstValue(normalizedGap(row.gap), normalizedGap(row.time_back), normalizedGap(row.behind), normalizedGap(row.time_diff), normalizedGap(row.time_difference), normalizedGap(row.delta), ''))}</td>
+                    <td title="${escapeHtml(gcInfo?.name || 'GC')}">${escapeHtml(gcDisplayValue(gcRow))}</td>
+                    <td title="${escapeHtml(pointsInfo?.name || 'Points')}">${escapeHtml(pointsEarnedDisplayValue(pointsRow))}</td>
+                    <td title="${escapeHtml(komInfo?.name || 'KOM')}">${escapeHtml(pointsEarnedDisplayValue(komRow))}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
             return `
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-dark align-middle mb-0 tdf-board-table tdf-stage-results-table">
                         <thead>
-                            <tr><th>#</th><th>Rider</th><th>Time</th><th>Time Behind</th></tr>
+                            <tr><th>#</th><th>Rider</th><th>Time</th><th>Gap</th><th>GC</th><th>Green</th><th>KOM</th></tr>
                         </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
@@ -932,7 +1007,7 @@
                 .sort((a, b) => Number(b.points_earned) - Number(a.points_earned));
         }
 
-        function renderStagePointsBoard(title, rows) {
+        function renderStagePointsBoard(title, boardType, rows) {
             if (!rows.length) return '';
             const tableRows = rows.slice(0, 10).map((row, index) => `
                 <tr>
@@ -947,7 +1022,7 @@
             return `
                 <section class="event-league-card tdf-board-card">
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                        <h2 class="event-league-title fs-5 mb-0">${escapeHtml(title)}</h2>
+                        <h2 class="event-league-title fs-5 mb-0">${jerseySwatchHtml(boardType)}${escapeHtml(title)}</h2>
                         <span class="event-league-pill">${rows.length}</span>
                     </div>
                     <div class="table-responsive">
@@ -964,8 +1039,8 @@
 
         function renderStagePointsBoards(stageDetail) {
             const boards = [
-                renderStagePointsBoard('Green Jersey — Stage Points', stagePointsEarnedRows(stageDetail, 'points')),
-                renderStagePointsBoard('KOM — Stage Points', stagePointsEarnedRows(stageDetail, 'kom')),
+                renderStagePointsBoard(boardTitleWithJersey('Stage Points', 'points'), 'points', stagePointsEarnedRows(stageDetail, 'points')),
+                renderStagePointsBoard(boardTitleWithJersey('Stage Points', 'kom'), 'kom', stagePointsEarnedRows(stageDetail, 'kom')),
             ].filter(Boolean).join('');
             return boards ? `<div class="d-flex flex-wrap gap-3 mt-3">${boards}</div>` : '';
         }
@@ -976,6 +1051,20 @@
             const currentKey = stageKey(currentStage);
             if (selectedKey && currentKey && selectedKey === currentKey) return 'Current Stage';
             return 'Stage Results';
+        }
+
+        function jerseySwatchHtml(boardType) {
+            const info = jerseyInfo(boardType);
+            if (!info) return '';
+            const style = info.ring
+                ? `background:${info.color}; border:2px solid ${info.ring};`
+                : `background:${info.color}; border:1px solid rgba(255,255,255,0.35);`;
+            return `<span class="tdf-jersey-swatch" style="${style}" title="${escapeHtml(info.name)}"></span>`;
+        }
+
+        function boardTitleWithJersey(title, boardType) {
+            const info = jerseyInfo(boardType);
+            return info ? `${title} — ${info.name}` : title;
         }
 
         function renderBoard(title, boardType, rows) {
@@ -994,7 +1083,7 @@
             return `
                 <section class="event-league-card tdf-board-card">
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                        <h2 class="event-league-title fs-5 mb-0">${escapeHtml(title)}</h2>
+                        <h2 class="event-league-title fs-5 mb-0">${jerseySwatchHtml(boardType)}${escapeHtml(boardTitleWithJersey(title, boardType))}</h2>
                         <span class="event-league-pill">${safeRows.length}</span>
                     </div>
                     <div class="table-responsive">
