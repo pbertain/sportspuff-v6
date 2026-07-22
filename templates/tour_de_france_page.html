@@ -935,12 +935,6 @@
             return byType;
         }
 
-        function gcDisplayValue(gcRow) {
-            if (!gcRow) return '';
-            if (Number(gcRow.rank) === 1) return firstValue(gcRow.time, gcRow.total_time, '');
-            return firstValue(normalizedGap(gcRow.gap), normalizedGap(gcRow.time_back), normalizedGap(gcRow.behind), '');
-        }
-
         function pointsEarnedDisplayValue(row) {
             const earned = Number(row?.points_earned);
             return Number.isFinite(earned) && earned > 0 ? `+${earned}` : '';
@@ -953,13 +947,11 @@
             }
 
             const byType = stageClassificationsByType(stageDetail);
-            const gcInfo = jerseyInfo('gc');
             const pointsInfo = jerseyInfo('points');
             const komInfo = jerseyInfo('kom');
 
             const tableRows = rows.map((row, index) => {
                 const key = riderIdentityKey(row);
-                const gcRow = key ? byType.gc?.get(key) : null;
                 const pointsRow = key ? byType.points?.get(key) : null;
                 const komRow = key ? byType.kom?.get(key) : null;
                 return `
@@ -971,7 +963,6 @@
                     </td>
                     <td>${escapeHtml(firstValue(row.time, row.total_time, row.elapsed_time, row.result_time, row.stage_time, row.finish_time, row.elapsed, ''))}</td>
                     <td>${escapeHtml(firstValue(normalizedGap(row.gap), normalizedGap(row.time_back), normalizedGap(row.behind), normalizedGap(row.time_diff), normalizedGap(row.time_difference), normalizedGap(row.delta), ''))}</td>
-                    <td title="${escapeHtml(gcInfo?.name || 'GC')}">${escapeHtml(gcDisplayValue(gcRow))}</td>
                     <td title="${escapeHtml(pointsInfo?.name || 'Points')}">${escapeHtml(pointsEarnedDisplayValue(pointsRow))}</td>
                     <td title="${escapeHtml(komInfo?.name || 'KOM')}">${escapeHtml(pointsEarnedDisplayValue(komRow))}</td>
                 </tr>
@@ -982,7 +973,7 @@
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-dark align-middle mb-0 tdf-board-table tdf-stage-results-table">
                         <thead>
-                            <tr><th>#</th><th>Rider</th><th>Time</th><th>Gap</th><th>GC</th><th>Green</th><th>KOM</th></tr>
+                            <tr><th>#</th><th>Rider</th><th>Time</th><th>Gap</th><th>Green</th><th>KOM</th></tr>
                         </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
